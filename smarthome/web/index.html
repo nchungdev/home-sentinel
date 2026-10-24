@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Điện Quang Smart TV Dashboard & API</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --surface-hover: #1f2733;
+      --surface-on: rgba(244, 67, 54, 0.16);
+      --border: rgba(255, 255, 255, 0.08);
+      --border-on: #ff5252;
+      --accent: #e30613;
+      --accent-glow: rgba(227, 6, 19, 0.35);
+      --text: #f0f6fc;
+      --muted: #8b949e;
+      --warm: #ffb74d;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    body {
+      background: radial-gradient(circle at top right, #1e1b2e 0%, var(--bg) 60%);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 28px 36px;
+    }
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .brand-badge {
+      background: var(--accent);
+      color: #fff;
+      font-weight: 800;
+      font-size: 20px;
+      padding: 8px 14px;
+      border-radius: 12px;
+      letter-spacing: -0.5px;
+      box-shadow: 0 4px 16px var(--accent-glow);
+    }
+    .brand-info h1 {
+      font-size: 22px;
+      font-weight: 700;
+    }
+    .brand-info p {
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .stat-pill {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 10px 16px;
+      border-radius: 999px;
+      font-size: 14px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #4caf50;
+      box-shadow: 0 0 8px #4caf50;
+    }
+    .btn {
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 10px 18px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.18s ease;
+    }
+    .btn:hover, .btn:focus {
+      background: var(--surface-hover);
+      border-color: #58a6ff;
+      outline: none;
+      transform: translateY(-1px);
+    }
+    .btn-scene {
+      background: linear-gradient(135deg, #e53935, #ff7043);
+      border: none;
+      color: #fff;
+      box-shadow: 0 4px 14px rgba(229, 57, 53, 0.35);
+    }
+    .room-tabs {
+      display: flex;
+      gap: 10px;
+      overflow-x: auto;
+      padding-bottom: 10px;
+      margin-bottom: 22px;
+    }
+    .tab {
+      background: var(--surface);
+      color: var(--muted);
+      border: 1px solid var(--border);
+      padding: 9px 18px;
+      border-radius: 999px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.18s ease;
+    }
+    .tab.active, .tab:focus {
+      background: #f0f6fc;
+      color: #0d1117;
+      border-color: #f0f6fc;
+      outline: none;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+    .card {
+      background: var(--surface);
+      border: 2px solid var(--border);
+      border-radius: 18px;
+      padding: 18px;
+      cursor: pointer;
+      transition: all 0.18s ease;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 148px;
+      position: relative;
+      user-select: none;
+    }
+    .card:hover, .card:focus {
+      transform: translateY(-2px);
+      border-color: #58a6ff;
+      outline: none;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    }
+    .card.on {
+      background: linear-gradient(160deg, rgba(255, 82, 82, 0.22), rgba(255, 183, 77, 0.08));
+      border-color: var(--border-on);
+      box-shadow: 0 6px 20px rgba(244, 67, 54, 0.2);
+    }
+    .card.busy {
+      opacity: 0.6;
+      pointer-events: none;
+    }
+    .card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+    .bulb-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.06);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+    }
+    .card.on .bulb-icon {
+      background: rgba(255, 183, 77, 0.25);
+      color: var(--warm);
+    }
+    .switch {
+      width: 46px;
+      height: 26px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.18);
+      position: relative;
+      transition: background 0.2s;
+    }
+    .switch::after {
+      content: "";
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #fff;
+      transition: transform 0.2s;
+    }
+    .card.on .switch {
+      background: #ff5252;
+    }
+    .card.on .switch::after {
+      transform: translateX(20px);
+    }
+    .dev-room {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+    .dev-name {
+      font-size: 15px;
+      font-weight: 700;
+      line-height: 1.3;
+      margin-bottom: 8px;
+    }
+    .dev-state {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--muted);
+    }
+    .card.on .dev-state {
+      color: #ff6b6b;
+    }
+    .api-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px 24px;
+    }
+    .api-box h2 {
+      font-size: 16px;
+      margin-bottom: 12px;
+      color: #58a6ff;
+    }
+    .api-box pre {
+      background: #090d11;
+      padding: 12px 14px;
+      border-radius: 10px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 12.5px;
+      color: #c9d1d9;
+      overflow-x: auto;
+      margin-bottom: 10px;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-badge">DQSmart TV</div>
+      <div class="brand-info">
+        <h1>Bảng Điều Khiển Nhà Thông Minh</h1>
+        <p id="ownerSub">Tài khoản: U12201@dienquangsmart.vn • Chung Nguyễn</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <div class="stat-pill">
+        <span class="dot"></span>
+        <span id="onSummary">Đang tải trạng thái...</span>
+      </div>
+      <button class="btn btn-scene" tabindex="0" onclick="runScene('tat_dien_khu_sinh_hoat_chung')">
+        🏠 Tắt điện khu sinh hoạt chung
+      </button>
+      <button class="btn" tabindex="0" id="refreshBtn" onclick="fetchDevices()">
+        🔄 Làm mới
+      </button>
+    </div>
+  </div>
+
+  <div class="room-tabs" id="roomTabs"></div>
+  <div class="grid" id="deviceGrid"></div>
+
+  <div class="api-box">
+    <h2>🔌 Tích hợp REST API (Điều khiển từ bất kỳ thiết bị, Siri Shortcuts, Home Assistant, Script)</h2>
+    <pre>
+# 1. Lấy danh sách 17 đèn và trạng thái Bật/Tắt thực tế:
+curl http://192.168.1.9:8088/api/devices
+
+# 2. Bật / Tắt / Đảo trạng thái 1 đèn (state: "on" | "off" | "toggle"):
+curl -X POST http://192.168.1.9:8088/api/control \
+  -H "Content-Type: application/json" \
+  -d '{"id": "den_tran_cua_chinh", "state": "toggle"}'
+
+# 3. Kích hoạt kịch bản Tắt điện khu sinh hoạt chung:
+curl -X POST http://192.168.1.9:8088/api/scene \
+  -H "Content-Type: application/json" \
+  -d '{"id": "tat_dien_khu_sinh_hoat_chung"}'</pre>
+  </div>
+
+  <script>
+    let allDevices = [];
+    let currentRoom = 'ALL';
+
+    function renderTabs() {
+      const rooms = ['ALL', 'ON', ...new Set(allDevices.map(d => d.room))];
+      const labels = {
+        'ALL': `Tất cả (${allDevices.length})`,
+        'ON': `Đang bật (${allDevices.filter(d => d.state === 'on').length})`
+      };
+      const container = document.getElementById('roomTabs');
+      container.innerHTML = '';
+      rooms.forEach(r => {
+        const btn = document.createElement('button');
+        btn.className = 'tab' + (currentRoom === r ? ' active' : '');
+        btn.textContent = labels[r] || r;
+        btn.onclick = () => { currentRoom = r; renderTabs(); renderGrid(); };
+        container.appendChild(btn);
+      });
+    }
+
+    function renderGrid() {
+      const grid = document.getElementById('deviceGrid');
+      grid.innerHTML = '';
+      const filtered = allDevices.filter(d => {
+        if (currentRoom === 'ALL') return true;
+        if (currentRoom === 'ON') return d.state === 'on';
+        return d.room === currentRoom;
+      });
+
+      filtered.forEach(dev => {
+        const isGatewayPower = dev.id === 'ct_cua_chinh_1';
+        const card = document.createElement('div');
+        card.className = 'card' + (dev.state === 'on' ? ' on' : '');
+        card.tabIndex = 0;
+        card.id = 'card-' + dev.id;
+        card.onclick = () => {
+          if (isGatewayPower && dev.state === 'on') {
+            alert('Nút này cấp nguồn cho Gateway Hub, đã khóa lệnh tắt để bảo vệ hệ thống!');
+            return;
+          }
+          toggleDevice(dev.id);
+        };
+        card.onkeydown = (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            if (isGatewayPower && dev.state === 'on') {
+              alert('Nút này cấp nguồn cho Gateway Hub, đã khóa lệnh tắt để bảo vệ hệ thống!');
+              return;
+            }
+            toggleDevice(dev.id);
+          }
+        };
+        card.innerHTML = `
+          <div>
+            <div class="card-top">
+              <div class="bulb-icon">${isGatewayPower ? '🛡️' : (dev.state === 'on' ? '💡' : '🔌')}</div>
+              <div class="switch"></div>
+            </div>
+            <div class="dev-room">${dev.room}</div>
+            <div class="dev-name">${dev.name}</div>
+          </div>
+          <div class="dev-state">${isGatewayPower ? '🔒 NGUỒN GATEWAY (ĐANG BẬT)' : (dev.state === 'on' ? '● ĐANG BẬT' : '○ Đang tắt')}</div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    async function fetchDevices() {
+      const btn = document.getElementById('refreshBtn');
+      btn.textContent = '⏳ Đang đồng bộ...';
+      try {
+        const res = await fetch('/api/devices');
+        const data = await res.json();
+        if (data.success) {
+          allDevices = data.devices;
+          document.getElementById('onSummary').textContent =
+            `Đang bật: ${data.on_count} / ${data.total} thiết bị`;
+          renderTabs();
+          renderGrid();
+        }
+      } catch (e) {
+        document.getElementById('onSummary').textContent = 'Lỗi kết nối API';
+      } finally {
+        btn.textContent = '🔄 Làm mới';
+      }
+    }
+
+    async function toggleDevice(id) {
+      const card = document.getElementById('card-' + id);
+      if (card) card.classList.add('busy');
+      try {
+        const res = await fetch('/api/control', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, state: 'toggle' })
+        });
+        const data = await res.json();
+        if (data.success) {
+          allDevices = data.devices;
+          document.getElementById('onSummary').textContent =
+            `Đang bật: ${data.on_count} / ${allDevices.length} thiết bị`;
+          renderTabs();
+          renderGrid();
+        }
+      } finally {
+        if (card) card.classList.remove('busy');
+      }
+    }
+
+    async function runScene(id) {
+      document.getElementById('onSummary').textContent = 'Đang chạy kịch bản...';
+      const res = await fetch('/api/scene', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
+      });
+      const data = await res.json();
+      if (data.success) {
+        allDevices = data.devices;
+        document.getElementById('onSummary').textContent =
+          `Đang bật: ${data.on_count} / ${allDevices.length} thiết bị`;
+        renderTabs();
+        renderGrid();
+      }
+    }
+
+    fetchDevices();
+  </script>
+</body>
+</html>

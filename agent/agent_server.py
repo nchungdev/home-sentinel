@@ -574,6 +574,58 @@ class Handler(BaseHTTPRequestHandler):
         finally:
             REQUEST_SLOTS.release()
 
+    def read_json_payload(self):
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+        except ValueError:
+            length = -1
+        if length <= 0 or length > MAX_BODY_BYTES:
+            self.reply(413, PLAIN_TEXT, "bad length")
+            return None
+        try:
+            return json.loads(self.rfile.read(length).decode("utf-8"))
+        except (ValueError, UnicodeDecodeError):
+            self.reply(400, PLAIN_TEXT, "bad json")
+            return None
+
+    def handle_config_camera(self):
+        body = self.read_json_payload()
+        if body is None:
+            return
+        host = str(body.get("host", "")).strip()
+        port = int(body.get("port", 554))
+        stream_url = str(body.get("stream_url", "")).strip()
+        if not host:
+            response = {"status": "error", "message": "IP camera không được để trống"}
+            return self.reply(400, JSON_TYPE, json.dumps(response))
+        success, message = verify_camera_connection(host, port)
+        if not success:
+            response = {"status": "error", "message": message}
+            return self.reply(400, JSON_TYPE, json.dumps(response))
+        save_camera_configuration(stream_url)
+        response = {"status": "ok", "message": "Xác thực và lưu camera thành công"}
+        self.reply(200, JSON_TYPE, json.dumps(response))
+
+    def handle_config_smarthome(self):
+        body = self.read_json_payload()
+        if body is None:
+            return
+        server_url = str(body.get("server_url", "")).strip()
+        token = str(body.get("token", "")).strip()
+        auto_wake = bool(body.get("auto_wake", True))
+        auto_sleep = bool(body.get("auto_sleep", True))
+        greeting = bool(body.get("greeting", True))
+        if not server_url:
+            msg = "URL máy chủ không được để trống"
+            return self.reply(400, JSON_TYPE, json.dumps({"status": "error", "message": msg}))
+        success, message = verify_smarthome_connection(server_url, token)
+        if not success:
+            response = {"status": "error", "message": message}
+            return self.reply(400, JSON_TYPE, json.dumps(response))
+        save_smarthome_configuration(server_url, token, auto_wake, auto_sleep, greeting)
+        response = {"status": "ok", "message": "Xác thực Home Assistant thành công"}
+        self.reply(200, JSON_TYPE, json.dumps(response))
+
     def do_POST(self):
         if not self.client_allowed():
             return self.reply(403, PLAIN_TEXT, "forbidden")
@@ -583,6 +635,12 @@ class Handler(BaseHTTPRequestHandler):
 
         if self.path == "/ask":
             return self.handle_ask()
+
+        if self.path == "/api/config/camera":
+            return self.handle_config_camera()
+
+        if self.path == "/api/config/smarthome":
+            return self.handle_config_smarthome()
 
         self.reply(404, PLAIN_TEXT, "not found")
 
@@ -598,6 +656,90 @@ def broadcast_notification(notification):
         sys.stderr.write("failed to broadcast notification: %s\n" % error)
     finally:
         sock.close()
+
+
+def verify_camera_connection(host, port):
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.settimeout(3.0)
+    try:
+        sock.connect((host, port))
+        if port == 554:
+            probe = f"OPTIONS rtsp://{host}:{port}/ RTSP/1.0\r\nCSeq: 1\r\n\r\n"
+            sock.sendall(probe.encode("utf-8"))
+            resp = sock.recv(256).decode("utf-8", errors="ignore")
+            if resp and "RTSP/1.0" in resp:
+                return True, "Kết nối cổng RTSP thành công"
+        return True, f"Kết nối cổng {port} thành công"
+    except socket.timeout:
+        return False, f"Hết thời gian kết nối tới {host}:{port}"
+    except Exception as error:
+        return False, f"Không thể kết nối tới {host}:{port}: {error}"
+    finally:
+        sock.close()
+
+
+def verify_smarthome_connection(server_url, token):
+    target = server_url.rstrip("/") + "/api/"
+    headers = {"Content-Type": "application/json"}
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    request = urllib.request.Request(target, headers=headers)
+    try:
+        with urllib.request.urlopen(request, timeout=4.0) as response:
+            if response.status == 200:
+                return True, "Kết nối Home Assistant API thành công"
+            return False, f"Phản hồi mã HTTP {response.status}"
+    except urllib.error.HTTPError as error:
+        if error.code == 401:
+            return False, "Token không chính xác (401)"
+        return False, f"Lỗi HTTP {error.code}: {error.reason}"
+    except Exception as error:
+        return False, f"Lỗi kết nối tới {server_url}: {error}"
+
+
+def save_camera_configuration(stream_url):
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    config_path = os.path.join(base_dir, "..", "camera", "camera_config.json")
+    config = {}
+    if os.path.exists(config_path):
+        try:
+            with open(config_path, "r", encoding="utf-8") as f:
+                config = json.load(f)
+        except Exception:
+            config = {}
+    config["stream_url"] = stream_url
+    try:
+        with open(config_path, "w", encoding="utf-8") as f:
+            json.dump(config, f, indent=2)
+    except Exception as error:
+        sys.stderr.write("failed to save camera config: %s\n" % error)
+
+
+def save_smarthome_configuration(server_url, token, auto_wake, auto_sleep, greeting):
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    config_path = os.path.join(base_dir, "..", "smarthome", "smarthome_config.json")
+    config = {}
+    if os.path.exists(config_path):
+        try:
+            with open(config_path, "r", encoding="utf-8") as f:
+                config = json.load(f)
+        except Exception:
+            config = {}
+    config["home_assistant"] = {"url": server_url, "token": token}
+    rules = config.get("rules", {})
+    rules["on_sofa_enter"] = {
+        "tv_action": "wake" if auto_wake else "none",
+        "greeting": "Xin chào! Chúc bạn xem phim vui vẻ." if greeting else ""
+    }
+    rules["on_sofa_leave"] = {
+        "tv_action": "sleep" if auto_sleep else "none"
+    }
+    config["rules"] = rules
+    try:
+        with open(config_path, "w", encoding="utf-8") as f:
+            json.dump(config, f, indent=2)
+    except Exception as error:
+        sys.stderr.write("failed to save smarthome config: %s\n" % error)
 
 
 def start_discovery_responder():

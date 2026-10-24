@@ -1,0 +1,64 @@
+#!/usr/bin/env python3
+import json
+import os
+import sys
+
+scriptDirectory = os.path.dirname(os.path.abspath(__file__))
+parentDirectory = os.path.dirname(scriptDirectory)
+if parentDirectory not in sys.path:
+    sys.path.insert(0, parentDirectory)
+
+from dqsmart_gateway import (
+    DEVICES,
+    SCENES,
+    controlDevice,
+    readAllStates,
+    triggerScene,
+)
+
+
+def printUsageAndExit():
+    sys.stderr.write("Usage: smarthome status | toggle <id> | on <id> | off <id> | scene <id>\n")
+    sys.exit(1)
+
+
+def executeCli():
+    if len(sys.argv) < 2:
+        printUsageAndExit()
+
+    commandAction = sys.argv[1].lower()
+
+    if commandAction == "status":
+        deviceStates = readAllStates()
+        activeDevices = [dev for dev in deviceStates if dev["state"] == "on"]
+        summary = {
+            "on_count": len(activeDevices),
+            "total": len(deviceStates),
+            "devices": deviceStates,
+            "scenes": SCENES,
+        }
+        print(json.dumps(summary, ensure_ascii=False, indent=2))
+        return
+
+    if commandAction in ("toggle", "on", "off"):
+        if len(sys.argv) < 3:
+            printUsageAndExit()
+        targetId = sys.argv[2]
+        targetState = "toggle" if commandAction == "toggle" else commandAction
+        updatedDevices = controlDevice(targetId, targetState)
+        targetDevice = next((dev for dev in updatedDevices if dev["id"] == targetId), None)
+        print(json.dumps(targetDevice, ensure_ascii=False))
+        return
+
+    if commandAction == "scene":
+        targetSceneId = sys.argv[2] if len(sys.argv) >= 3 else "tat_dien_khu_sinh_hoat_chung"
+        results = triggerScene(targetSceneId)
+        activeCount = sum(1 for dev in results if dev["state"] == "on")
+        print(json.dumps({"scene": targetSceneId, "on_count": activeCount}, ensure_ascii=False))
+        return
+
+    printUsageAndExit()
+
+
+if __name__ == "__main__":
+    executeCli()

@@ -1,0 +1,19 @@
+{
+  "stream_url": "rtmp://192.168.1.100/live/sofa",
+  "model": "yolov8n.pt",
+  "confidence_threshold": 0.5,
+  "zones": [
+    {
+      "id": "sofa",
+      "polygon": [
+        [0.25, 0.40],
+        [0.75, 0.40],
+        [0.75, 0.85],
+        [0.25, 0.85]
+      ],
+      "enter_debounce_seconds": 3,
+      "leave_debounce_seconds": 60
+    }
+  ],
+  "webhook_url": "http://127.0.0.1:8791/event"
+}

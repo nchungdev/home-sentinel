@@ -129,6 +129,14 @@ class AgentFailureTest(unittest.TestCase):
             self.assertEqual("Xin chào", received.get("title"))
         receiver.close()
 
+    def test_verify_camera_failure(self):
+        success, message = server.verify_camera_connection("127.0.0.1", 59999)
+        self.assertFalse(success)
+
+    def test_verify_smarthome_failure(self):
+        success, message = server.verify_smarthome_connection("http://127.0.0.1:59999", "tok")
+        self.assertFalse(success)
+
 
 if __name__ == "__main__":
     unittest.main()
