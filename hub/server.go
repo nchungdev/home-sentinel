@@ -23,6 +23,7 @@ type HubServer struct {
 	cameraManager     *CameraManager
 	agentOrchestrator *AgentOrchestrator
 	settingsManager   *SettingsManager
+	pairingManager    *PairingManager
 	httpServer        *http.Server
 }
 
@@ -86,6 +87,7 @@ func NewHubServer(port int) *HubServer {
 		cameraManager:     camera,
 		agentOrchestrator: agent,
 		settingsManager:   settings,
+		pairingManager:    NewPairingManager("paired.json"),
 	}
 }
 
@@ -97,17 +99,19 @@ func (server *HubServer) Start() error {
 		mux.Handle("/icons/", http.StripPrefix("/icons/", http.FileServer(http.FS(iconsSub))))
 	}
 
-	mux.HandleFunc("/api/hub/overview", server.handleOverview)
-	mux.HandleFunc("/api/hub/settings", server.handleSettings)
-	mux.HandleFunc("/api/hub/scan", server.handleScan)
-	mux.HandleFunc("/api/hub/device/toggle", server.handleDeviceToggle)
-	mux.HandleFunc("/api/hub/device/set", server.handleDeviceSet)
-	mux.HandleFunc("/api/hub/tv/action", server.handleTvAction)
-	mux.HandleFunc("/api/hub/tv/notify", server.handleTvNotify)
-	mux.HandleFunc("/api/hub/camera/privacy", server.handleCameraPrivacy)
-	mux.HandleFunc("/api/hub/camera/ptz", server.handleCameraPTZ)
-	mux.HandleFunc("/api/hub/camera/speak", server.handleCameraSpeak)
-	mux.HandleFunc("/api/hub/agent/chat", server.handleAgentChat)
+	server.registerPairingRoutes(mux)
+	require := server.pairingManager.Require
+	mux.HandleFunc("/api/hub/overview", require(server.handleOverview))
+	mux.HandleFunc("/api/hub/settings", server.pairingManager.RequireWebPage(server.handleSettings))
+	mux.HandleFunc("/api/hub/scan", server.pairingManager.RequireWebPage(server.handleScan))
+	mux.HandleFunc("/api/hub/device/toggle", require(server.handleDeviceToggle))
+	mux.HandleFunc("/api/hub/device/set", require(server.handleDeviceSet))
+	mux.HandleFunc("/api/hub/tv/action", require(server.handleTvAction))
+	mux.HandleFunc("/api/hub/tv/notify", require(server.handleTvNotify))
+	mux.HandleFunc("/api/hub/camera/privacy", require(server.handleCameraPrivacy))
+	mux.HandleFunc("/api/hub/camera/ptz", require(server.handleCameraPTZ))
+	mux.HandleFunc("/api/hub/camera/speak", require(server.handleCameraSpeak))
+	mux.HandleFunc("/api/hub/agent/chat", require(server.handleAgentChat))
 
 	server.httpServer = &http.Server{
 		Addr:    fmt.Sprintf(":%d", server.port),

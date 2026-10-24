@@ -7,7 +7,8 @@ Backend services, AI servers, and background workers for the TV ecosystem:
 | `agent/`     | Voice assistant & media hub           | Python 3 (HTTP/SSE) | Active | `README.md` |
 | `camera/`    | AI camera & zone presence             | Go / Python / Tapo  | Active | `AGENTS.md` |
 | `smarthome/` | Device coordinator & rules            | Go / Python / HA    | Active | `AGENTS.md` |
-| `hub/`       | Unified Home Assistant portal & agent | Go / Web / Embedded | Active | `README.md` |
+| `hub/`       | Legacy hub, replaced by `gateway/`    | Go / Web / Embedded | Legacy | |
+| `gateway/`   | TV pairing & generic device API over Home Assistant | Go | Active | `README.md` |
 
 ## Architecture
 

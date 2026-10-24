@@ -1495,6 +1495,22 @@
             </div>
           </div>
 
+
+          <!-- CARD 5: PAIRED APP DEVICES -->
+          <div class="setting-card" id="cardSettingPairing">
+            <div class="setting-card-title">
+              <div class="setting-card-title-left">
+                <span>🔐 Thiết Bị Được Phép Điều Khiển</span>
+              </div>
+            </div>
+            <div style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">
+              TV hoặc app chỉ cần nhập địa chỉ Hub rồi chờ duyệt tại đây. Mọi cấu hình thiết bị
+              thực hiện trên trang web này.
+            </div>
+            <div id="pairPendingList"></div>
+            <div id="pairPairedList"></div>
+          </div>
+
         </div>
       </div>
     </div>
@@ -2107,6 +2123,53 @@
       const el = document.getElementById(cardId);
       if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
+
+
+    function pairRowHtml(label, buttonsHtml) {
+      return '<div style="display:flex; align-items:center; justify-content:space-between; '
+        + 'gap:8px; padding:8px 0; border-top:1px solid var(--border);">'
+        + '<span>' + label + '</span><span style="display:flex; gap:6px;">' + buttonsHtml
+        + '</span></div>';
+    }
+
+    function escapeHtml(text) {
+      const holder = document.createElement('div');
+      holder.textContent = text;
+      return holder.innerHTML;
+    }
+
+    async function postPairing(action, id) {
+      await fetch('/api/hub/pair/' + action, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
+      });
+      loadPairing();
+    }
+
+    async function loadPairing() {
+      const pendingBox = document.getElementById('pairPendingList');
+      const pairedBox = document.getElementById('pairPairedList');
+      if (!pendingBox || !pairedBox) return;
+      try {
+        const resp = await fetch('/api/hub/pair/list');
+        const data = await resp.json();
+        pendingBox.innerHTML = data.pending.map(request => pairRowHtml(
+          '<b>' + escapeHtml(request.name) + '</b> xin kết nối · mã <b>' + request.code + '</b>',
+          '<button class="chip-btn" onclick="postPairing(\'approve\', \'' + request.id
+            + '\')">Duyệt</button>'
+          + '<button class="chip-btn" onclick="postPairing(\'reject\', \'' + request.id
+            + '\')">Từ chối</button>')).join('');
+        pairedBox.innerHTML = data.paired.map(device => pairRowHtml(
+          escapeHtml(device.name),
+          '<button class="chip-btn" onclick="postPairing(\'revoke\', \'' + device.id
+            + '\')">Thu hồi</button>')).join('') || '<div>Chưa có thiết bị nào.</div>';
+      } catch (error) {
+      }
+    }
+
+    setInterval(loadPairing, 3000);
+    loadPairing();
 
     async function loadSettingsFromBackend() {
       const gwDev = currentDevices.find(d => d.id === 'ct_cua_chinh_1');
