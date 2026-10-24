@@ -1,0 +1,34 @@
+{
+  "default_provider": "auto",
+  "providers": {
+    "gemini": {
+      "type": "gemini_api",
+      "api_key": "${GEMINI_API_KEY}",
+      "model": "gemini-1.5-flash",
+      "cost_tier": "low",
+      "priority": 1
+    },
+    "agy": {
+      "type": "cli",
+      "command": "agy",
+      "flags": ["-p", "--output-format", "stream-json"],
+      "cost_tier": "medium",
+      "priority": 2
+    },
+    "claude": {
+      "type": "cli",
+      "command": "claude",
+      "flags": ["-p", "--output-format", "stream-json", "--verbose", "--include-partial-messages"],
+      "cost_tier": "high",
+      "priority": 3
+    },
+    "local": {
+      "type": "openai_compatible",
+      "url": "http://127.0.0.1:11434/v1/chat/completions",
+      "model": "qwen2.5:7b",
+      "cost_tier": "free",
+      "priority": 1
+    }
+  },
+  "fallback_order": ["gemini", "agy", "claude", "local"]
+}

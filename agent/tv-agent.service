@@ -1,0 +1,17 @@
+[Unit]
+Description=TV AI Agent endpoint
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+# A user service, like agent-bridge's: `systemctl --user enable --now tv-agent`. Runs as the user that is logged
+# in to the CLI. Set AGENT_CMD in the env file to the CLI's full path if it is not on this PATH.
+Environment=PATH=%h/.local/bin:/home/linuxbrew/.linuxbrew/bin:/usr/local/bin:/usr/bin:/bin
+EnvironmentFile=%h/.config/tv-agent.env
+ExecStart=/usr/bin/python3 %h/tv-agent/agent_server.py
+Restart=on-failure
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,77 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+TV_HOST="${TV_HOST:-192.168.1.50:5555}"
+ADB="${HOME}/bin/adb"
+
+if [[ ! -x "$ADB" ]]; then
+    echo "adb not found at $ADB" >&2
+    exit 1
+fi
+
+case "${1:-}" in
+    search_youtube)
+        query="${2:-}"
+        encoded=$(python3 -c \
+            "import urllib.parse, sys; print(urllib.parse.quote(sys.argv[1]))" \
+            "$query")
+        "$ADB" -s "$TV_HOST" shell am start -a android.intent.action.VIEW \
+            -d "vnd.youtube://results?q=${encoded}" com.google.android.youtube.tv \
+            >/dev/null 2>&1
+        echo "Đang tìm kiếm '$query' trên YouTube..."
+        ;;
+    open)
+        pkg="${2:-}"
+        case "$pkg" in
+            plex)
+                "$ADB" -s "$TV_HOST" shell monkey \
+                    -p com.plexapp.android -c android.intent.category.LAUNCHER 1 \
+                    >/dev/null 2>&1
+                echo "Đã mở Plex trên TV."
+                ;;
+            youtube)
+                "$ADB" -s "$TV_HOST" shell monkey \
+                    -p com.google.android.youtube.tv -c android.intent.category.LAUNCHER 1 \
+                    >/dev/null 2>&1
+                echo "Đã mở YouTube trên TV."
+                ;;
+            netflix)
+                "$ADB" -s "$TV_HOST" shell monkey \
+                    -p com.netflix.ninja -c android.intent.category.LAUNCHER 1 \
+                    >/dev/null 2>&1
+                echo "Đã mở Netflix trên TV."
+                ;;
+            home)
+                "$ADB" -s "$TV_HOST" shell input keyevent 3 >/dev/null 2>&1
+                echo "Đã quay về màn hình chính."
+                ;;
+            *)
+                echo "Ứng dụng '$pkg' chưa được hỗ trợ." >&2
+                exit 1
+                ;;
+        esac
+        ;;
+    key)
+        key="${2:-}"
+        case "$key" in
+            up) code=19 ;;
+            down) code=20 ;;
+            left) code=21 ;;
+            right) code=22 ;;
+            enter|ok) code=23 ;;
+            back) code=4 ;;
+            home) code=3 ;;
+            play|pause|play_pause) code=85 ;;
+            volup|volume_up) code=24 ;;
+            voldown|volume_down) code=25 ;;
+            mute) code=164 ;;
+            *) echo "Phím '$key' không hợp lệ." >&2; exit 1 ;;
+        esac
+        "$ADB" -s "$TV_HOST" shell input keyevent "$code" >/dev/null 2>&1
+        echo "Đã gửi phím $key."
+        ;;
+    *)
+        echo "Cách dùng: tv open <plex|youtube|netflix|home> | tv key <key>" >&2
+        exit 1
+        ;;
+esac
