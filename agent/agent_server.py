@@ -341,15 +341,16 @@ def run_cli(text, session, send_piece, user_pref=None):
                 return
 
         search_match = re.search(
-            r"^((tìm\s+kiếm\s+|tìm\s+phim\s+|tìm\s+|gợi\s+ý\s+)(phim\s+)?)(.*?)$",
+            r"^(tìm\s+kiếm\s+phim|tìm\s+phim|phim\s+gợi\s+ý|tìm\s+kiếm)\s+(.*?)$",
             text.strip(),
             re.I,
         )
-        query = search_match.group(4).strip() if search_match else text.strip()
-        cards = media_bridge.render_media_results(query)
-        if cards:
-            send_piece(cards)
-            return
+        if search_match:
+            query = search_match.group(2).strip()
+            cards = media_bridge.render_media_results(query)
+            if cards:
+                send_piece(cards)
+                return
 
     if system_overloaded():
         send_piece(OVERLOAD_MESSAGE)

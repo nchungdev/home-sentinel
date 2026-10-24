@@ -102,6 +102,9 @@ class CliProvider(BaseProvider):
                         )
 
                     if piece:
+                        if is_quota_error(piece):
+                            self.mark_quota_exhausted()
+                            raise RuntimeError(f"QUOTA_ERROR: {piece}")
                         streamed = True
                         send_piece(piece)
 
