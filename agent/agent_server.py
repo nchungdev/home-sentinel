@@ -11,6 +11,11 @@ import tempfile
 import urllib.request
 from collections import OrderedDict
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+try:
+    from arbitration import AudioArbitrator
+except ImportError:
+    from services.agent.arbitration import AudioArbitrator
 
 TOKEN = os.environ.get("AGENT_TOKEN", "")
 PORT = int(os.environ.get("AGENT_PORT", "8788"))
@@ -48,6 +53,7 @@ MIN_MEM_AVAILABLE_MB = float(os.environ.get("AGENT_MIN_MEM_MB", "2048.0"))
 REQUEST_SLOTS = threading.BoundedSemaphore(MAX_CONCURRENT_REQUESTS)
 CLI_SESSIONS = OrderedDict()
 CLI_SESSIONS_LOCK = threading.Lock()
+ARBITRATOR = AudioArbitrator()
 
 PHONE_PAGE = """<!doctype html><meta charset=utf-8>
 <meta name=viewport content='width=device-width,initial-scale=1'><title>AI Agent</title>
@@ -323,11 +329,48 @@ def try_tv_command(text):
     return None
 
 
+def try_smarthome_command(text):
+    cleaned = text.strip().lower()
+    keywords = [
+        "đèn", "quạt", "máy lạnh", "điều hòa", "rèm",
+        "đi ngủ", "xem phim", "tiếp khách",
+        "tắt hết", "bật hết", "trạng thái nhà", "ngôi nhà"
+    ]
+    if not any(k in cleaned for k in keywords):
+        return None
+
+    hub_url = os.environ.get("AGENT_HUB_URL", "http://127.0.0.1:8888")
+    target = hub_url.rstrip("/") + "/api/hub/agent/chat"
+    req_body = json.dumps({"text": text}).encode("utf-8")
+    req = urllib.request.Request(
+        target,
+        data=req_body,
+        headers={"Content-Type": "application/json"}
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=3.0) as resp:
+            if resp.status == 200:
+                data = json.loads(resp.read().decode("utf-8"))
+                if data.get("ok") and "reply" in data:
+                    reply_obj = data["reply"]
+                    content = reply_obj.get("content", "")
+                    if content and not content.startswith("Tôi đã ghi nhận:"):
+                        return content
+    except Exception:
+        pass
+    return None
+
+
 def run_cli(text, session, send_piece, user_pref=None):
     text = normalize_voice_input(text)
     handled_tv = try_tv_command(text)
     if handled_tv:
         send_piece(handled_tv)
+        return
+
+    handled_smarthome = try_smarthome_command(text)
+    if handled_smarthome:
+        send_piece(handled_smarthome)
         return
 
     if media_bridge:
@@ -626,6 +669,13 @@ class Handler(BaseHTTPRequestHandler):
         response = {"status": "ok", "message": "Xác thực Home Assistant thành công"}
         self.reply(200, JSON_TYPE, json.dumps(response))
 
+    def handle_arbitration(self):
+        body = self.read_json_payload()
+        if body is None:
+            return
+        decision = ARBITRATOR.arbitrate(body)
+        self.reply(200, JSON_TYPE, json.dumps(decision))
+
     def do_POST(self):
         if not self.client_allowed():
             return self.reply(403, PLAIN_TEXT, "forbidden")
@@ -641,6 +691,9 @@ class Handler(BaseHTTPRequestHandler):
 
         if self.path == "/api/config/smarthome":
             return self.handle_config_smarthome()
+
+        if self.path == "/api/arbitration/decide":
+            return self.handle_arbitration()
 
         self.reply(404, PLAIN_TEXT, "not found")
 
@@ -679,22 +732,23 @@ def verify_camera_connection(host, port):
 
 
 def verify_smarthome_connection(server_url, token):
-    target = server_url.rstrip("/") + "/api/"
     headers = {"Content-Type": "application/json"}
     if token:
         headers["Authorization"] = f"Bearer {token}"
-    request = urllib.request.Request(target, headers=headers)
-    try:
-        with urllib.request.urlopen(request, timeout=4.0) as response:
-            if response.status == 200:
-                return True, "Kết nối Home Assistant API thành công"
-            return False, f"Phản hồi mã HTTP {response.status}"
-    except urllib.error.HTTPError as error:
-        if error.code == 401:
-            return False, "Token không chính xác (401)"
-        return False, f"Lỗi HTTP {error.code}: {error.reason}"
-    except Exception as error:
-        return False, f"Lỗi kết nối tới {server_url}: {error}"
+    candidates = ["/api/", "/health", "/api/devices", "/api/hub/overview"]
+    for path in candidates:
+        target = server_url.rstrip("/") + path
+        request = urllib.request.Request(target, headers=headers)
+        try:
+            with urllib.request.urlopen(request, timeout=3.0) as response:
+                if response.status == 200:
+                    return True, "Kết nối Smarthome / Home Assistant thành công"
+        except urllib.error.HTTPError as error:
+            if error.code == 401:
+                return False, "Token không chính xác (401)"
+        except Exception:
+            pass
+    return False, f"Không thể kết nối tới {server_url}"
 
 
 def save_camera_configuration(stream_url):

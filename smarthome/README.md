@@ -42,3 +42,29 @@ Copy and edit `smarthome_config.example.json`:
 
 The agent server in `services/agent` invokes `services/smarthome/bin/smarthome`
 as a CLI tool to query status or toggle devices.
+
+## Documentation
+
+For full REST API reference, request/response schemas, and device catalogue, see:
+[`docs/smarthome-api.md`](../../docs/smarthome-api.md)
+
+## Go Backend Service
+
+The standalone Go backend server (`bin/smarthome`) manages devices directly via Home Assistant:
+
+```bash
+make smarthome                                       # Compile binary to bin/smarthome
+services/smarthome/bin/smarthome serve --port 8791   # Run backend API server
+services/smarthome/bin/smarthome status              # Query all 20 devices in JSON
+services/smarthome/bin/smarthome toggle ct_pn_nho_1  # Toggle specific switch
+services/smarthome/bin/smarthome set ct_pk_1_1 on    # Set state (on/off)
+```
+
+### REST API Endpoints
+
+- `GET /health` - Service health, gateway connection, total device count
+- `GET /api/devices` - Current list of 20 devices and real-time states
+- `GET /api/devices/{id}` - Single device details
+- `POST /api/devices/{id}/state` - Set state (`{"state": "on"|"off"}`)
+- `POST /api/devices/{id}/toggle` - Toggle current state
+- `POST /api/sync` - Force immediate synchronization with gateway

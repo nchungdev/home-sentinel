@@ -137,6 +137,20 @@ class AgentFailureTest(unittest.TestCase):
         success, message = server.verify_smarthome_connection("http://127.0.0.1:59999", "tok")
         self.assertFalse(success)
 
+    def test_arbitration_remote_mic_override(self):
+        result = server.ARBITRATOR.arbitrate({"remote_mic_active": True, "tv_screen_on": False})
+        self.assertEqual("tv", result["listening_device"])
+
+    def test_arbitration_tv_on(self):
+        result = server.ARBITRATOR.arbitrate({"tv_screen_on": True})
+        self.assertEqual("tv", result["listening_device"])
+        self.assertEqual("tv", result["speaking_device"])
+
+    def test_arbitration_tv_off_user_on_sofa(self):
+        result = server.ARBITRATOR.arbitrate({"tv_screen_on": False, "user_on_sofa": True})
+        self.assertEqual("camera", result["listening_device"])
+        self.assertEqual("camera", result["speaking_device"])
+
 
 if __name__ == "__main__":
     unittest.main()

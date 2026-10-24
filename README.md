@@ -2,11 +2,12 @@
 
 Backend services, AI servers, and background workers for the TV ecosystem:
 
-| Service | Description | Tech Stack | Status | Docs |
-|---|---|---|---|---|
-| `agent/` | Voice assistant & media hub | Python 3 (HTTP/SSE) | Active | `README.md` |
-| `camera/` | AI camera & zone presence | Python / YOLO / RTMP | In Dev | `AGENTS.md` |
-| `smarthome/` | Device coordinator & rules | Python / Home Assistant | In Dev | `AGENTS.md` |
+| Service      | Description                           | Tech Stack          | Status | Docs        |
+|--------------|---------------------------------------|---------------------|--------|-------------|
+| `agent/`     | Voice assistant & media hub           | Python 3 (HTTP/SSE) | Active | `README.md` |
+| `camera/`    | AI camera & zone presence             | Go / Python / Tapo  | Active | `AGENTS.md` |
+| `smarthome/` | Device coordinator & rules            | Go / Python / HA    | Active | `AGENTS.md` |
+| `hub/`       | Unified Home Assistant portal & agent | Go / Web / Embedded | Active | `README.md` |
 
 ## Architecture
 

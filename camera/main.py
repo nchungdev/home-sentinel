@@ -6,7 +6,9 @@ import sys
 import time
 from dispatcher import EventDispatcher
 from detector import PersonDetector
-from presence import PresenceTracker
+from motion import MotionPreFilter
+from presence import PresenceTracker, EVENT_ENTER
+from snapshot import SnapshotManager
 from stream import VideoStreamReader
 from zone import Zone
 
@@ -45,13 +47,29 @@ def main():
     modelPath = configuration.get("model", "yolov8n.pt")
     confidence = float(configuration.get("confidence_threshold", 0.5))
     webhookUrl = configuration["webhook_url"]
+    privacyBlur = bool(configuration.get("privacy_blur", False))
 
     zones = createZoneInstances(configuration.get("zones", []))
     dispatcher = EventDispatcher(webhookUrl)
-    tracker = PresenceTracker(zones, dispatcher.dispatchEvent)
+    snapshotManager = SnapshotManager(enableFacePrivacyBlur=privacyBlur)
+    motionFilter = MotionPreFilter()
     detector = PersonDetector(modelPath, confidence)
     reader = VideoStreamReader(streamUrl)
 
+    latestCapturedFrame = None
+
+    def onPresence(zoneIdentifier: str, eventType: str, metadata: dict = None):
+        if eventType == EVENT_ENTER and latestCapturedFrame is not None:
+            snapshotPath = snapshotManager.captureAndStore(
+                latestCapturedFrame,
+                zoneIdentifier
+            )
+            if metadata is not None:
+                metadata["snapshot_path"] = snapshotPath
+
+        dispatcher.dispatchEvent(zoneIdentifier, eventType, metadata)
+
+    tracker = PresenceTracker(zones, onPresence)
     shouldTerminate = False
 
     def handleSignal(signalNumber, frameObject):
@@ -68,8 +86,13 @@ def main():
         while not shouldTerminate:
             frame = reader.readLatestFrame()
             if frame is not None:
-                detectedPositions = detector.detectPersonFootPositions(frame)
-                tracker.processDetectedPoints(detectedPositions)
+                latestCapturedFrame = frame
+                hasMotion = motionFilter.evaluateMotion(frame)
+                if hasMotion:
+                    detectedPersons = detector.detectPersons(frame)
+                    tracker.processDetectedPoints(detectedPersons)
+                else:
+                    tracker.processDetectedPoints([])
 
             time.sleep(DEFAULT_LOOP_INTERVAL_SECONDS)
     finally:
