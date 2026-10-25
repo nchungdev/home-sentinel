@@ -2,12 +2,14 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"crypto/rand"
 	_ "embed"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"net"
 	"net/http"
 	"net/url"
@@ -20,6 +22,7 @@ import (
 
 	"github.com/nchungdev/home-sentinel/agent/pkg/arbitration"
 	"github.com/nchungdev/home-sentinel/agent/pkg/camstream"
+	"github.com/nchungdev/home-sentinel/agent/pkg/contracts"
 	"github.com/nchungdev/home-sentinel/agent/pkg/haclient"
 	"github.com/nchungdev/home-sentinel/agent/pkg/llm"
 	"github.com/nchungdev/home-sentinel/agent/pkg/mediabridge"
@@ -786,6 +789,242 @@ func isTVScreenOn(tvHost string) bool {
 	return strings.Contains(string(out), "mWakefulness=Awake")
 }
 
+// matchesWakeWord kiểm tra xem văn bản STT có chứa từ khóa đánh thức Duinch hay không
+// Bao gồm cả tiếng Anh lẫn các biến thể phát âm / ghi nhận tiếng Việt (đu in, đu inh, đuyn,...)
+func matchesWakeWord(text string) (bool, string) {
+	lower := strings.ToLower(text)
+	wakeWords := []string{
+		"duinch ơi", "duinch oi", "duinch",
+		"đu in ơi", "đu in oi", "đu in",
+		"đu inh ơi", "đu inh oi", "đu inh",
+		"đuyn ơi", "đuyn oi", "đuyn",
+		"đo in ơi", "đo in oi", "đo in",
+		"đuin ơi", "đuin oi", "đuin",
+		"du in ơi", "du in oi", "du in",
+		"du inh ơi", "du inh oi", "du inh",
+		"duy in ơi", "duy in oi", "duy in",
+	}
+
+	for _, w := range wakeWords {
+		if idx := strings.Index(lower, w); idx != -1 {
+			// Tách bỏ từ khóa gọi, lấy nội dung câu hỏi phía sau (nếu có)
+			after := strings.TrimSpace(lower[idx+len(w):])
+			after = strings.TrimPrefix(after, ",")
+			after = strings.TrimPrefix(after, "ơi")
+			after = strings.TrimPrefix(after, "oi")
+			after = strings.TrimSpace(after)
+			return true, after
+		}
+	}
+	return false, ""
+}
+
+// askAgentQuery gửi câu hỏi đến Orchestrator và trả về câu trả lời bằng giọng nói
+func askAgentQuery(server *Server, question string) string {
+	orch := buildServerOrchestrator(server)
+	reqID := fmt.Sprintf("cam-%d", time.Now().UnixNano())
+	inputEv := &contracts.InputEvent{
+		RequestID: reqID,
+		SessionID: "camera_intercom",
+		Text:      question,
+		Locale:    "vi-VN",
+		InputType: "voice",
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	pres, err := orch.Process(ctx, inputEv, nil)
+	if err != nil || pres == nil || pres.SpeechText == "" {
+		return "Em đây ạ, anh cần giúp gì thế anh?"
+	}
+
+	return pres.SpeechText
+}
+
+// startCameraWakeWordListener lắng nghe âm thanh từ microphone của Camera Tapo trong nền
+func startCameraWakeWordListener(server *Server) {
+	go func() {
+		for {
+			var cfg CameraConfigData
+			if data, err := os.ReadFile("sentinel_camera_config.json"); err == nil {
+				_ = json.Unmarshal(data, &cfg)
+			}
+			if cfg.IP == "" || cfg.Password == "" {
+				time.Sleep(10 * time.Second)
+				continue
+			}
+
+			rtspURL := fmt.Sprintf("rtsp://%s:%s@%s:554/stream1", cfg.Username, cfg.Password, cfg.IP)
+			cmd := exec.Command("ffmpeg", "-rtsp_transport", "tcp", "-i", rtspURL, "-f", "s16le", "-ar", "16000", "-ac", "1", "-")
+			stdout, err := cmd.StdoutPipe()
+			if err != nil {
+				time.Sleep(5 * time.Second)
+				continue
+			}
+			if err := cmd.Start(); err != nil {
+				time.Sleep(5 * time.Second)
+				continue
+			}
+
+			fmt.Println("[WakeWord] Bắt đầu giám sát từ khóa 'Duinch ơi / Đu in...' qua Mic Camera Tapo C200...")
+
+			buf := make([]byte, 3200) // 100ms
+			var speechBuffer []byte
+			silenceChunks := 0
+			isSpeaking := false
+
+			for {
+				n, err := stdout.Read(buf)
+				if err != nil || n < 2 {
+					break
+				}
+
+				// Tính năng lượng âm thanh (RMS Energy)
+				var sum float64
+				samples := n / 2
+				for i := 0; i < samples; i++ {
+					val := int16(buf[2*i]) | (int16(buf[2*i+1]) << 8)
+					sum += float64(val) * float64(val)
+				}
+				rms := math.Sqrt(sum / float64(samples))
+
+				// Ngưỡng phát hiện tiếng nói (Voice Activity Threshold)
+				if rms > 120.0 {
+					isSpeaking = true
+					silenceChunks = 0
+					speechBuffer = append(speechBuffer, buf[:n]...)
+				} else if isSpeaking {
+					silenceChunks++
+					speechBuffer = append(speechBuffer, buf[:n]...)
+
+					// Khi người nói dứt câu (ngừng nói ~800ms)
+					if silenceChunks > 8 {
+						isSpeaking = false
+						if len(speechBuffer) > 16000*2*1 { // Ít nhất 1 giây âm thanh
+							audioToTranscribe := speechBuffer
+							speechBuffer = nil
+
+							go func(rawPCM []byte) {
+								text, terr := transcribePCM(rawPCM)
+								if terr != nil || text == "" {
+									return
+								}
+								fmt.Printf("[Mic Camera Heard]: \"%s\"\n", text)
+
+								matched, query := matchesWakeWord(text)
+								if matched {
+									fmt.Printf("🎯 [WakeWord Triggered] Duinch! Query: \"%s\"\n", query)
+
+									// Nếu chỉ gọi "Duinch ơi" mà chưa có lệnh
+									if query == "" {
+										_ = server.speakOnCamera("Dạ, em nghe đây ạ!", "female")
+										// Thu âm câu lệnh tiếp theo trong 4 giây
+										time.Sleep(2 * time.Second)
+										followUp, ferr := recordAndTranscribe(cfg, 4)
+										if ferr == nil && followUp != "" {
+											query = followUp
+										}
+									}
+
+									// Xử lý câu hỏi hoặc yêu cầu
+									if query != "" {
+										lowerQuery := strings.ToLower(query)
+										if strings.Contains(lowerQuery, "mở tv") || strings.Contains(lowerQuery, "bật tv") {
+											_ = server.speakOnCamera("Dạ, em mở TV ngay đây ạ!", "female")
+											_ = turnOnTV("192.168.1.8")
+										} else if strings.Contains(lowerQuery, "tắt tv") {
+											_ = server.speakOnCamera("Dạ, em tắt TV đây ạ!", "female")
+											adbBin := "/home/chungnh/bin/adb"
+											_ = exec.Command(adbBin, "-s", "192.168.1.8:5555", "shell", "input keyevent 26").Run()
+										} else {
+											reply := askAgentQuery(server, query)
+											_ = server.speakOnCamera(reply, "female")
+										}
+									}
+								}
+							}(audioToTranscribe)
+						} else {
+							speechBuffer = nil
+						}
+					}
+				}
+			}
+
+			_ = cmd.Process.Kill()
+			time.Sleep(3 * time.Second)
+		}
+	}()
+}
+
+// transcribePCM gửi trực tiếp dữ liệu PCM sang Faster-Whisper trên cổng :10300
+func transcribePCM(pcm []byte) (string, error) {
+	conn, err := net.DialTimeout("tcp", "127.0.0.1:10300", 3*time.Second)
+	if err != nil {
+		return "", err
+	}
+	defer conn.Close()
+
+	tData, _ := json.Marshal(map[string]interface{}{"name": "base-int8", "language": "vi"})
+	tHeader, _ := json.Marshal(map[string]interface{}{"type": "transcribe", "version": "1.10.2", "data_length": len(tData)})
+	conn.Write(append(tHeader, '\n'))
+	conn.Write(tData)
+
+	sData, _ := json.Marshal(map[string]interface{}{"rate": 16000, "width": 2, "channels": 1})
+	sHeader, _ := json.Marshal(map[string]interface{}{"type": "audio-start", "version": "1.10.2", "data_length": len(sData)})
+	conn.Write(append(sHeader, '\n'))
+	conn.Write(sData)
+
+	chunkSize := 2048
+	for i := 0; i < len(pcm); i += chunkSize {
+		end := i + chunkSize
+		if end > len(pcm) {
+			end = len(pcm)
+		}
+		cData, _ := json.Marshal(map[string]interface{}{"rate": 16000, "width": 2, "channels": 1})
+		cHeader, _ := json.Marshal(map[string]interface{}{"type": "audio-chunk", "version": "1.10.2", "data_length": len(cData), "payload_length": end - i})
+		conn.Write(append(cHeader, '\n'))
+		conn.Write(cData)
+		conn.Write(pcm[i:end])
+	}
+
+	stopHeader, _ := json.Marshal(map[string]interface{}{"type": "audio-stop", "version": "1.10.2"})
+	conn.Write(append(stopHeader, '\n'))
+
+	reader := bufio.NewReader(conn)
+	for {
+		line, err := reader.ReadBytes('\n')
+		if err != nil {
+			break
+		}
+		var h struct {
+			Type          string `json:"type"`
+			DataLength    int    `json:"data_length,omitempty"`
+			PayloadLength int    `json:"payload_length,omitempty"`
+		}
+		_ = json.Unmarshal(line, &h)
+
+		var dataBytes []byte
+		if h.DataLength > 0 {
+			dataBytes = make([]byte, h.DataLength)
+			_, _ = io.ReadFull(reader, dataBytes)
+		}
+		if h.PayloadLength > 0 {
+			pBytes := make([]byte, h.PayloadLength)
+			_, _ = io.ReadFull(reader, pBytes)
+		}
+
+		if h.Type == "transcript" {
+			var res struct {
+				Text string `json:"text"`
+			}
+			_ = json.Unmarshal(dataBytes, &res)
+			return strings.TrimSpace(res.Text), nil
+		}
+	}
+	return "", fmt.Errorf("no transcript")
+}
+
 func turnOnTV(tvHost string) error {
 	adbBin := "/home/chungnh/bin/adb"
 	if _, err := os.Stat(adbBin); err != nil {
@@ -930,6 +1169,7 @@ func (s *Server) handleCameraSpeak(w http.ResponseWriter, r *http.Request) {
 func main() {
 	server := NewServer()
 	server.StartDiscoveryResponder()
+	startCameraWakeWordListener(server)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
