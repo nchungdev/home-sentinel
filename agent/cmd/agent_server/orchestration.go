@@ -60,25 +60,49 @@ func (s *serverHAResolver) ResolveEntity(
 		return nil, err
 	}
 	targetNormalized := strings.ToLower(strings.TrimSpace(targetLabel))
+	words := strings.Fields(targetNormalized)
+	var bestMatch *resolution.HAEntityMatch
+	var maxScore int
+
 	for _, st := range states {
 		fn, _ := st.Attributes["friendly_name"].(string)
-		if strings.Contains(strings.ToLower(fn), targetNormalized) ||
-			strings.Contains(strings.ToLower(st.EntityID), targetNormalized) {
-			parts := strings.Split(st.EntityID, ".")
-			domain := parts[0]
-			service := "turn_on"
-			if action == "off" || action == "tắt" {
-				service = "turn_off"
+		fnLower := strings.ToLower(fn)
+		eidLower := strings.ToLower(st.EntityID)
+
+		if strings.Contains(fnLower, targetNormalized) || strings.Contains(eidLower, targetNormalized) {
+			return makeHAMatch(st.EntityID, fn, action), nil
+		}
+
+		score := 0
+		for _, w := range words {
+			if len(w) > 1 && strings.Contains(fnLower, w) {
+				score++
 			}
-			return &resolution.HAEntityMatch{
-				EntityID: st.EntityID,
-				Domain:   domain,
-				Service:  service,
-				Name:     fn,
-			}, nil
+		}
+		if score > maxScore && score >= 2 {
+			maxScore = score
+			bestMatch = makeHAMatch(st.EntityID, fn, action)
 		}
 	}
+	if bestMatch != nil {
+		return bestMatch, nil
+	}
 	return nil, nil
+}
+
+func makeHAMatch(entityID, fn, action string) *resolution.HAEntityMatch {
+	parts := strings.Split(entityID, ".")
+	domain := parts[0]
+	service := "turn_on"
+	if action == "off" || action == "tắt" {
+		service = "turn_off"
+	}
+	return &resolution.HAEntityMatch{
+		EntityID: entityID,
+		Domain:   domain,
+		Service:  service,
+		Name:     fn,
+	}
 }
 
 type serverExecutionEngine struct {
