@@ -22,6 +22,8 @@ import (
 	"github.com/nchungdev/home-sentinel/agent/pkg/llm"
 	"github.com/nchungdev/home-sentinel/agent/pkg/mediabridge"
 	"github.com/nchungdev/home-sentinel/agent/pkg/onvifscan"
+	"github.com/nchungdev/home-sentinel/agent/pkg/proactive"
+	"github.com/nchungdev/home-sentinel/agent/pkg/transport"
 	"github.com/nchungdev/home-sentinel/web"
 )
 
@@ -923,6 +925,13 @@ func main() {
 	mux.HandleFunc("/api/camera/detection", server.handleCameraDetection)
 	mux.HandleFunc("/api/camera/speak", server.handleCameraSpeak)
 	mux.HandleFunc("/api/ha/config", server.handleHAConfig)
+
+	transportCfg := transport.ConfigFromEnv()
+	if transportCfg.Token == "" {
+		transportCfg.Token = server.Token
+	}
+	suggestionEngine := proactive.NewSuggestionEngine(nil, nil)
+	mux.Handle("/v2/suggestions", transport.NewV2SuggestionsHandler(suggestionEngine, &transportCfg))
 
 	mux.HandleFunc("/notify", func(w http.ResponseWriter, r *http.Request) {
 		var payload map[string]interface{}
