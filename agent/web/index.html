@@ -525,83 +525,83 @@
       box-shadow: 0 6px 18px rgba(79, 70, 229, 0.45);
     }
 
-    /* PRIVACY & DETECTION TOGGLE BUTTONS (UI/UX PRO MAX) */
+    /* SMART DETECTION & PRIVACY STATUS BADGES (READ-ONLY) */
     .detection-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 8px;
       width: 100%;
     }
-    .btn-toggle-row {
+    .status-card-row {
       width: 100%;
-      padding: 10px 14px;
+      padding: 9px 12px;
       border-radius: 10px;
       background: rgba(255, 255, 255, 0.02);
       border: 1px solid var(--border);
       color: var(--text-bright);
-      font-size: 12.5px;
+      font-size: 12px;
       font-weight: 500;
-      cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      user-select: none;
     }
-    .btn-toggle-row:hover {
-      background: rgba(255, 255, 255, 0.05);
-      border-color: rgba(99, 102, 241, 0.4);
-    }
-    .btn-toggle-row.full-width {
+    .status-card-row.full-width {
       grid-column: span 2;
     }
-    .toggle-switch-sm {
-      width: 32px;
-      height: 18px;
-      background: #1e2433;
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      border-radius: 20px;
-      position: relative;
+    .status-badge-val {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 6px;
+      letter-spacing: 0.3px;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-muted);
+      border: 1px solid rgba(255, 255, 255, 0.08);
       transition: all 0.2s ease;
-      flex-shrink: 0;
     }
-    .toggle-switch-sm::after {
+    .status-badge-val.on {
+      background: rgba(16, 185, 129, 0.15);
+      color: #10b981;
+      border-color: rgba(16, 185, 129, 0.35);
+      box-shadow: 0 0 8px rgba(16, 185, 129, 0.2);
+    }
+    .status-badge-val.on::before {
       content: '';
-      position: absolute;
-      width: 12px;
-      height: 12px;
-      background: #6b7280;
+      width: 6px;
+      height: 6px;
       border-radius: 50%;
-      top: 2px;
-      left: 2px;
-      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      background: #10b981;
+      box-shadow: 0 0 6px #10b981;
     }
-    .btn-toggle-row.active {
-      background: rgba(99, 102, 241, 0.08);
-      border-color: rgba(99, 102, 241, 0.5);
+    .status-badge-val.off {
+      background: rgba(107, 114, 128, 0.1);
+      color: #9ca3af;
+      border-color: rgba(107, 114, 128, 0.2);
     }
-    .btn-toggle-row.active .toggle-switch-sm {
-      background: #4f46e5;
-      border-color: #6366f1;
-      box-shadow: 0 0 8px rgba(99, 102, 241, 0.4);
+    .status-badge-val.off::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #6b7280;
     }
-    .btn-toggle-row.active .toggle-switch-sm::after {
-      background: #ffffff;
-      transform: translateX(14px);
+    .status-badge-val.privacy-on {
+      background: rgba(239, 68, 68, 0.15);
+      color: #ef4444;
+      border-color: rgba(239, 68, 68, 0.35);
+      box-shadow: 0 0 8px rgba(239, 68, 68, 0.2);
     }
-
-    /* Privacy mode active alert */
-    .btn-toggle-row.privacy.active {
-      background: rgba(239, 68, 68, 0.08);
-      border-color: rgba(239, 68, 68, 0.5);
-    }
-    .btn-toggle-row.privacy.active .toggle-switch-sm {
+    .status-badge-val.privacy-on::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
       background: #ef4444;
-      border-color: #ef4444;
-      box-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
-    }
-    .btn-toggle-row.privacy.active .toggle-switch-sm::after {
-      background: #ffffff;
-      transform: translateX(14px);
+      box-shadow: 0 0 6px #ef4444;
     }
 
     /* COMPACT VOICE / CALL BAR CHO CAMERA (UI/UX PRO MAX DESIGN) */
@@ -1294,52 +1294,52 @@
             </div>
           </div>
 
-          <!-- CỤM TÍNH NĂNG SMART DETECTION & PRIVACY (UI/UX PRO MAX) -->
+          <!-- CỤM TÍNH NĂNG SMART DETECTION & PRIVACY (READ-ONLY STATUS) -->
           <div class="detection-grid">
             <!-- Chế độ riêng tư (Full width) -->
-            <button class="btn-toggle-row privacy full-width" id="btnPrivacyToggle" onclick="togglePrivacy()">
+            <div class="status-card-row full-width" id="rowPrivacy">
               <div style="display:flex; align-items:center; gap:8px;">
-                <span id="privacyIcon" style="font-size:16px;">👁️</span>
+                <span id="privacyIcon" style="font-size:15px;">👁️</span>
                 <span style="font-weight:600;" id="privacyTitle">Chế độ riêng tư (Tắt ghi hình)</span>
               </div>
-              <div class="toggle-switch-sm" id="privacySwitch"></div>
-            </button>
+              <span class="status-badge-val off" id="statusPrivacy">TẮT</span>
+            </div>
 
             <!-- 1. Motion Detection -->
-            <button class="btn-toggle-row" id="btnToggleMotion" onclick="toggleDetection('motion')">
+            <div class="status-card-row" id="rowMotion">
               <div style="display:flex; align-items:center; gap:8px;">
                 <span>🏃</span>
                 <span>Phát hiện C.Động</span>
               </div>
-              <div class="toggle-switch-sm" id="switchMotion"></div>
-            </button>
+              <span class="status-badge-val off" id="statusMotion">...</span>
+            </div>
 
             <!-- 2. Motion Tracking -->
-            <button class="btn-toggle-row" id="btnToggleTracking" onclick="toggleDetection('tracking')">
+            <div class="status-card-row" id="rowTracking">
               <div style="display:flex; align-items:center; gap:8px;">
                 <span>🎯</span>
                 <span>Bám theo C.Động</span>
               </div>
-              <div class="toggle-switch-sm" id="switchTracking"></div>
-            </button>
+              <span class="status-badge-val off" id="statusTracking">...</span>
+            </div>
 
             <!-- 3. Person AI Detection -->
-            <button class="btn-toggle-row" id="btnTogglePerson" onclick="toggleDetection('person')">
+            <div class="status-card-row" id="rowPerson">
               <div style="display:flex; align-items:center; gap:8px;">
                 <span>👤</span>
                 <span>Nhận diện Người</span>
               </div>
-              <div class="toggle-switch-sm" id="switchPerson"></div>
-            </button>
+              <span class="status-badge-val off" id="statusPerson">...</span>
+            </div>
 
             <!-- 4. Baby Crying Sound -->
-            <button class="btn-toggle-row" id="btnToggleBabyCry" onclick="toggleDetection('baby_cry')">
+            <div class="status-card-row" id="rowBabyCry">
               <div style="display:flex; align-items:center; gap:8px;">
                 <span>👶</span>
                 <span>Tiếng em bé khóc</span>
               </div>
-              <div class="toggle-switch-sm" id="switchBabyCry"></div>
-            </button>
+              <span class="status-badge-val off" id="statusBabyCry">...</span>
+            </div>
           </div>
         </div>
 
@@ -2228,7 +2228,7 @@
       input.focus();
     }
 
-    // SMART DETECTION TOGGLE STATES
+    // SMART DETECTION & PRIVACY STATUSES (READ-ONLY)
     const detectionStates = {
       motion: false,
       tracking: false,
@@ -2243,34 +2243,38 @@
         const res = await fetch('/api/camera/detection');
         const data = await res.json();
         if (data.ok && data.states) {
-          const btnMap = {
-            motion: 'btnToggleMotion',
-            tracking: 'btnToggleTracking',
-            person: 'btnTogglePerson',
-            baby_cry: 'btnToggleBabyCry'
+          const badgeMap = {
+            motion: 'statusMotion',
+            tracking: 'statusTracking',
+            person: 'statusPerson',
+            baby_cry: 'statusBabyCry'
           };
           for (const [k, v] of Object.entries(data.states)) {
             if (k in detectionStates) {
               detectionStates[k] = v;
-              const btn = document.getElementById(btnMap[k]);
-              if (btn) {
-                if (v) btn.classList.add('active');
-                else btn.classList.remove('active');
+              const badge = document.getElementById(badgeMap[k]);
+              if (badge) {
+                if (v) {
+                  badge.className = 'status-badge-val on';
+                  badge.textContent = 'BẬT';
+                } else {
+                  badge.className = 'status-badge-val off';
+                  badge.textContent = 'TẮT';
+                }
               }
             } else if (k === 'privacy') {
               isPrivacyOn = v;
-              const pBtn = document.getElementById('btnPrivacyToggle');
+              const pBadge = document.getElementById('statusPrivacy');
               const pIcon = document.getElementById('privacyIcon');
-              const pTitle = document.getElementById('privacyTitle');
-              if (pBtn) {
+              if (pBadge) {
                 if (v) {
-                  pBtn.classList.add('active');
+                  pBadge.className = 'status-badge-val privacy-on';
+                  pBadge.textContent = 'BẬT';
                   if (pIcon) pIcon.textContent = '🔒';
-                  if (pTitle) pTitle.innerHTML = 'Chế độ riêng tư <span style="color:#ef4444; font-size:12px; margin-left:4px;">(BẬT)</span>';
                 } else {
-                  pBtn.classList.remove('active');
+                  pBadge.className = 'status-badge-val off';
+                  pBadge.textContent = 'TẮT';
                   if (pIcon) pIcon.textContent = '👁️';
-                  if (pTitle) pTitle.innerHTML = 'Chế độ riêng tư <span style="color:var(--text-muted); font-size:12px; margin-left:4px;">(TẮT)</span>';
                 }
               }
             }
@@ -2278,70 +2282,6 @@
         }
       } catch (e) {
         console.warn('Load detection states error:', e);
-      }
-    }
-
-    async function toggleDetection(feature) {
-      const btnMap = {
-        motion: 'btnToggleMotion',
-        tracking: 'btnToggleTracking',
-        person: 'btnTogglePerson',
-        baby_cry: 'btnToggleBabyCry'
-      };
-      const btn = document.getElementById(btnMap[feature]);
-      if (!btn) return;
-
-      const newState = !detectionStates[feature];
-      btn.disabled = true;
-
-      const log = document.getElementById('termLog');
-      const time = new Date().toLocaleTimeString();
-      log.textContent += `\n[${time}] Cập nhật Detection [${feature}]: ${newState ? 'BẬT' : 'TẮT'}...`;
-
-      try {
-        const res = await fetch('/api/camera/detection', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({ feature: feature, enabled: newState })
-        });
-        const data = await res.json();
-        if (data.ok) {
-          detectionStates[feature] = newState;
-          if (newState) {
-            btn.classList.add('active');
-          } else {
-            btn.classList.remove('active');
-          }
-          log.textContent += `\n ➔ Thành công: ${data.message}`;
-        } else {
-          log.textContent += `\n ➔ Thất bại: ${data.error}`;
-        }
-      } catch (e) {
-        log.textContent += `\n ➔ Lỗi kết nối: ${e.message}`;
-      } finally {
-        btn.disabled = false;
-        log.scrollTop = log.scrollHeight;
-      }
-    }
-    async function togglePrivacy() {
-      const btn = document.getElementById('btnPrivacyToggle');
-      const icon = document.getElementById('privacyIcon');
-      const title = document.getElementById('privacyTitle');
-      const newState = !isPrivacyOn;
-      btn.disabled = true;
-
-      await callCamera('privacy', { enabled: newState });
-
-      isPrivacyOn = newState;
-      btn.disabled = false;
-      if (isPrivacyOn) {
-        btn.classList.add('active');
-        icon.textContent = '🔒';
-        title.innerHTML = 'Chế độ riêng tư <span style="color:#ef4444; font-size:12px; margin-left:4px;">(BẬT)</span>';
-      } else {
-        btn.classList.remove('active');
-        icon.textContent = '👁️';
-        title.innerHTML = 'Chế độ riêng tư <span style="color:var(--text-muted); font-size:12px; margin-left:4px;">(TẮT)</span>';
       }
     }
 
