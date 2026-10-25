@@ -844,18 +844,101 @@
       transform: scale(0.94);
     }
 
-    .log-terminal {
-      background: #06070a;
+    /* Card Container Base */
+    .card {
+      background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 10px 14px;
+      border-radius: var(--radius);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+      display: flex;
+      flex-direction: column;
+    }
+    .card-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-bright);
+      letter-spacing: -0.2px;
+    }
+
+    /* TERMINAL CONSOLE LOG (SEAMLESS INTEGRATION) */
+    .terminal-card {
+      background: linear-gradient(180deg, rgba(20, 23, 34, 0.95) 0%, rgba(13, 16, 25, 0.98) 100%);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      width: 100%;
+    }
+    .terminal-header {
+      padding: 10px 16px;
+      background: rgba(255, 255, 255, 0.02);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .terminal-title-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .terminal-dots {
+      display: flex;
+      gap: 5px;
+      align-items: center;
+    }
+    .terminal-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+    .terminal-dot.red { background: #ef4444; opacity: 0.8; }
+    .terminal-dot.yellow { background: #f59e0b; opacity: 0.8; }
+    .terminal-dot.green { background: #10b981; opacity: 0.8; }
+    .terminal-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-bright);
       font-family: ui-monospace, Menlo, Consolas, monospace;
+      letter-spacing: -0.2px;
+    }
+    .terminal-badge {
+      font-size: 10px;
+      padding: 1px 6px;
+      border-radius: 4px;
+      background: rgba(16, 185, 129, 0.12);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    .terminal-action {
       font-size: 11px;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 3px 8px;
+      border-radius: 4px;
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .terminal-action:hover {
+      color: var(--text-bright);
+      background: rgba(255, 255, 255, 0.06);
+    }
+    .log-terminal {
+      background: #07090e;
+      padding: 12px 16px;
+      font-family: ui-monospace, Menlo, Consolas, monospace;
+      font-size: 11.5px;
       color: #10b981;
       height: 140px;
       overflow-y: auto;
-      line-height: 1.5;
+      line-height: 1.6;
       white-space: pre-wrap;
+      border: none;
     }
 
     /* 4. CLIENT LOGS VIEW */
@@ -1144,10 +1227,22 @@
           </div>
         </div>
 
-        <div class="card" style="padding: 14px 18px; gap: 8px;">
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <div class="card-title" style="font-size: 11px;">Terminal Console Log</div>
-            <span style="font-size:11px; color:var(--text-muted); cursor:pointer;" onclick="document.getElementById('termLog').textContent='[Cleared]';">Xóa log</span>
+        <!-- TERMINAL CONSOLE LOG (CANH ĐỀU VỚI KHỐI CAMERA SCREEN) -->
+        <div class="terminal-card">
+          <div class="terminal-header">
+            <div class="terminal-title-group">
+              <div class="terminal-dots">
+                <span class="terminal-dot red"></span>
+                <span class="terminal-dot yellow"></span>
+                <span class="terminal-dot green"></span>
+              </div>
+              <span class="terminal-title">terminal.log</span>
+              <span class="terminal-badge">LIVE</span>
+            </div>
+            <span class="terminal-action" onclick="document.getElementById('termLog').textContent='[Cleared]';">
+              <svg style="width:12px; height:12px; fill:currentColor;" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+              Xóa log
+            </span>
           </div>
           <div class="log-terminal" id="termLog">[Ready] Sentinel Camera Streaming sẵn sàng.</div>
         </div>
