@@ -44,6 +44,9 @@ type Server struct {
 	LogsMutex      sync.RWMutex
 	eventSubscribers map[chan string]struct{}
 	eventSubMutex    sync.Mutex
+
+	lastTVPromptTime time.Time
+	promptMutex      sync.Mutex
 }
 
 type ClientLogEntry struct {
@@ -689,6 +692,95 @@ func (s *Server) handleCameraDetection(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (s *Server) speakOnCamera(text string, voice string) error {
+	configPath := "sentinel_camera_config.json"
+	var cfg CameraConfigData
+	if data, err := os.ReadFile(configPath); err == nil {
+		_ = json.Unmarshal(data, &cfg)
+	}
+
+	effectivePass := cfg.CloudPassword
+	if effectivePass == "" {
+		effectivePass = cfg.Password
+	}
+	if cfg.IP == "" || effectivePass == "" {
+		return fmt.Errorf("chưa cấu hình IP hoặc mật khẩu Camera")
+	}
+
+	selectedVoice := "vi-VN-HoaiMyNeural"
+	if voice == "male" {
+		selectedVoice = "vi-VN-NamMinhNeural"
+	}
+
+	tmpMp3 := fmt.Sprintf("/tmp/tts_%d.mp3", time.Now().UnixNano())
+	tmpWav := fmt.Sprintf("/tmp/tts_%d.wav", time.Now().UnixNano())
+	defer os.Remove(tmpMp3)
+	defer os.Remove(tmpWav)
+
+	ttsSuccess := false
+	var lastTTSErr error
+
+	for attempt := 0; attempt < 2; attempt++ {
+		ttsCmd := exec.Command("edge-tts", "--voice", selectedVoice, "--text", text, "--write-media", tmpMp3)
+		out, err := ttsCmd.CombinedOutput()
+		if err == nil {
+			if stat, serr := os.Stat(tmpMp3); serr == nil && stat.Size() > 0 {
+				ttsSuccess = true
+				break
+			}
+		}
+		lastTTSErr = fmt.Errorf("%v (%s)", err, strings.TrimSpace(string(out)))
+		time.Sleep(150 * time.Millisecond)
+	}
+
+	if !ttsSuccess {
+		encodedText := url.QueryEscape(text)
+		googleURL := fmt.Sprintf("https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=vi&q=%s", encodedText)
+		curlCmd := exec.Command("curl", "-sL", "-A", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)", googleURL, "-o", tmpMp3)
+		if err := curlCmd.Run(); err == nil {
+			if stat, serr := os.Stat(tmpMp3); serr == nil && stat.Size() > 0 {
+				ttsSuccess = true
+			}
+		}
+	}
+
+	if !ttsSuccess {
+		return fmt.Errorf("lỗi tạo giọng nói TTS: %v", lastTTSErr)
+	}
+
+	ffmpegCmd := exec.Command("ffmpeg", "-y", "-i", tmpMp3, "-af", "adelay=600|600", "-ar", "8000", "-ac", "1", "-c:a", "pcm_alaw", tmpWav)
+	if err := ffmpegCmd.Run(); err != nil {
+		return fmt.Errorf("lỗi xử lý audio ffmpeg: %v", err)
+	}
+
+	speakerBin := "/home/chungnh/home-sentinel/bin/tapo_speaker"
+	tapoURL := fmt.Sprintf("tapo://%s@%s:8800", effectivePass, cfg.IP)
+	spkCmd := exec.Command(speakerBin, tapoURL, tmpWav)
+	out, err := spkCmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("lỗi phát loa Camera: %v (%s)", err, strings.TrimSpace(string(out)))
+	}
+	return nil
+}
+
+func isTVScreenOn(tvHost string) bool {
+	adbBin := "/home/chungnh/bin/adb"
+	if _, err := os.Stat(adbBin); err != nil {
+		adbBin = "adb"
+	}
+	target := tvHost
+	if !strings.Contains(target, ":") {
+		target = target + ":5555"
+	}
+
+	cmd := exec.Command(adbBin, "-s", target, "shell", "dumpsys power | grep mWakefulness=")
+	out, err := cmd.Output()
+	if err != nil {
+		return false
+	}
+	return strings.Contains(string(out), "mWakefulness=Awake")
+}
+
 func (s *Server) handleCameraSpeak(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	if r.Method != http.MethodPost {
@@ -711,91 +803,10 @@ func (s *Server) handleCameraSpeak(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	configPath := "sentinel_camera_config.json"
-	var cfg CameraConfigData
-	if data, err := os.ReadFile(configPath); err == nil {
-		_ = json.Unmarshal(data, &cfg)
-	}
-
-	effectivePass := cfg.CloudPassword
-	if effectivePass == "" {
-		effectivePass = cfg.Password
-	}
-	if cfg.IP == "" || effectivePass == "" {
+	if err := s.speakOnCamera(text, req.Voice); err != nil {
 		_ = json.NewEncoder(w).Encode(map[string]interface{}{
 			"ok":    false,
-			"error": "Chưa cấu hình IP hoặc mật khẩu Camera",
-		})
-		return
-	}
-
-	// 1. Tạo âm thanh MP3 (Ưu tiên edge-tts chất lượng cao, tự động thử lại hoặc fallback Google TTS nếu Microsoft ngắt kết nối)
-	voice := "vi-VN-HoaiMyNeural"
-	if req.Voice == "male" {
-		voice = "vi-VN-NamMinhNeural"
-	}
-
-	tmpMp3 := fmt.Sprintf("/tmp/tts_%d.mp3", time.Now().UnixNano())
-	tmpWav := fmt.Sprintf("/tmp/tts_%d.wav", time.Now().UnixNano())
-	defer os.Remove(tmpMp3)
-	defer os.Remove(tmpWav)
-
-	ttsSuccess := false
-	var lastTTSErr error
-
-	// Thử edge-tts tối đa 2 lần
-	for attempt := 0; attempt < 2; attempt++ {
-		ttsCmd := exec.Command("edge-tts", "--voice", voice, "--text", text, "--write-media", tmpMp3)
-		out, err := ttsCmd.CombinedOutput()
-		if err == nil {
-			if stat, serr := os.Stat(tmpMp3); serr == nil && stat.Size() > 0 {
-				ttsSuccess = true
-				break
-			}
-		}
-		lastTTSErr = fmt.Errorf("%v (%s)", err, strings.TrimSpace(string(out)))
-		time.Sleep(150 * time.Millisecond)
-	}
-
-	// Nếu edge-tts không trả về audio (Microsoft rate limit / NoAudioReceived), fallback sang Google Translate TTS
-	if !ttsSuccess {
-		encodedText := url.QueryEscape(text)
-		googleURL := fmt.Sprintf("https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=vi&q=%s", encodedText)
-		curlCmd := exec.Command("curl", "-sL", "-A", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)", googleURL, "-o", tmpMp3)
-		if err := curlCmd.Run(); err == nil {
-			if stat, serr := os.Stat(tmpMp3); serr == nil && stat.Size() > 0 {
-				ttsSuccess = true
-			}
-		}
-	}
-
-	if !ttsSuccess {
-		_ = json.NewEncoder(w).Encode(map[string]interface{}{
-			"ok":    false,
-			"error": fmt.Sprintf("Lỗi tạo giọng nói TTS: %v", lastTTSErr),
-		})
-		return
-	}
-
-	// 2. Chuyển đổi sang chuẩn Alaw 8000Hz PCM cho Tapo Speaker, chèn 600ms khoảng lặng ở đầu để tránh mất chữ đầu (do buffer kết nối loa)
-	ffmpegCmd := exec.Command("ffmpeg", "-y", "-i", tmpMp3, "-af", "adelay=600|600", "-ar", "8000", "-ac", "1", "-c:a", "pcm_alaw", tmpWav)
-	if err := ffmpegCmd.Run(); err != nil {
-		_ = json.NewEncoder(w).Encode(map[string]interface{}{
-			"ok":    false,
-			"error": fmt.Sprintf("Lỗi xử lý audio (ffmpeg): %v", err),
-		})
-		return
-	}
-
-	// 3. Gọi tapo_speaker phát trực tiếp lên loa camera port 8800
-	speakerBin := "/home/chungnh/home-sentinel/bin/tapo_speaker"
-	tapoURL := fmt.Sprintf("tapo://%s@%s:8800", effectivePass, cfg.IP)
-	spkCmd := exec.Command(speakerBin, tapoURL, tmpWav)
-	out, err := spkCmd.CombinedOutput()
-	if err != nil {
-		_ = json.NewEncoder(w).Encode(map[string]interface{}{
-			"ok":    false,
-			"error": fmt.Sprintf("Lỗi phát loa Camera: %v (%s)", err, strings.TrimSpace(string(out))),
+			"error": err.Error(),
 		})
 		return
 	}
@@ -878,11 +889,38 @@ func main() {
 			fn, _ := payload["friendly_name"].(string)
 			et, _ := payload["event_type"].(string)
 			st, _ := payload["state"].(string)
+			eid, _ := payload["entity_id"].(string)
 			summary = fmt.Sprintf("📡 HA Event [%s]: %s (trạng thái: %s)", et, fn, st)
 			if fn == "" {
 				fn = "Camera Phòng Khách"
 			}
 			terminalLogMsg = fmt.Sprintf("[%s] 🚨 CẢNH BÁO: %s - Phát hiện người/chuyển động! (trạng thái: %s)", nowStr, fn, st)
+
+			// Logic Proactive: Khi phát hiện Người (hoặc chuyển động) mà TV đang TẮT
+			isPersonOrMotion := strings.Contains(eid, "person") || strings.Contains(eid, "motion") || et == "person_detected"
+			if isPersonOrMotion && st == "on" {
+				go func() {
+					tvHost := "192.168.1.8"
+					server.promptMutex.Lock()
+					// Cooldown 15 phút để tránh hỏi liên tục
+					if time.Since(server.lastTVPromptTime) < 15*time.Minute {
+						server.promptMutex.Unlock()
+						return
+					}
+					// Kiểm tra màn hình TV xem có đang BẬT không
+					if isTVScreenOn(tvHost) {
+						server.promptMutex.Unlock()
+						return
+					}
+					server.lastTVPromptTime = time.Now()
+					server.promptMutex.Unlock()
+
+					// TV đang TẮT và có người -> Phát lời chào qua Camera Tapo
+					promptText := "Anh có muốn xem TV không? Em mở giúp anh nhé"
+					time.Sleep(1 * time.Second) // Đợi người ngồi ổn định 1 giây
+					_ = server.speakOnCamera(promptText, "female")
+				}()
+			}
 		} else if ev, ok := payload["event"].(string); ok {
 			summary = fmt.Sprintf("📡 Event: %s", ev)
 			terminalLogMsg = fmt.Sprintf("[%s] 🔔 Event: %s", nowStr, ev)
