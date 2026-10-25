@@ -806,6 +806,7 @@ func matchesWakeWord(text string) (bool, string) {
 	lower := strings.ToLower(text)
 	wakeWords := []string{
 		"duinch ơi", "duinch oi", "duinch",
+		"do we know", "do you know", "doing",
 		"đu in ơi", "đu in oi", "đu in",
 		"đu inh ơi", "đu inh oi", "đu inh",
 		"đuyn ơi", "đuyn oi", "đuyn",
@@ -901,7 +902,8 @@ func startCameraWakeWordListener(server *Server) {
 				rms := math.Sqrt(sum / float64(samples))
 
 				// Ngưỡng phát hiện tiếng nói (Voice Activity Threshold)
-				if rms > 120.0 {
+				// Hạ ngưỡng xuống 35.0 để bắt được giọng nói bình thường hoặc từ khoảng cách vài mét
+				if rms > 35.0 {
 					isSpeaking = true
 					silenceChunks = 0
 					speechBuffer = append(speechBuffer, buf[:n]...)
@@ -909,10 +911,10 @@ func startCameraWakeWordListener(server *Server) {
 					silenceChunks++
 					speechBuffer = append(speechBuffer, buf[:n]...)
 
-					// Khi người nói dứt câu (ngừng nói ~800ms)
-					if silenceChunks > 8 {
+					// Khi người nói dứt câu (ngừng nói ~700ms)
+					if silenceChunks > 7 {
 						isSpeaking = false
-						if len(speechBuffer) > 16000*2*1 { // Ít nhất 1 giây âm thanh
+						if len(speechBuffer) >= 16000*2*6/10 { // Ít nhất 0.6 giây âm thanh
 							audioToTranscribe := speechBuffer
 							speechBuffer = nil
 
