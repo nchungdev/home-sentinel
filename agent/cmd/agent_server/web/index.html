@@ -421,13 +421,13 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 16px;
+      margin: 16px 0;
       flex: 1;
       width: 100%;
     }
     .dpad-circle {
-      width: 170px;
-      height: 170px;
+      width: 180px;
+      height: 180px;
       background: radial-gradient(circle, #1a1e2d 0%, #0d0f17 100%);
       border-radius: 50%;
       border: 1px solid rgba(255, 255, 255, 0.1);
@@ -457,13 +457,13 @@
     .dpad-btn:active {
       opacity: 0.6;
     }
-    .dpad-up { top: 8px; left: 50%; transform: translateX(-50%); width: 44px; height: 34px; }
-    .dpad-down { bottom: 8px; left: 50%; transform: translateX(-50%); width: 44px; height: 34px; }
-    .dpad-left { left: 8px; top: 50%; transform: translateY(-50%); width: 34px; height: 44px; }
-    .dpad-right { right: 8px; top: 50%; transform: translateY(-50%); width: 34px; height: 44px; }
+    .dpad-up { top: 10px; left: 50%; transform: translateX(-50%); width: 44px; height: 34px; }
+    .dpad-down { bottom: 10px; left: 50%; transform: translateX(-50%); width: 44px; height: 34px; }
+    .dpad-left { left: 10px; top: 50%; transform: translateY(-50%); width: 34px; height: 44px; }
+    .dpad-right { right: 10px; top: 50%; transform: translateY(-50%); width: 34px; height: 44px; }
     .dpad-center {
-      width: 60px;
-      height: 60px;
+      width: 64px;
+      height: 64px;
       background: linear-gradient(145deg, #1f2537, #131722);
       border: 1px solid rgba(255, 255, 255, 0.12);
       border-radius: 50%;
@@ -513,6 +513,62 @@
     .btn-modern.primary:hover {
       background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
       box-shadow: 0 6px 18px rgba(79, 70, 229, 0.45);
+    }
+
+    /* PRIVACY TOGGLE BUTTON */
+    .btn-privacy {
+      width: 100%;
+      padding: 12px 18px;
+      border-radius: 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text-bright);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+    }
+    .btn-privacy:hover {
+      background: var(--surface-hover);
+      border-color: rgba(99, 102, 241, 0.4);
+    }
+    .privacy-switch {
+      width: 38px;
+      height: 22px;
+      background: #1e2433;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 20px;
+      position: relative;
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+    }
+    .privacy-switch::after {
+      content: '';
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      background: #6b7280;
+      border-radius: 50%;
+      top: 2px;
+      left: 2px;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .btn-privacy.active {
+      border-color: rgba(239, 68, 68, 0.5);
+      background: rgba(239, 68, 68, 0.08);
+    }
+    .btn-privacy.active .privacy-switch {
+      background: #ef4444;
+      border-color: #ef4444;
+      box-shadow: 0 0 10px rgba(239, 68, 68, 0.4);
+    }
+    .btn-privacy.active .privacy-switch::after {
+      background: #ffffff;
+      transform: translateX(16px);
     }
 
     .log-terminal {
@@ -815,10 +871,10 @@
       <!-- CỘT 2: CONTROL (PTZ REMOTE & PRIVACY) + VOICE BROADCAST (TTS) -->
       <div class="camera-col">
         <!-- PHẦN TRÊN: ĐIỀU KHIỂN CAMERA & PRIVACY -->
-        <div class="card" style="align-items: center; text-align: center; padding: 16px 20px; gap: 12px; flex-shrink: 0;">
+        <div class="card" style="align-items: center; text-align: center; padding: 22px 24px; gap: 20px; flex-shrink: 0;">
           <div class="card-title" style="align-self: flex-start; margin-bottom: 2px;">Điều Khiển Camera (PTZ)</div>
           
-          <div class="remote-container" style="flex: initial; margin: 4px 0;">
+          <div class="remote-container">
             <div class="dpad-circle">
               <button class="dpad-btn dpad-up" onclick="callCamera('ptz', {direction: 'up'})" title="Lên">▲</button>
               <button class="dpad-btn dpad-left" onclick="callCamera('ptz', {direction: 'left'})" title="Trái">◀</button>
@@ -828,8 +884,12 @@
             </div>
           </div>
 
-          <button class="btn-modern" id="btnPrivacyToggle" style="width:100%; padding: 10px 14px;" onclick="togglePrivacy()">
-            👁️ Chế độ riêng tư: Đang TẮT (Bấm để Bật)
+          <button class="btn-privacy" id="btnPrivacyToggle" onclick="togglePrivacy()">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <span id="privacyIcon" style="font-size:18px;">👁️</span>
+              <span style="font-weight:600;" id="privacyTitle">Chế độ riêng tư</span>
+            </div>
+            <div class="privacy-switch" id="privacySwitch"></div>
           </button>
         </div>
 
@@ -1361,20 +1421,23 @@
     let isPrivacyOn = false;
     async function togglePrivacy() {
       const btn = document.getElementById('btnPrivacyToggle');
+      const icon = document.getElementById('privacyIcon');
+      const title = document.getElementById('privacyTitle');
       const newState = !isPrivacyOn;
       btn.disabled = true;
-      btn.textContent = '⏳ Đang chuyển chế độ...';
 
       await callCamera('privacy', { enabled: newState });
 
       isPrivacyOn = newState;
       btn.disabled = false;
       if (isPrivacyOn) {
-        btn.innerHTML = '🔒 Chế độ riêng tư: <b style="color:#ef4444;">Đang BẬT</b> (Bấm để Tắt)';
-        btn.style.borderColor = '#ef4444';
+        btn.classList.add('active');
+        icon.textContent = '🔒';
+        title.innerHTML = 'Chế độ riêng tư <span style="color:#ef4444; font-size:12px; margin-left:4px;">(BẬT)</span>';
       } else {
-        btn.innerHTML = '👁️ Chế độ riêng tư: <b style="color:#10b981;">Đang TẮT</b> (Bấm để Bật)';
-        btn.style.borderColor = 'var(--border)';
+        btn.classList.remove('active');
+        icon.textContent = '👁️';
+        title.innerHTML = 'Chế độ riêng tư <span style="color:var(--text-muted); font-size:12px; margin-left:4px;">(TẮT)</span>';
       }
     }
 
