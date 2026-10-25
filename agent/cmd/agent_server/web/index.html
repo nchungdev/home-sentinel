@@ -647,21 +647,70 @@
 
       <!-- Camera Config -->
       <div id="subtab-camera-cfg" class="subtab-content">
+        <!-- Card 1: Dò tìm camera tự động -->
         <div class="card">
-          <div class="card-title">Cấu hình Camera Tapo</div>
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div class="card-title">Dò Tìm Thiết Bị Camera Mạng (ONVIF Scan)</div>
+            <button class="btn-action" id="btnScanCam" onclick="scanNetworkCameras()">🔍 Quét Mạng LAN</button>
+          </div>
+          <p style="font-size:12px; color:var(--text-muted); margin-bottom:12px;">
+            Hỗ trợ tự động phát hiện mọi dòng Camera IP (Tapo, Imou, EZVIZ, Hikvision, Dahua, Generic ONVIF) trong mạng cục bộ.
+          </p>
+          <div id="scanResultList" style="display:flex; flex-direction:column; gap:8px;">
+            <div style="padding:14px; text-align:center; color:var(--text-muted); font-size:13px; border:1px dashed var(--border); border-radius:8px;">
+              Bấm nút <strong>"🔍 Quét Mạng LAN"</strong> để tự động tìm camera khả dụng.
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 2: Thông tin kết nối & Xác thực -->
+        <div class="card">
+          <div class="card-title">Thông Tin Kết Nối & Xác Thực Camera</div>
           <div class="form-group">
-            <label>Camera IP:</label>
-            <input type="text" id="cfgCamIp" value="192.168.1.6">
+            <label>Địa chỉ IP Camera:</label>
+            <input type="text" id="cfgCamIp" placeholder="192.168.1.xxx">
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div class="form-group">
+              <label>Thương hiệu / Loại:</label>
+              <select id="cfgCamBrand">
+                <option value="tapo">TP-Link Tapo</option>
+                <option value="imou">Imou / Dahua</option>
+                <option value="ezviz">EZVIZ / Hikvision</option>
+                <option value="onvif">ONVIF Tiêu Chuẩn</option>
+                <option value="custom">Tùy chỉnh RTSP</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Model / Tên:</label>
+              <input type="text" id="cfgCamModel" placeholder="Ví dụ: C200, C310, A22...">
+            </div>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div class="form-group">
+              <label>Tài khoản Camera (Camera Account):</label>
+              <input type="text" id="cfgCamUser" placeholder="admin hoặc tài khoản ONVIF">
+            </div>
+            <div class="form-group">
+              <label>Mật khẩu Camera (Camera Password):</label>
+              <input type="password" id="cfgCamPass" placeholder="Mật khẩu thiết bị/ONVIF">
+            </div>
           </div>
           <div class="form-group">
-            <label>Tài khoản Camera:</label>
-            <input type="text" id="cfgCamUser" value="admin">
+            <label>Mật khẩu tài khoản App / Cloud (nếu camera yêu cầu):</label>
+            <input type="password" id="cfgCamCloudPass" placeholder="Mật khẩu App TP-Link / Hik-Connect / Imou Life (tùy chọn)">
+            <span style="font-size:11px; color:var(--text-muted); margin-top:2px;">
+              * Dành cho các tính năng nâng cao như đàm thoại 2 chiều (Speaker) hoặc Cloud PTZ khi thiết bị khóa firmware.
+            </span>
           </div>
           <div class="form-group">
-            <label>Mật khẩu Camera:</label>
-            <input type="password" id="cfgCamPass" placeholder="••••••••">
+            <label>Đường dẫn luồng (Stream Path RTSP):</label>
+            <input type="text" id="cfgCamStreamPath" value="/stream1" placeholder="/stream1, /ch0/main, /live/ch0...">
           </div>
-          <button class="btn-save" onclick="alert('Đã cập nhật cấu hình!')">Lưu Cấu Hình Camera</button>
+          <div style="display:flex; gap:12px; margin-top:8px;">
+            <button class="btn-save" onclick="saveCameraConfig()">💾 Lưu Cấu Hình Camera</button>
+            <button class="btn-action" style="padding:10px 18px;" onclick="testCameraConnection()">⚡ Thử Kết Nối</button>
+          </div>
         </div>
       </div>
 
@@ -891,6 +940,151 @@
         document.getElementById('tokenOutput').innerHTML = `<b>Token mới:</b><br>${data.token}`;
       }
     }
+
+    // CAMERA SCAN & CONFIG
+    async function scanNetworkCameras() {
+      const btn = document.getElementById('btnScanCam');
+      const list = document.getElementById('scanResultList');
+      btn.disabled = true;
+      btn.textContent = '⏳ Đang quét ONVIF...';
+      list.innerHTML = `
+        <div style="padding:14px; text-align:center; color:var(--text-muted); font-size:13px;">
+          Đang phát sóng ONVIF WS-Discovery dò tìm thiết bị trên mạng...
+        </div>`;
+
+      try {
+        const res = await fetch('/api/camera/scan');
+        const data = await res.json();
+        list.innerHTML = '';
+
+        if (!data.ok || !data.devices || data.devices.length === 0) {
+          list.innerHTML = `
+            <div style="padding:14px; text-align:center; color:#f59e0b; font-size:13px; border:1px solid rgba(245,158,11,0.2); border-radius:8px;">
+              Không tìm thấy thiết bị ONVIF tự động. Bạn có thể nhập địa chỉ IP thủ công ở bảng bên dưới.
+            </div>`;
+          return;
+        }
+
+        data.devices.forEach(dev => {
+          const item = document.createElement('div');
+          item.className = 'engine-row';
+          item.style.cursor = 'pointer';
+          item.innerHTML = `
+            <div class="engine-info">
+              <h4>${dev.manufacturer} - ${dev.name} (${dev.ip})</h4>
+              <p>Hardware: ${dev.hardware || 'IP Camera'} | ONVIF Port: ${dev.onvif_port || 2020}</p>
+            </div>
+            <button class="btn-action" style="padding:6px 14px; background:var(--primary); color:#fff; font-weight:600;" onclick="selectDevice('${dev.ip}', '${dev.name}', '${dev.manufacturer}')">
+              Chọn & Cấu Hình
+            </button>
+          `;
+          list.appendChild(item);
+        });
+      } catch (e) {
+        list.innerHTML = `<div style="color:#ef4444; font-size:13px;">Lỗi quét thiết bị: ${e.message}</div>`;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '🔍 Quét Mạng LAN';
+      }
+    }
+
+    function selectDevice(ip, name, mfg) {
+      document.getElementById('cfgCamIp').value = ip;
+      document.getElementById('cfgCamModel').value = name;
+      
+      const brandSelect = document.getElementById('cfgCamBrand');
+      const lower = (mfg + ' ' + name).toLowerCase();
+      if (lower.includes('tapo')) brandSelect.value = 'tapo';
+      else if (lower.includes('imou') || lower.includes('dahua')) brandSelect.value = 'imou';
+      else if (lower.includes('ezviz') || lower.includes('hik')) brandSelect.value = 'ezviz';
+      else brandSelect.value = 'onvif';
+
+      if (brandSelect.value === 'tapo') {
+        document.getElementById('cfgCamStreamPath').value = '/stream1';
+      } else if (brandSelect.value === 'imou' || brandSelect.value === 'ezviz') {
+        document.getElementById('cfgCamStreamPath').value = '/h264Preview_01_main';
+      }
+
+      alert(`Đã chọn thiết bị ${name} (${ip}). Vui lòng nhập tài khoản/mật khẩu camera rồi bấm Lưu.`);
+    }
+
+    async function loadSavedCameraConfig() {
+      try {
+        const res = await fetch('/api/camera/config');
+        const data = await res.json();
+        if (data.ok && data.config && data.config.ip) {
+          const c = data.config;
+          document.getElementById('cfgCamIp').value = c.ip || '';
+          document.getElementById('cfgCamBrand').value = c.brand || 'tapo';
+          document.getElementById('cfgCamModel').value = c.model || '';
+          document.getElementById('cfgCamUser').value = c.username || '';
+          document.getElementById('cfgCamPass').value = c.password || '';
+          document.getElementById('cfgCamCloudPass').value = c.cloud_password || '';
+          document.getElementById('cfgCamStreamPath').value = c.stream_path || '/stream1';
+        }
+      } catch (e) { console.error(e); }
+    }
+
+    async function saveCameraConfig() {
+      const payload = {
+        ip: document.getElementById('cfgCamIp').value.trim(),
+        brand: document.getElementById('cfgCamBrand').value,
+        model: document.getElementById('cfgCamModel').value.trim(),
+        username: document.getElementById('cfgCamUser').value.trim(),
+        password: document.getElementById('cfgCamPass').value.trim(),
+        cloud_password: document.getElementById('cfgCamCloudPass').value.trim(),
+        stream_path: document.getElementById('cfgCamStreamPath').value.trim()
+      };
+
+      if (!payload.ip) {
+        alert('Vui lòng nhập IP camera!');
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/camera/config', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        alert(data.message || 'Đã lưu cấu hình camera!');
+      } catch (e) {
+        alert('Lỗi lưu cấu hình: ' + e.message);
+      }
+    }
+
+    async function testCameraConnection() {
+      const ip = document.getElementById('cfgCamIp').value.trim();
+      const user = document.getElementById('cfgCamUser').value.trim();
+      const pass = document.getElementById('cfgCamPass').value.trim();
+      const path = document.getElementById('cfgCamStreamPath').value.trim();
+
+      if (!ip) {
+        alert('Vui lòng nhập địa chỉ IP!');
+        return;
+      }
+
+      alert(`Đang kiểm tra kết nối tới RTSP rtsp://${ip}:554${path}...`);
+      try {
+        const res = await fetch('http://192.168.1.37:8792/api/test-camera', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ ip: ip, port: 554, user: user, password: pass, path: path })
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert('✅ Kết nối thành công! ' + data.message);
+        } else {
+          alert('❌ Kết nối thất bại: ' + (data.message || 'Không thể liên lạc'));
+        }
+      } catch (e) {
+        alert('Lỗi gửi yêu cầu kiểm tra (Camera Center :8792): ' + e.message);
+      }
+    }
+
+    // Tự động load config khi mở
+    loadSavedCameraConfig();
   </script>
 </body>
 </html>

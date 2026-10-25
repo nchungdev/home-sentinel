@@ -12,11 +12,13 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/nchungdev/home-sentinel/agent/pkg/arbitration"
 	"github.com/nchungdev/home-sentinel/agent/pkg/haclient"
 	"github.com/nchungdev/home-sentinel/agent/pkg/llm"
 	"github.com/nchungdev/home-sentinel/agent/pkg/mediabridge"
+	"github.com/nchungdev/home-sentinel/agent/pkg/onvifscan"
 )
 
 //go:embed web/index.html
@@ -226,6 +228,75 @@ func (s *Server) handleGenerateToken(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (s *Server) handleScanCameras(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	devices, err := onvifscan.ScanDevices(2500 * time.Millisecond)
+	if err != nil {
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"ok":      false,
+			"error":   err.Error(),
+			"devices": []onvifscan.DiscoveredDevice{},
+		})
+		return
+	}
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"ok":      true,
+		"devices": devices,
+	})
+}
+
+type CameraConfigData struct {
+	IP            string `json:"ip"`
+	Port          int    `json:"port"`
+	Username      string `json:"username"`
+	Password      string `json:"password"`
+	CloudPassword string `json:"cloud_password"`
+	Brand         string `json:"brand"`
+	Model         string `json:"model"`
+	StreamPath    string `json:"stream_path"`
+}
+
+func (s *Server) handleCameraConfig(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	configPath := "sentinel_camera_config.json"
+
+	if r.Method == http.MethodGet {
+		var cfg CameraConfigData
+		if data, err := os.ReadFile(configPath); err == nil {
+			_ = json.Unmarshal(data, &cfg)
+		}
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"ok":     true,
+			"config": cfg,
+		})
+		return
+	}
+
+	if r.Method == http.MethodPost {
+		var cfg CameraConfigData
+		if err := json.NewDecoder(r.Body).Decode(&cfg); err != nil {
+			http.Error(w, "bad request", http.StatusBadRequest)
+			return
+		}
+		data, err := json.MarshalIndent(cfg, "", "  ")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if err := os.WriteFile(configPath, data, 0644); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"ok":      true,
+			"message": "Đã lưu thông tin cấu hình camera!",
+		})
+		return
+	}
+
+	http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+}
+
 func main() {
 	server := NewServer()
 	server.StartDiscoveryResponder()
@@ -243,6 +314,8 @@ func main() {
 	mux.HandleFunc("/ask", server.handleAsk)
 	mux.HandleFunc("/api/llm/engines", server.handleConfigLLM)
 	mux.HandleFunc("/api/token/generate", server.handleGenerateToken)
+	mux.HandleFunc("/api/camera/scan", server.handleScanCameras)
+	mux.HandleFunc("/api/camera/config", server.handleCameraConfig)
 
 	mux.HandleFunc("/notify", func(w http.ResponseWriter, r *http.Request) {
 		var payload map[string]interface{}
