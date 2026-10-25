@@ -8,6 +8,7 @@ type SoundCategory string
 
 const (
 	CategorySpeech SoundCategory = "speech" // Lời nói con người (hài âm, năng lượng liên tục, ZCR 0.05-0.35)
+	CategoryAlarm  SoundCategory = "alarm"  // Tiếng còi báo động / báo cháy / bíp bíp tần số cố định lặp lại
 	CategoryClap   SoundCategory = "clap"   // Tiếng vỗ tay (xung cực nhọn, attack time cực dốc < 20ms, crest factor rất cao)
 	CategoryNoise  SoundCategory = "noise"  // Tiếng động/va quẹt, cạch cửa, rơi vỡ, ho, tiếng ồn cơ học
 	CategoryQuiet  SoundCategory = "quiet"  // Không gian yên tĩnh
@@ -108,6 +109,14 @@ func AnalyzeAudioSegment(pcm []byte) AudioFeatures {
 		} else {
 			feat.Description = "Tiếng vỗ tay (Clap)"
 		}
+		return feat
+	}
+
+	// 1.1 Nhận diện Tiếng Còi Báo Động / Báo Cháy (Siren / Fire Alarm):
+	// Đặc trưng: Năng lượng RMS cực lớn (> 2000), biên độ đều liên tục, Crest factor thấp (< 5.0), dải ZCR 0.18 - 0.38 (tần số 2500Hz - 4000Hz chói tai)
+	if rms > 1800.0 && crestFactor < 6.0 && dur > 1.0 && zcr > 0.15 && zcr < 0.38 {
+		feat.Category = CategoryAlarm
+		feat.Description = "Còi báo động / Báo cháy"
 		return feat
 	}
 

@@ -103,9 +103,6 @@ func startCameraWakeWordListener(server *Server) {
 				}
 
 				if rms > 250.0 {
-					if !isSpeaking {
-						logMic("Bắt đầu đoạn âm thanh vượt ngưỡng (RMS=%.1f).", rms)
-					}
 					isSpeaking = true
 					silenceChunks = 0
 					speechBuffer = append(speechBuffer, buf[:n]...)
@@ -123,13 +120,19 @@ func startCameraWakeWordListener(server *Server) {
 							tNow := time.Now().Format("15:04:05")
 
 							if audioFeatures.Category == speech.CategoryClap {
-								logMic("👏 [Phát Hiện Tiếng Vỗ Tay] %s! Peaks=%d, PeakVal=%d, RMS=%.0f, ZCR=%.3f",
-									audioFeatures.Description, audioFeatures.ClapCount, audioFeatures.Peak,
-									audioFeatures.RMS, audioFeatures.ZeroCrossing)
-								server.broadcastTerminal(fmt.Sprintf("[%s] 👏 Camera ghi nhận: %s (Peaks: %d, Max: %d)",
-									tNow, audioFeatures.Description, audioFeatures.ClapCount, audioFeatures.Peak))
+								logMic("👏 [Phát Hiện Tiếng Vỗ Tay] %s (Peaks=%d, Max=%d)", audioFeatures.Description, audioFeatures.ClapCount, audioFeatures.Peak)
+								server.broadcastTerminal(fmt.Sprintf("[%s] 👏 Camera: %s", tNow, audioFeatures.Description))
 								if server.AutomationMgr != nil {
 									server.AutomationMgr.RecordActivity("tiếng vỗ tay")
+								}
+								continue
+							}
+
+							if audioFeatures.Category == speech.CategoryAlarm {
+								logMic("🚨 [CẢNH BÁO KHẨN CẤP] %s (RMS=%.0f, Peak=%d)", audioFeatures.Description, audioFeatures.RMS, audioFeatures.Peak)
+								server.broadcastTerminal(fmt.Sprintf("[%s] 🚨 CẢNH BÁO: Phát hiện %s!", tNow, audioFeatures.Description))
+								if server.AutomationMgr != nil {
+									server.AutomationMgr.RecordActivity("còi báo động / báo cháy")
 								}
 								continue
 							}
@@ -182,7 +185,7 @@ func startCameraWakeWordListener(server *Server) {
 
 								tNow := time.Now().Format("15:04:05")
 								if server.AutomationMgr != nil {
-									server.AutomationMgr.RecordActivity("tiếng nói / âm thanh phòng khách")
+									server.AutomationMgr.RecordActivity("âm thanh phòng khách")
 									if server.AutomationMgr.MatchesDoorSound(text) {
 										go server.AutomationMgr.HandleEveningArrival("âm thanh mở cửa / lời chào về nhà")
 									}
