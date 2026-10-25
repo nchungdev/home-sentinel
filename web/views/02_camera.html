@@ -1,0 +1,208 @@
+    <!-- 2. CAMERA VIEW - 3 CỘT ĐỘC LẬP HIỆN ĐẠI -->
+    <div id="view-camera" class="view-content camera-view">
+      <!-- CỘT 1: CAMERA STREAM + TERMINAL LOG -->
+      <div class="camera-col">
+        <div class="camera-screen">
+          <div class="stream-feed" style="position:relative; cursor:pointer;" onclick="toggleCameraPlayback()">
+            <div class="camera-live-badge" id="camLiveBadge" style="display:none;">
+              <span class="rec-dot"></span>
+              <span id="camFeedBadgeText">LIVE STREAM</span>
+            </div>
+            <img id="mjpegFeed" src="" alt="Camera Stream" style="display:none;" onerror="handleStreamError()" onload="handleStreamLoaded()">
+            <div class="unconfigured-overlay" id="camPlaceholderOverlay" style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px;">
+              <div style="width: 56px; height: 56px; border-radius: 50%; background: rgba(99, 102, 241, 0.2); border: 2px solid rgba(99, 102, 241, 0.6); display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 0 20px rgba(99, 102, 241, 0.4);">
+                <span class="mi" style="font-size:32px; color:#fff;">play_arrow</span>
+              </div>
+              <h4 style="margin: 4px 0 0; font-size: 14px; font-weight: 600; color: var(--text-bright);">Bấm để xem trực tiếp</h4>
+              <p style="margin: 0; font-size: 11.5px; color: var(--text-muted);">Tối ưu băng thông mạng &amp; CPU máy chủ</p>
+            </div>
+            <div class="unconfigured-overlay" id="unconfiguredOverlay" style="display:none;">
+              <span class="mi" style="font-size:42px; color:var(--accent);">videocam_off</span>
+              <h4 id="overlayTitle">Chưa kết nối Camera</h4>
+              <p id="overlayDesc">Hệ thống chưa tìm thấy cấu hình Camera hoặc luồng RTSP bị ngắt quãng. Hãy vào Cài Đặt để chọn thiết bị hoặc bấm thử kết nối.</p>
+              <button class="btn-shortcut" onclick="jumpToConfig('camera-cfg'); event.stopPropagation();"><span class="mi">settings</span> Cấu Hình Camera Ngay</button>
+            </div>
+          </div>
+          <div class="camera-meta">
+            <span id="camMetaLabel">Camera IP (RTSP TCP)</span>
+            <span style="color: var(--text-muted); font-weight:600;" id="feedStatusLabel">Đang tạm dừng (Bấm để xem)</span>
+          </div>
+        </div>
+
+        <!-- TERMINAL CONSOLE LOG (CANH ĐỀU VỚI KHỐI CAMERA SCREEN) -->
+        <div class="terminal-card">
+          <div class="terminal-header">
+            <div class="terminal-title-group">
+              <div class="terminal-dots">
+                <span class="terminal-dot red"></span>
+                <span class="terminal-dot yellow"></span>
+                <span class="terminal-dot green"></span>
+              </div>
+              <span class="terminal-title">terminal.log</span>
+              <span class="terminal-badge">LIVE</span>
+            </div>
+            <span class="terminal-action" onclick="document.getElementById('termLog').textContent='[Cleared]';">
+              <span class="mi" style="font-size:14px;">close</span>
+              Xóa log
+            </span>
+          </div>
+          <div class="log-terminal" id="termLog">[Ready] Sentinel Camera Streaming sẵn sàng.</div>
+        </div>
+      </div>
+
+      <!-- CỘT 2: CONTROL (PTZ REMOTE & PRIVACY) + VOICE BROADCAST (TTS) -->
+      <div class="camera-col">
+        <!-- PHẦN TRÊN: ĐIỀU KHIỂN CAMERA & PRIVACY -->
+        <div class="card" style="align-items: center; text-align: center; padding: 14px 18px; gap: 12px; flex-shrink: 0;">
+          <div class="card-title" style="align-self: flex-start; margin-bottom: 2px;">Điều Khiển Camera (PTZ)</div>
+          
+          <div class="remote-container">
+            <div class="dpad-circle">
+              <button class="dpad-btn dpad-up" onclick="callCamera('ptz', {direction: 'up'})" title="Lên"><span class="mi">keyboard_arrow_up</span></button>
+              <button class="dpad-btn dpad-left" onclick="callCamera('ptz', {direction: 'left'})" title="Trái"><span class="mi">keyboard_arrow_left</span></button>
+              <div class="dpad-center">PTZ</div>
+              <button class="dpad-btn dpad-right" onclick="callCamera('ptz', {direction: 'right'})" title="Phải"><span class="mi">keyboard_arrow_right</span></button>
+              <button class="dpad-btn dpad-down" onclick="callCamera('ptz', {direction: 'down'})" title="Xuống"><span class="mi">keyboard_arrow_down</span></button>
+            </div>
+          </div>
+
+          <!-- NHÓM PHÍM GỌI PRESET VỊ TRÍ GÓC QUAY (SOFA / BÀN ĂN / CỬA CHÍNH) -->
+          <div style="display: flex; gap: 8px; width: 100%; margin-top: -4px;">
+            <button class="btn-modern" style="flex: 1; padding: 7px 4px; font-size: 11.5px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 5px;" onclick="callCamera('ptz', {preset: '1'})" title="Xoay về Sofa">
+              <span class="mi" style="font-size:16px;">chair</span> Sofa
+            </button>
+            <button class="btn-modern" style="flex: 1; padding: 7px 4px; font-size: 11.5px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 5px;" onclick="callCamera('ptz', {preset: '2'})" title="Xoay về Bàn ăn">
+              <span class="mi" style="font-size:16px;">restaurant</span> Bàn ăn
+            </button>
+            <button class="btn-modern" style="flex: 1; padding: 7px 4px; font-size: 11.5px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 5px;" onclick="callCamera('ptz', {preset: '3'})" title="Xoay về Cửa chính">
+              <span class="mi" style="font-size:16px;">door_front</span> Cửa chính
+            </button>
+          </div>
+
+          <!-- CỤM TÍNH NĂNG SMART DETECTION & PRIVACY (READ-ONLY STATUS) -->
+          <div class="detection-grid">
+            <!-- Chế độ riêng tư (Full width) -->
+            <div class="status-card-row full-width" id="rowPrivacy">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span class="mi" id="privacyIcon" style="font-size:16px;">visibility</span>
+                <span style="font-weight:600;" id="privacyTitle">Chế độ riêng tư (Tắt ghi hình)</span>
+              </div>
+              <span class="status-badge-val off" id="statusPrivacy">TẮT</span>
+            </div>
+
+            <!-- 1. Motion Detection -->
+            <div class="status-card-row" id="rowMotion">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span class="mi" style="font-size:16px;">directions_run</span>
+                <span>Phát hiện C.Động</span>
+              </div>
+              <span class="status-badge-val off" id="statusMotion">...</span>
+            </div>
+
+            <!-- 2. Motion Tracking -->
+            <div class="status-card-row" id="rowTracking">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span class="mi" style="font-size:16px;">my_location</span>
+                <span>Bám theo C.Động</span>
+              </div>
+              <span class="status-badge-val off" id="statusTracking">...</span>
+            </div>
+
+            <!-- 3. Person AI Detection -->
+            <div class="status-card-row" id="rowPerson">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span class="mi" style="font-size:16px;">person</span>
+                <span>Nhận diện Người</span>
+              </div>
+              <span class="status-badge-val off" id="statusPerson">...</span>
+            </div>
+
+            <!-- 4. Baby Crying Sound -->
+            <div class="status-card-row" id="rowBabyCry">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span class="mi" style="font-size:16px;">child_care</span>
+                <span>Tiếng em bé khóc</span>
+              </div>
+              <span class="status-badge-val off" id="statusBabyCry">...</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- PHẦN DƯỚI: CHAT BOX DUY NHẤT: VOICE / CALL / TEXT CHO CAMERA (UI/UX PRO MAX DESIGN) -->
+        <div class="cam-chat-box">
+          <div class="cam-chat-header">
+            <div class="cam-chat-title">
+              <span class="mi" style="font-size:18px; color:var(--accent);">mic</span>
+              <span>Đàm Thoại & Loa Camera</span>
+            </div>
+            <div class="cam-chat-badge" id="callStatusBadge">
+              <span class="pulse-dot" id="callStatusDot" style="width:6px; height:6px; background:#6b7280;"></span>
+              <span id="callStatusIndicator">Sẵn sàng</span>
+            </div>
+          </div>
+
+          <!-- Màn hình trạng thái âm thanh trực quan (Visual Intercom State) -->
+          <div class="cam-intercom-display" id="intercomDisplay">
+            <!-- Trạng thái chờ Idle -->
+            <div class="intercom-idle" id="intercomIdle">
+              <div class="intercom-idle-icon"><span class="mi" style="font-size:22px;">volume_up</span></div>
+              <div style="font-size:12px; font-weight:500; color:var(--text-bright);">Loa 2 Chiều Sẵn Sàng</div>
+              <div style="font-size:11px; max-width:240px; line-height:1.4;">Gõ văn bản để phát thông báo, chạm mic để nói hoặc bấm nút gọi để đàm thoại trực tiếp.</div>
+            </div>
+
+            <!-- Trạng thái Sóng âm Waveform khi đang nói hoặc gọi -->
+            <div class="intercom-active-wave" id="intercomActiveWave">
+              <div class="sound-wave">
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+              </div>
+              <div class="live-transcript" id="liveTranscriptText">Đang lắng nghe giọng nói...</div>
+              <div style="font-size:11px; color:#34d399; font-weight:600;" id="liveCallTimerText">Đang đàm thoại</div>
+            </div>
+          </div>
+
+          <!-- Gợi ý thông báo nhanh -->
+          <div class="cam-quick-chips">
+            <span class="cam-quick-chip" onclick="fillVoiceText('Xin chào quý khách!')"><span class="mi" style="font-size:14px;">waving_hand</span> Chào khách</span>
+            <span class="cam-quick-chip" onclick="fillVoiceText('Bạn cần tìm ai ạ?')"><span class="mi" style="font-size:14px;">help</span> Hỏi thăm</span>
+            <span class="cam-quick-chip" onclick="fillVoiceText('Mời bạn vào nhà ngồi chơi!')"><span class="mi" style="font-size:14px;">emoji_food_beverage</span> Mời vào</span>
+            <span class="cam-quick-chip" onclick="fillVoiceText('Cảnh báo: Khu vực có ghi hình an ninh!')"><span class="mi" style="font-size:14px;">warning</span> Cảnh báo</span>
+          </div>
+
+          <!-- Input Row tích hợp text + voice + call + send (Unified Design System) -->
+          <div class="cam-input-row">
+            <textarea id="camVoiceInput" rows="1" placeholder="Nhập câu thông báo hoặc chọn thao tác..."></textarea>
+            
+            <div class="cam-actions-cluster">
+              <!-- Nút Giọng nói / Voice STT -->
+              <button class="btn-cam-action mic" id="btnCamMic" onclick="toggleSpeechRecognition()" title="Ghi âm giọng nói">
+                <svg viewBox="0 0 24 24">
+                  <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+                  <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+                </svg>
+              </button>
+
+              <!-- Nút Call trực tiếp -->
+              <button class="btn-cam-action call" id="btnCamCall" onclick="toggleCameraCall()" title="Gọi trực tiếp 2 chiều">
+                <svg viewBox="0 0 24 24">
+                  <path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56a.977.977 0 0 0-1.01.24l-2.2 2.2a15.053 15.053 0 0 1-6.59-6.59l2.2-2.21a.96.96 0 0 0 .25-1A11.36 11.36 0 0 1 8.5 4c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1 0 9.39 7.61 17 17 17 .55 0 1-.45 1-1v-3.62c0-.55-.45-1-1-1z"/>
+                </svg>
+              </button>
+
+              <!-- Nút Gửi / Phát loa -->
+              <button class="btn-cam-action send" id="btnCamSpeak" onclick="sendCameraSpeech()" title="Phát lên loa camera">
+                <svg viewBox="0 0 24 24">
+                  <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+

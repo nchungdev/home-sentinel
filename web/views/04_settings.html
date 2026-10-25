@@ -1,0 +1,199 @@
+    <!-- 3. SETTINGS VIEW (CONTAINING SUB-TABS) -->
+    <div id="view-setting" class="view-content setting-view">
+      <div class="subtabs-bar">
+        <button class="subtab-btn active" id="btn-subtab-agent-cfg" onclick="switchSubTab('agent-cfg', this)">
+          <span class="mi">psychology</span> AI Engines
+        </button>
+        <button class="subtab-btn" id="btn-subtab-camera-cfg" onclick="switchSubTab('camera-cfg', this)">
+          <span class="mi">photo_camera</span> Camera Config
+        </button>
+        <button class="subtab-btn" id="btn-subtab-ha-cfg" onclick="switchSubTab('ha-cfg', this)">
+          <span class="mi">home_iot_device</span> Home Assistant
+        </button>
+        <button class="subtab-btn" id="btn-subtab-auth-cfg" onclick="switchSubTab('auth-cfg', this)">
+          <span class="mi">key</span> Bearer Token
+        </button>
+        <button class="subtab-btn" id="btn-subtab-logs" onclick="switchSubTab('logs', this)">
+          <span class="mi">terminal</span> Client Logs
+        </button>
+      </div>
+
+      <!-- SUBTAB 1: AI ENGINES -->
+      <div id="subtab-agent-cfg" class="subtab-panel grid-layout active">
+        <!-- Card 1: Thứ tự ưu tiên & Trạng thái tài khoản -->
+        <div class="card">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div class="card-title">Thứ tự ưu tiên AI Engine (Tự động chuyển khi lỗi/hết token)</div>
+            <button class="btn-action" style="padding:6px 12px; font-size:12px;" onclick="loadEngines()"><span class="mi" style="font-size:15px;">refresh</span> Cập nhật</button>
+          </div>
+          <p style="font-size:12px; color:var(--text-muted); margin: 0 0 10px 0;">
+            Sentinel tự động failover giữa các AI Engine khả dụng trên NAS. Bạn có thể sắp xếp mức độ ưu tiên theo nhu cầu.
+          </p>
+          <div id="engineContainer" style="display:flex; flex-direction:column; gap:8px;"></div>
+        </div>
+
+        <!-- Card 2: Quản lý Tài khoản & Cấu hình CLI / Token -->
+        <div class="card">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div class="card-title">Tài Khoản CLI & API Tokens</div>
+            <a href="http://192.168.1.37:8000/#settings" target="_blank" class="btn-action" style="padding:6px 12px; font-size:12px; text-decoration:none; color:#818cf8; border-color:rgba(99,102,241,0.4);">
+              <span class="mi" style="font-size:15px;">open_in_new</span> Mở Agent Bridge
+            </a>
+          </div>
+          <p style="font-size:12px; color:var(--text-muted); margin: 4px 0 12px 0; line-height:1.5;">
+            Các engine CLI (Claude Code, OpenAI Codex, Google Antigravity) sử dụng phiên đăng nhập và hồ sơ quản lý tập trung trên NAS qua Agent Bridge.
+          </p>
+
+          <!-- Danh sách tài khoản đọc từ Agent Bridge -->
+          <div id="bridgeAccountsList" style="display:flex; flex-direction:column; gap:8px; margin-bottom:16px;">
+            <div style="font-size:12px; color:var(--text-muted); text-align:center; padding:12px; border:1px dashed var(--border); border-radius:8px;">
+              Đang đọc trạng thái đăng nhập từ Agent Bridge...
+            </div>
+          </div>
+
+          <div style="border-top:1px solid var(--border); padding-top:14px;">
+            <div class="card-title" style="font-size:13px; margin-bottom:8px;">Cấu hình API Key & Endpoint Độc Lập</div>
+            <div class="form-group">
+              <label>Google Gemini API Key:</label>
+              <input type="password" id="geminiKeyInput" placeholder="AIzaSy...">
+            </div>
+            <div class="form-group" style="margin-top:8px;">
+              <label>Local LLM URL (NAS):</label>
+              <input type="text" id="localUrlInput" value="http://127.0.0.1:9931/v1/chat/completions">
+            </div>
+            <div style="display:flex; gap:12px; margin-top:14px;">
+              <button class="btn-save" id="btnSaveAI" onclick="saveAIConfig()"><span class="mi">save</span> Lưu Cấu Hình</button>
+              <button class="btn-action" onclick="testAIConnection()"><span class="mi">bolt</span> Kiểm Tra Kết Nối</button>
+            </div>
+            <div id="aiTestResult" style="font-size:12px; margin-top:8px; line-height:1.4;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SUBTAB 2: CAMERA CONFIG -->
+      <div id="subtab-camera-cfg" class="subtab-panel grid-layout">
+        <!-- Card 1: Dò tìm camera tự động -->
+        <div class="card">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div class="card-title">Dò Tìm Thiết Bị Camera Mạng (ONVIF Scan)</div>
+            <button class="btn-action" id="btnScanCam" onclick="scanNetworkCameras()"><span class="mi">radar</span> Quét Mạng LAN</button>
+          </div>
+          <p style="font-size:12px; color:var(--text-muted); margin-bottom:12px;">
+            Hỗ trợ tự động phát hiện mọi dòng Camera IP (Tapo, Imou, EZVIZ, Hikvision, Dahua, Generic ONVIF) trong mạng cục bộ.
+          </p>
+          <div id="scanResultList" style="display:flex; flex-direction:column; gap:8px;">
+            <div style="padding:14px; text-align:center; color:var(--text-muted); font-size:13px; border:1px dashed var(--border); border-radius:8px;">
+              Bấm nút <strong>"Quét Mạng LAN"</strong> để tự động tìm camera khả dụng.
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 2: Thông tin kết nối & Xác thực -->
+        <div class="card">
+          <div class="card-title">Thông Tin Kết Nối & Xác Thực Camera</div>
+          <div class="form-group">
+            <label>Địa chỉ IP Camera:</label>
+            <input type="text" id="cfgCamIp" placeholder="192.168.1.xxx">
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div class="form-group">
+              <label>Thương hiệu / Loại:</label>
+              <select id="cfgCamBrand">
+                <option value="tapo">TP-Link Tapo</option>
+                <option value="imou">Imou / Dahua</option>
+                <option value="ezviz">EZVIZ / Hikvision</option>
+                <option value="onvif">ONVIF Tiêu Chuẩn</option>
+                <option value="custom">Tùy chỉnh RTSP</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Model / Tên:</label>
+              <input type="text" id="cfgCamModel" placeholder="Ví dụ: C200, C310, A22...">
+            </div>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div class="form-group">
+              <label>Tài khoản Camera (Camera Account):</label>
+              <input type="text" id="cfgCamUser" placeholder="admin hoặc tài khoản ONVIF">
+            </div>
+            <div class="form-group">
+              <label>Mật khẩu Camera (Camera Password):</label>
+              <input type="password" id="cfgCamPass" placeholder="Mật khẩu thiết bị/ONVIF">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Mật khẩu tài khoản App / Cloud (nếu camera yêu cầu):</label>
+            <input type="password" id="cfgCamCloudPass" placeholder="Mật khẩu App TP-Link / Hik-Connect / Imou Life (tùy chọn)">
+            <span style="font-size:11px; color:var(--text-muted); margin-top:2px;">
+              * Dành cho các tính năng nâng cao như đàm thoại 2 chiều (Speaker) hoặc Cloud PTZ khi thiết bị khóa firmware.
+            </span>
+          </div>
+          <div class="form-group">
+            <label>Đường dẫn luồng (Stream Path RTSP):</label>
+            <input type="text" id="cfgCamStreamPath" value="/stream1" placeholder="/stream1, /ch0/main, /live/ch0...">
+          </div>
+          <div style="display:flex; gap:12px; margin-top:8px;">
+            <button class="btn-save" id="btnSaveCam" onclick="saveCameraConfig()"><span class="mi">save</span> Lưu Cấu Hình Camera</button>
+            <button class="btn-action" id="btnTestCam" onclick="testCameraConnection()"><span class="mi">bolt</span> Thử Kết Nối</button>
+          </div>
+          <div id="camTestResult" style="font-size:12px; margin-top:10px; line-height:1.4;"></div>
+        </div>
+      </div>
+
+      <!-- SUBTAB 3: HOME ASSISTANT -->
+      <div id="subtab-ha-cfg" class="subtab-panel">
+        <div class="card">
+          <div class="card-title">Kết Nối Home Assistant</div>
+          <p style="font-size:12px; color:var(--text-muted); margin-bottom:12px;">
+            Nhập URL và Long-Lived Access Token để Sentinel điều khiển đèn, công tắc, điều hòa, quạt theo lệnh từ TV Launcher.
+          </p>
+          <div class="form-group">
+            <label>Home Assistant URL:</label>
+            <input type="text" id="cfgHaUrl" value="http://192.168.1.37:8123" placeholder="http://192.168.1.37:8123">
+          </div>
+          <div class="form-group">
+            <label>Long-Lived Access Token:</label>
+            <input type="password" id="cfgHaToken" placeholder="Nhập token tạo từ Profile Home Assistant...">
+          </div>
+          <div style="display:flex; gap:12px; margin-top:8px;">
+            <button class="btn-save" id="btnSaveHA" onclick="saveHAConfig()"><span class="mi">save</span> Kiểm Tra & Lưu Cấu Hình</button>
+            <button class="btn-action" onclick="testHAConnection()"><span class="mi">bolt</span> Kiểm Tra Kết Nối</button>
+          </div>
+          <div id="haTestResult" style="font-size:12px; margin-top:8px; line-height:1.4;"></div>
+        </div>
+      </div>
+
+      <!-- SUBTAB 4: BEARER TOKEN -->
+      <div id="subtab-auth-cfg" class="subtab-panel">
+        <div class="card">
+          <div class="card-title">Tạo Bearer Token Cho Launcher</div>
+          <p style="font-size: 13px; color: var(--text-muted); line-height: 1.5;">
+            Tạo mã Token bảo mật để cài đặt trên TV Launcher. Khi kích hoạt token, chỉ các thiết bị có mã này mới được gửi yêu cầu tới Agent.
+          </p>
+          <button class="btn-save" onclick="generateToken()"><span class="mi">key</span> Tạo Token Mới</button>
+          <div id="tokenOutput" style="font-family:monospace; color:#10b981; font-size:13px; margin-top:8px;"></div>
+        </div>
+      </div>
+
+      <!-- SUBTAB 5: CLIENT LOGS -->
+      <div id="subtab-logs" class="subtab-panel">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <h4 style="margin:0; font-size:16px; color:var(--text-bright);">Client Message Console</h4>
+            <p style="margin:4px 0 0 0; font-size:12px; color:var(--text-muted);">
+              Theo dõi tất cả tin nhắn, lệnh điều khiển từ TV Launcher và các Client thiết bị ngoại vi gửi lên Sentinel Server.
+            </p>
+          </div>
+          <div style="display:flex; gap:10px;">
+            <button class="btn-action" style="padding:8px 14px; font-size:12px;" onclick="loadClientLogs()"><span class="mi" style="font-size:15px;">refresh</span> Làm mới</button>
+            <button class="btn-action" style="padding:8px 14px; font-size:12px; background:rgba(239,68,68,0.15); color:#ef4444; border-color:rgba(239,68,68,0.3);" onclick="clearServerClientLogs()"><span class="mi" style="font-size:15px;">delete</span> Xóa logs</button>
+          </div>
+        </div>
+
+        <div class="client-logs-container" id="clientLogsContainer" style="min-height: 400px;">
+          <div style="color:var(--text-muted); text-align:center; padding:30px;">Đang tải danh sách logs...</div>
+        </div>
+      </div>
+    </div>
+  </main>
+

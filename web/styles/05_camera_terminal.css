@@ -1,0 +1,245 @@
+    .btn-cam-action {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 1px solid transparent;
+      background: transparent;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+      color: #9ca3af;
+      padding: 0;
+    }
+    .btn-cam-action svg {
+      width: 16px;
+      height: 16px;
+      fill: currentColor;
+      transition: transform 0.18s ease;
+    }
+    .btn-cam-action:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: #f3f4f6;
+      transform: translateY(-1px);
+    }
+    .btn-cam-action:active {
+      transform: scale(0.94);
+    }
+
+    /* Mic button active state */
+    .btn-cam-action.mic.recording {
+      background: rgba(239, 68, 68, 0.2);
+      border-color: rgba(239, 68, 68, 0.5);
+      color: #ef4444;
+      animation: pulseRecord 1.2s infinite;
+    }
+    .btn-cam-action.mic.recording svg {
+      animation: pulse 1s infinite;
+    }
+
+    /* Call button state */
+    .btn-cam-action.call:hover {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border-color: rgba(16, 185, 129, 0.3);
+    }
+    .btn-cam-action.call.in-call {
+      background: rgba(239, 68, 68, 0.2);
+      border-color: rgba(239, 68, 68, 0.5);
+      color: #ef4444;
+      animation: pulseRecord 1.2s infinite;
+    }
+
+    /* Primary Send button */
+    .btn-cam-action.send {
+      background: var(--primary);
+      color: #ffffff;
+      box-shadow: 0 2px 8px rgba(99, 102, 241, 0.35);
+    }
+    .btn-cam-action.send:hover {
+      background: var(--primary-hover);
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.5);
+      transform: translateY(-1px);
+    }
+    .btn-cam-action.send:active {
+      transform: scale(0.94);
+    }
+
+    /* Card Container Base */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+      display: flex;
+      flex-direction: column;
+    }
+    .card-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-bright);
+      letter-spacing: -0.2px;
+    }
+
+    /* TERMINAL CONSOLE LOG (SEAMLESS INTEGRATION) */
+    .terminal-card {
+      background: linear-gradient(180deg, rgba(20, 23, 34, 0.95) 0%, rgba(13, 16, 25, 0.98) 100%);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      width: 100%;
+    }
+    .terminal-header {
+      padding: 10px 16px;
+      background: rgba(255, 255, 255, 0.02);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .terminal-title-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .terminal-dots {
+      display: flex;
+      gap: 5px;
+      align-items: center;
+    }
+    .terminal-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+    .terminal-dot.red { background: #ef4444; opacity: 0.8; }
+    .terminal-dot.yellow { background: #f59e0b; opacity: 0.8; }
+    .terminal-dot.green { background: #10b981; opacity: 0.8; }
+    .terminal-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-bright);
+      font-family: ui-monospace, Menlo, Consolas, monospace;
+      letter-spacing: -0.2px;
+    }
+    .terminal-badge {
+      font-size: 10px;
+      padding: 1px 6px;
+      border-radius: 4px;
+      background: rgba(16, 185, 129, 0.12);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    .terminal-action {
+      font-size: 11px;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 3px 8px;
+      border-radius: 4px;
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .terminal-action:hover {
+      color: var(--text-bright);
+      background: rgba(255, 255, 255, 0.06);
+    }
+    .log-terminal {
+      background: #07090e;
+      padding: 12px 16px;
+      font-family: ui-monospace, Menlo, Consolas, monospace;
+      font-size: 11.5px;
+      color: #10b981;
+      height: 140px;
+      overflow-y: auto;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      border: none;
+    }
+
+    /* 4. CLIENT LOGS VIEW */
+    .client-logs-view {
+      padding: 24px 32px;
+      width: 100%;
+      height: calc(100vh - 61px);
+      box-sizing: border-box;
+      gap: 16px;
+    }
+    .view-content.client-logs-view.active {
+      display: flex !important;
+      flex-direction: column !important;
+    }
+    .client-logs-container {
+      background: #06070a;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      flex: 1;
+      overflow-y: auto;
+      font-family: ui-monospace, Menlo, Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.6;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .client-log-item {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 8px;
+      padding: 12px 14px;
+      transition: border-color 0.15s ease;
+    }
+    .client-log-item:hover {
+      border-color: rgba(99, 102, 241, 0.3);
+    }
+    .client-log-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 6px;
+      font-size: 11px;
+    }
+    .client-badge {
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-weight: 600;
+      font-size: 10px;
+      text-transform: uppercase;
+    }
+    .client-badge.tv {
+      background: rgba(99, 102, 241, 0.2);
+      color: #818cf8;
+      border: 1px solid rgba(99, 102, 241, 0.4);
+    }
+    .client-badge.web {
+      background: rgba(16, 185, 129, 0.2);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.4);
+    }
+    .client-log-prompt {
+      color: #f3f4f6;
+      font-weight: 600;
+      margin-bottom: 4px;
+      word-break: break-word;
+    }
+    .client-log-resp {
+      color: #9ca3af;
+      word-break: break-word;
+      white-space: pre-wrap;
+    }
+
+    /* 3. SETTING / CONFIG VIEWS */
+    .setting-view {
+      padding: 24px 32px;
+      width: 100%;
+      height: calc(100vh - 61px);
+      box-sizing: border-box;
+      overflow-y: auto;

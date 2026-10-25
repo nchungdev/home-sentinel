@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	camAdapter "github.com/nchungdev/home-sentinel/agent/pkg/adapters/camera"
@@ -81,6 +82,7 @@ func (s *serverHAResolver) ResolveEntity(
 }
 
 type serverExecutionEngine struct {
+	server        *Server
 	haAdapter     *haAdapter.Adapter
 	cameraAdapter *camAdapter.Adapter
 	llmManager    *llm.Manager
@@ -106,11 +108,39 @@ func (e *serverExecutionEngine) Execute(
 
 	if step.ActionType == "llm.chat" || step.TargetID == "llm" {
 		text, _ := step.Parameters["text"].(string)
+		lower := strings.ToLower(text)
+
+		if e.server != nil && (strings.Contains(lower, "câu chào") || strings.Contains(lower, "lời chào")) && (strings.Contains(lower, "tv") || strings.Contains(lower, "tivi")) {
+			greeting := "Chúc cả nhà một buổi tối ấm áp và thư giãn bên nhau!"
+			if idx := strings.Index(text, ":"); idx > 0 && idx < len(text)-2 {
+				greeting = strings.TrimSpace(text[idx+1:])
+			} else if e.llmManager != nil {
+				var sb strings.Builder
+				e.llmManager.StreamChat("Viết 1 câu chào dưới 15 từ gửi đến gia đình hiển thị trên màn hình TV, ấm áp, lịch sự, không để trong ngoặc kép.", func(chunk string) {
+					sb.WriteString(chunk)
+				})
+				if g := strings.Trim(strings.TrimSpace(sb.String()), "\"'“”"); g != "" {
+					greeting = g
+				}
+			}
+			sent := e.server.BroadcastDuinchGreeting(greeting, "happy")
+			reply := fmt.Sprintf("Đã gửi câu chào lên TV (%d thiết bị): %q", sent, greeting)
+			return &contracts.ExecutionResult{
+				StepID:   step.StepID,
+				Status:   contracts.ActionStatusSucceeded,
+				Detail:   &reply,
+				CanRetry: false,
+			}, nil
+		}
+
 		var sb strings.Builder
 		e.llmManager.StreamChat(text, func(chunk string) {
 			sb.WriteString(chunk)
 		})
 		reply := sb.String()
+		if reply == "" {
+			reply = "Tôi đã ghi nhận yêu cầu của bạn."
+		}
 		return &contracts.ExecutionResult{
 			StepID:   step.StepID,
 			Status:   contracts.ActionStatusSucceeded,
@@ -205,6 +235,7 @@ func buildServerOrchestrator(server *Server) *orchestrator.Orchestrator {
 	camExecAdapter := camAdapter.NewAdapter(nil, camAdapter.Config{})
 
 	executionEngine := &serverExecutionEngine{
+		server:        server,
 		haAdapter:     haExecAdapter,
 		cameraAdapter: camExecAdapter,
 		llmManager:    server.LLMManager,

@@ -11,15 +11,15 @@ import (
 )
 
 type Broadcaster struct {
-	mu           sync.RWMutex
-	clients      map[chan []byte]struct{}
-	latestFrame  []byte
-	rtspURL      string
-	cmd          *exec.Cmd
-	running      bool
-	stopCh       chan struct{}
-	lastAccess   time.Time
-	idleTimer    *time.Timer
+	mu          sync.RWMutex
+	clients     map[chan []byte]struct{}
+	latestFrame []byte
+	rtspURL     string
+	cmd         *exec.Cmd
+	running     bool
+	stopCh      chan struct{}
+	lastAccess  time.Time
+	idleTimer   *time.Timer
 }
 
 var (

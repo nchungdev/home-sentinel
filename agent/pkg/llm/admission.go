@@ -16,10 +16,10 @@ type SystemMetricsProvider interface {
 }
 
 type AdmissionConfig struct {
-	MaxCPULoadPercent   float64
-	MinAvailableRAMMB   uint64
+	MaxCPULoadPercent    float64
+	MinAvailableRAMMB    uint64
 	MaxActivePlexStreams int
-	MaxLocalConcurrency int
+	MaxLocalConcurrency  int
 }
 
 type AdmissionController struct {
@@ -31,10 +31,10 @@ type AdmissionController struct {
 
 func DefaultAdmissionConfig() AdmissionConfig {
 	return AdmissionConfig{
-		MaxCPULoadPercent:   85.0,
-		MinAvailableRAMMB:   1024,
+		MaxCPULoadPercent:    85.0,
+		MinAvailableRAMMB:    1024,
 		MaxActivePlexStreams: 0,
-		MaxLocalConcurrency: 1,
+		MaxLocalConcurrency:  1,
 	}
 }
 

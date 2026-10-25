@@ -1,0 +1,279 @@
+    .detection-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      width: 100%;
+    }
+    .status-card-row {
+      width: 100%;
+      padding: 9px 12px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border);
+      color: var(--text-bright);
+      font-size: 12px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      user-select: none;
+    }
+    .status-card-row.full-width {
+      grid-column: span 2;
+    }
+    .status-badge-val {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 6px;
+      letter-spacing: 0.3px;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-muted);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      transition: all 0.2s ease;
+    }
+    .status-badge-val.on {
+      background: rgba(16, 185, 129, 0.15);
+      color: #10b981;
+      border-color: rgba(16, 185, 129, 0.35);
+      box-shadow: 0 0 8px rgba(16, 185, 129, 0.2);
+    }
+    .status-badge-val.on::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #10b981;
+      box-shadow: 0 0 6px #10b981;
+    }
+    .status-badge-val.off {
+      background: rgba(107, 114, 128, 0.1);
+      color: #9ca3af;
+      border-color: rgba(107, 114, 128, 0.2);
+    }
+    .status-badge-val.off::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #6b7280;
+    }
+    .status-badge-val.privacy-on {
+      background: rgba(239, 68, 68, 0.15);
+      color: #ef4444;
+      border-color: rgba(239, 68, 68, 0.35);
+      box-shadow: 0 0 8px rgba(239, 68, 68, 0.2);
+    }
+    .status-badge-val.privacy-on::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #ef4444;
+      box-shadow: 0 0 6px #ef4444;
+    }
+
+    /* COMPACT VOICE / CALL BAR CHO CAMERA (UI/UX PRO MAX DESIGN) */
+    .cam-chat-box {
+      background: linear-gradient(180deg, rgba(26, 31, 46, 0.8) 0%, rgba(18, 22, 34, 0.95) 100%);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+      flex-shrink: 0;
+    }
+    .cam-chat-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .cam-chat-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-bright);
+      letter-spacing: -0.2px;
+    }
+    .cam-chat-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+    .cam-chat-badge.active-talk {
+      background: rgba(16, 185, 129, 0.12);
+      border-color: rgba(16, 185, 129, 0.3);
+      color: #34d399;
+    }
+
+    /* Live Intercom Display Area */
+    .cam-intercom-display {
+      flex: 1;
+      min-height: 120px;
+      background: rgba(10, 13, 20, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .intercom-idle {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      color: var(--text-muted);
+      text-align: center;
+    }
+    .intercom-idle-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: rgba(99, 102, 241, 0.08);
+      border: 1px solid rgba(99, 102, 241, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--accent);
+      font-size: 20px;
+    }
+    .intercom-active-wave {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+    }
+    .intercom-active-wave.visible {
+      display: flex;
+    }
+    .sound-wave {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      height: 32px;
+    }
+    .sound-wave .bar {
+      width: 4px;
+      height: 8px;
+      background: #10b981;
+      border-radius: 4px;
+      animation: soundWaveAnim 1.2s ease-in-out infinite alternate;
+    }
+    .sound-wave .bar:nth-child(2) { animation-delay: 0.15s; }
+    .sound-wave .bar:nth-child(3) { animation-delay: 0.3s; }
+    .sound-wave .bar:nth-child(4) { animation-delay: 0.45s; }
+    .sound-wave .bar:nth-child(5) { animation-delay: 0.2s; }
+    .sound-wave .bar:nth-child(6) { animation-delay: 0.35s; }
+    .sound-wave .bar:nth-child(7) { animation-delay: 0.5s; }
+    @keyframes soundWaveAnim {
+      0% { height: 6px; opacity: 0.4; }
+      100% { height: 28px; opacity: 1; }
+    }
+
+    /* Live Transcript Bubble */
+    .live-transcript {
+      max-width: 90%;
+      text-align: center;
+      font-size: 13px;
+      color: #f3f4f6;
+      font-weight: 500;
+      line-height: 1.5;
+      background: rgba(255, 255, 255, 0.06);
+      padding: 6px 14px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    /* Suggestions Row */
+    .cam-quick-chips {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 2px;
+    }
+    .cam-quick-chip {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: var(--text);
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .cam-quick-chip:hover {
+      background: rgba(99, 102, 241, 0.12);
+      border-color: rgba(99, 102, 241, 0.35);
+      color: var(--text-bright);
+      transform: translateY(-1px);
+    }
+
+    /* Input Pill Bar & Unified Action Group */
+    .cam-input-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(11, 14, 23, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 28px;
+      padding: 5px 6px 5px 16px;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4);
+    }
+    .cam-input-row:focus-within {
+      border-color: rgba(99, 102, 241, 0.6);
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15), inset 0 2px 4px rgba(0, 0, 0, 0.3);
+    }
+    .cam-input-row textarea {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: var(--text-bright);
+      font-size: 13px;
+      resize: none;
+      height: 22px;
+      padding: 2px 0;
+      outline: none;
+      font-family: inherit;
+      line-height: 22px;
+    }
+    .cam-input-row textarea::placeholder {
+      color: rgba(156, 163, 175, 0.6);
+      font-size: 13px;
+    }
+
+    /* Action Control Cluster */
+    .cam-actions-cluster {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255, 255, 255, 0.04);
+      padding: 3px;
+      border-radius: 24px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
