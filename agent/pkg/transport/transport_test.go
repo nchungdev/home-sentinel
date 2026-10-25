@@ -224,7 +224,7 @@ func TestIPWhitelistEnforcement(t *testing.T) {
 	for _, tc := range testCases {
 		req := httptest.NewRequest(
 			http.MethodPost,
-			"/ask",
+			"/v2/ask",
 			bytes.NewReader(createTestInputEventJSON()),
 		)
 		req.RemoteAddr = tc.remoteAddr
@@ -275,7 +275,7 @@ func TestEmptyIPWhitelistAllowsAny(t *testing.T) {
 	for _, remote := range remoteAddresses {
 		req := httptest.NewRequest(
 			http.MethodPost,
-			"/ask",
+			"/v2/ask",
 			bytes.NewReader(createTestInputEventJSON()),
 		)
 		req.RemoteAddr = remote
@@ -313,7 +313,7 @@ func TestParseInputEventAndRequestContext(t *testing.T) {
 
 	req := httptest.NewRequest(
 		http.MethodPost,
-		"/ask",
+		"/v2/ask",
 		bytes.NewReader(createTestInputEventJSON()),
 	)
 	req.RemoteAddr = "192.168.1.77:5000"
@@ -402,7 +402,7 @@ func TestMethodNotAllowedForGet(t *testing.T) {
 		},
 	))
 
-	req := httptest.NewRequest(http.MethodGet, "/ask", nil)
+	req := httptest.NewRequest(http.MethodGet, "/v2/ask", nil)
 	req.Header.Set(HeaderAuthorization, "Bearer "+testSecretToken)
 
 	recorder := httptest.NewRecorder()
@@ -439,7 +439,7 @@ func TestClientDisconnectContextCancelled(t *testing.T) {
 
 	req := httptest.NewRequest(
 		http.MethodPost,
-		"/ask",
+		"/v2/ask",
 		bytes.NewReader(createTestInputEventJSON()),
 	)
 	req.Header.Set(HeaderAuthorization, "Bearer "+testSecretToken)
@@ -490,7 +490,7 @@ func TestMiddlewareRequestContextInjection(t *testing.T) {
 
 	wrappedHandler := middleware(innerHandler)
 
-	req := httptest.NewRequest(http.MethodPost, "/ask", nil)
+	req := httptest.NewRequest(http.MethodPost, "/v2/ask", nil)
 	req.RemoteAddr = "192.168.1.99:54321"
 	req.Header.Set(HeaderAuthorization, "Bearer "+testSecretToken)
 	req.Header.Set(HeaderClientID, "living-room-tv")
@@ -556,7 +556,7 @@ func TestHandlerInternalError(t *testing.T) {
 
 	req := httptest.NewRequest(
 		http.MethodPost,
-		"/ask",
+		"/v2/ask",
 		bytes.NewReader(createTestInputEventJSON()),
 	)
 	req.Header.Set(HeaderAuthorization, "Bearer "+testSecretToken)

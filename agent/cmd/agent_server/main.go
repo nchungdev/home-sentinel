@@ -166,80 +166,6 @@ func (s *Server) checkAuth(r *http.Request) bool {
 	return false
 }
 
-func (s *Server) handleAsk(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	if !s.checkAuth(r) {
-		http.Error(w, "unauthorised", http.StatusUnauthorized)
-		return
-	}
-
-	var req struct {
-		Text    string `json:"text"`
-		Session string `json:"session"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "bad json", http.StatusBadRequest)
-		return
-	}
-
-	text := strings.TrimSpace(req.Text)
-	if text == "" {
-		http.Error(w, "empty question", http.StatusBadRequest)
-		return
-	}
-
-	// 1. Kiểm tra lệnh Home Assistant trước
-	clientIP, _, _ := net.SplitHostPort(r.RemoteAddr)
-	if clientIP == "" {
-		clientIP = r.RemoteAddr
-	}
-	source := "client"
-	if req.Session == "web_session" || strings.HasPrefix(req.Session, "web_") {
-		source = "web"
-	}
-
-	timeStr := time.Now().Format("15:04:05")
-
-	if reply, handled := s.HAClient.HandleCommand(text); handled {
-		s.AddClientLog(ClientLogEntry{
-			Timestamp: timeStr,
-			ClientIP:  clientIP,
-			Session:   req.Session,
-			Text:      text,
-			Source:    source,
-			Response:  reply,
-		})
-		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		_, _ = w.Write([]byte(reply))
-		return
-	}
-
-	// 2. Chuyển sang LLM Manager với cơ chế Fallback ưu tiên
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	flusher, canFlush := w.(http.Flusher)
-
-	var fullResponse strings.Builder
-	s.LLMManager.StreamChat(text, func(chunk string) {
-		fullResponse.WriteString(chunk)
-		_, _ = w.Write([]byte(chunk))
-		if canFlush {
-			flusher.Flush()
-		}
-	})
-
-	s.AddClientLog(ClientLogEntry{
-		Timestamp: timeStr,
-		ClientIP:  clientIP,
-		Session:   req.Session,
-		Text:      text,
-		Source:    source,
-		Response:  fullResponse.String(),
-	})
-}
-
 func (s *Server) handleClientLogs(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	if r.Method == http.MethodDelete {
@@ -851,8 +777,8 @@ func (s *Server) handleCameraSpeak(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 2. Chuyển đổi sang chuẩn Alaw 8000Hz PCM cho Tapo Speaker, chèn 300ms khoảng lặng ở đầu để tránh mất chữ đầu
-	ffmpegCmd := exec.Command("ffmpeg", "-y", "-i", tmpMp3, "-af", "adelay=300|300", "-ar", "8000", "-ac", "1", "-c:a", "pcm_alaw", tmpWav)
+	// 2. Chuyển đổi sang chuẩn Alaw 8000Hz PCM cho Tapo Speaker, chèn 600ms khoảng lặng ở đầu để tránh mất chữ đầu (do buffer kết nối loa)
+	ffmpegCmd := exec.Command("ffmpeg", "-y", "-i", tmpMp3, "-af", "adelay=600|600", "-ar", "8000", "-ac", "1", "-c:a", "pcm_alaw", tmpWav)
 	if err := ffmpegCmd.Run(); err != nil {
 		_ = json.NewEncoder(w).Encode(map[string]interface{}{
 			"ok":    false,
@@ -894,7 +820,17 @@ func main() {
 		_, _ = w.Write(web.GetIndexHTML())
 	})
 
-	mux.HandleFunc("/ask", server.handleAsk)
+	transportCfg := transport.ConfigFromEnv()
+	if transportCfg.Token == "" {
+		transportCfg.Token = server.Token
+	}
+
+	orchestratorInstance := buildServerOrchestrator(server)
+	mux.Handle("/v2/ask", transport.NewV2Handler(orchestratorInstance, &transportCfg))
+
+	suggestionEngine := proactive.NewSuggestionEngine(nil, nil)
+	mux.Handle("/v2/suggestions", transport.NewV2SuggestionsHandler(suggestionEngine, &transportCfg))
+
 	mux.HandleFunc("/api/logs/client", server.handleClientLogs)
 	mux.HandleFunc("/api/llm/engines", server.handleConfigLLM)
 	mux.HandleFunc("/api/llm/test", server.handleLLMTest)
@@ -925,13 +861,6 @@ func main() {
 	mux.HandleFunc("/api/camera/detection", server.handleCameraDetection)
 	mux.HandleFunc("/api/camera/speak", server.handleCameraSpeak)
 	mux.HandleFunc("/api/ha/config", server.handleHAConfig)
-
-	transportCfg := transport.ConfigFromEnv()
-	if transportCfg.Token == "" {
-		transportCfg.Token = server.Token
-	}
-	suggestionEngine := proactive.NewSuggestionEngine(nil, nil)
-	mux.Handle("/v2/suggestions", transport.NewV2SuggestionsHandler(suggestionEngine, &transportCfg))
 
 	mux.HandleFunc("/notify", func(w http.ResponseWriter, r *http.Request) {
 		var payload map[string]interface{}

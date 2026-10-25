@@ -1761,27 +1761,48 @@
       const agentBubble = appendBubble('agent', '…', false);
 
       try {
-        const res = await fetch('/ask', {
+        const res = await fetch('/v2/ask', {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({ text: text, session: 'web_session' })
+          body: JSON.stringify({
+            request_id: 'web-' + Date.now(),
+            session_id: 'web_session',
+            text: text,
+            locale: 'vi-VN',
+            input_type: 'text'
+          })
         });
 
         agentBubble.textContent = '';
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
+        let buffer = '';
         let fullAnswer = '';
 
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
-          const chunk = decoder.decode(value, { stream: true });
-          agentBubble.textContent += chunk;
-          fullAnswer += chunk;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop();
+          for (const line of lines) {
+            if (!line.trim()) continue;
+            try {
+              const event = JSON.parse(line);
+              if (event.type === 'progress') {
+                agentBubble.textContent = 'Đang xử lý...';
+              } else if (event.type === 'presentation') {
+                fullAnswer = event.payload.text || '';
+                agentBubble.textContent = fullAnswer;
+              } else if (event.type === 'error') {
+                fullAnswer = 'Lỗi: ' + (event.payload.message || 'Không thể xử lý');
+                agentBubble.textContent = fullAnswer;
+              }
+            } catch (_) {}
+          }
           chatList.scrollTop = chatList.scrollHeight;
         }
 
-        // Lưu câu trả lời của agent vào lịch sử
         const history = getChatHistory();
         history.push({ sender: 'agent', text: fullAnswer });
         saveChatHistory(history);
