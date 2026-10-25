@@ -158,13 +158,14 @@ func startCameraWakeWordListener(server *Server) {
 								continue
 							}
 
+							// Worker pool xử lý STT bất đồng bộ (tối đa 2 worker đồng thời) thay vì block hoàn toàn luồng thu
 							server.transcribeLock.Lock()
-							if server.isTranscribing {
+							if server.transcribeWorkers >= 2 {
 								server.transcribeLock.Unlock()
-								logMic("Đang xử lý câu nói trước, bỏ qua đoạn này để tránh nghẽn.")
+								logMic("Hệ thống STT đang xử lý 2 câu liên tiếp, bỏ qua đoạn này để giải phóng tải.")
 								continue
 							}
-							server.isTranscribing = true
+							server.transcribeWorkers++
 							server.transcribeLock.Unlock()
 
 							targetSTT := "Groq Whisper Large-v3"
@@ -177,7 +178,7 @@ func startCameraWakeWordListener(server *Server) {
 							go func(rawPCM []byte, cfg CameraConfigData) {
 								defer func() {
 									server.transcribeLock.Lock()
-									server.isTranscribing = false
+									server.transcribeWorkers--
 									server.transcribeLock.Unlock()
 								}()
 

@@ -43,8 +43,8 @@ type Server struct {
 	AutomationMgr *automation.Manager
 	Transcriber   *speech.Transcriber
 
-	isTranscribing bool
-	transcribeLock sync.Mutex
+	transcribeWorkers int
+	transcribeLock    sync.Mutex
 
 	lastTVPromptTime time.Time
 	promptMutex      sync.Mutex
