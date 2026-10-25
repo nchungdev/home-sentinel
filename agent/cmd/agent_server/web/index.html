@@ -731,15 +731,15 @@
       transform: translateY(-1px);
     }
 
-    /* Input Pill Bar */
+    /* Input Pill Bar & Unified Action Group */
     .cam-input-row {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
       background: rgba(11, 14, 23, 0.85);
       border: 1px solid rgba(255, 255, 255, 0.12);
       border-radius: 28px;
-      padding: 6px 8px 6px 16px;
+      padding: 5px 6px 5px 16px;
       transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
       box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4);
     }
@@ -765,70 +765,83 @@
       font-size: 13px;
     }
 
-    /* Action Circle Buttons */
-    .btn-circle-action {
-      width: 36px;
-      height: 36px;
+    /* Action Control Cluster */
+    .cam-actions-cluster {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255, 255, 255, 0.04);
+      padding: 3px;
+      border-radius: 24px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .btn-cam-action {
+      width: 32px;
+      height: 32px;
       border-radius: 50%;
-      border: none;
+      border: 1px solid transparent;
+      background: transparent;
       display: inline-flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-      flex-shrink: 0;
-      font-size: 14px;
-      color: #fff;
-      position: relative;
+      transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+      color: #9ca3af;
+      padding: 0;
     }
-    .btn-circle-action:hover {
-      transform: scale(1.06);
+    .btn-cam-action svg {
+      width: 16px;
+      height: 16px;
+      fill: currentColor;
+      transition: transform 0.18s ease;
     }
-    .btn-circle-action:active {
-      transform: scale(0.96);
-    }
-    .btn-circle-action.mic {
+    .btn-cam-action:hover {
       background: rgba(255, 255, 255, 0.08);
-      color: #d1d5db;
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #f3f4f6;
+      transform: translateY(-1px);
     }
-    .btn-circle-action.mic:hover {
-      background: rgba(255, 255, 255, 0.15);
-      color: #fff;
-    }
-    .btn-circle-action.mic.recording {
-      background: #ef4444;
-      color: #fff;
-      animation: pulseRecord 1.2s infinite;
-      box-shadow: 0 0 16px rgba(239, 68, 68, 0.6);
-      border-color: #ef4444;
-    }
-    @keyframes pulseRecord {
-      0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
-      50% { transform: scale(1.08); box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+    .btn-cam-action:active {
+      transform: scale(0.94);
     }
 
-    .btn-circle-action.call {
-      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
-    }
-    .btn-circle-action.call:hover {
-      background: linear-gradient(135deg, #059669 0%, #047857 100%);
-      box-shadow: 0 6px 16px rgba(16, 185, 129, 0.5);
-    }
-    .btn-circle-action.call.in-call {
-      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    /* Mic button active state */
+    .btn-cam-action.mic.recording {
+      background: rgba(239, 68, 68, 0.2);
+      border-color: rgba(239, 68, 68, 0.5);
+      color: #ef4444;
       animation: pulseRecord 1.2s infinite;
-      box-shadow: 0 4px 14px rgba(239, 68, 68, 0.5);
+    }
+    .btn-cam-action.mic.recording svg {
+      animation: pulse 1s infinite;
     }
 
-    .btn-circle-action.send {
-      background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
-      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
+    /* Call button state */
+    .btn-cam-action.call:hover {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border-color: rgba(16, 185, 129, 0.3);
     }
-    .btn-circle-action.send:hover {
-      background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
-      box-shadow: 0 6px 16px rgba(99, 102, 241, 0.5);
+    .btn-cam-action.call.in-call {
+      background: rgba(239, 68, 68, 0.2);
+      border-color: rgba(239, 68, 68, 0.5);
+      color: #ef4444;
+      animation: pulseRecord 1.2s infinite;
+    }
+
+    /* Primary Send button */
+    .btn-cam-action.send {
+      background: var(--primary);
+      color: #ffffff;
+      box-shadow: 0 2px 8px rgba(99, 102, 241, 0.35);
+    }
+    .btn-cam-action.send:hover {
+      background: var(--primary-hover);
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.5);
+      transform: translateY(-1px);
+    }
+    .btn-cam-action.send:active {
+      transform: scale(0.94);
     }
 
     .log-terminal {
@@ -1211,24 +1224,33 @@
             <span class="cam-quick-chip" onclick="fillVoiceText('Cảnh báo: Khu vực có ghi hình an ninh!')">⚠️ Cảnh báo</span>
           </div>
 
-          <!-- Input Row tích hợp text + voice + call + send -->
+          <!-- Input Row tích hợp text + voice + call + send (Unified Design System) -->
           <div class="cam-input-row">
-            <textarea id="camVoiceInput" rows="1" placeholder="Nhập câu thông báo hoặc bấm mic..."></textarea>
+            <textarea id="camVoiceInput" rows="1" placeholder="Nhập câu thông báo hoặc chọn thao tác..."></textarea>
             
-            <!-- Nút Giọng nói / Voice STT -->
-            <button class="btn-circle-action mic" id="btnCamMic" onclick="toggleSpeechRecognition()" title="Ghi âm giọng nói tiếng Việt">
-              🎤
-            </button>
+            <div class="cam-actions-cluster">
+              <!-- Nút Giọng nói / Voice STT -->
+              <button class="btn-cam-action mic" id="btnCamMic" onclick="toggleSpeechRecognition()" title="Ghi âm giọng nói">
+                <svg viewBox="0 0 24 24">
+                  <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+                  <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+                </svg>
+              </button>
 
-            <!-- Nút Call trực tiếp -->
-            <button class="btn-circle-action call" id="btnCamCall" onclick="toggleCameraCall()" title="Gọi trực tiếp 2 chiều">
-              📞
-            </button>
+              <!-- Nút Call trực tiếp -->
+              <button class="btn-cam-action call" id="btnCamCall" onclick="toggleCameraCall()" title="Gọi trực tiếp 2 chiều">
+                <svg viewBox="0 0 24 24">
+                  <path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56a.977.977 0 0 0-1.01.24l-2.2 2.2a15.053 15.053 0 0 1-6.59-6.59l2.2-2.21a.96.96 0 0 0 .25-1A11.36 11.36 0 0 1 8.5 4c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1 0 9.39 7.61 17 17 17 .55 0 1-.45 1-1v-3.62c0-.55-.45-1-1-1z"/>
+                </svg>
+              </button>
 
-            <!-- Nút Gửi / Phát loa -->
-            <button class="btn-circle-action send" id="btnCamSpeak" onclick="sendCameraSpeech()" title="Phát lên loa camera">
-              ➤
-            </button>
+              <!-- Nút Gửi / Phát loa -->
+              <button class="btn-cam-action send" id="btnCamSpeak" onclick="sendCameraSpeech()" title="Phát lên loa camera">
+                <svg viewBox="0 0 24 24">
+                  <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -1716,6 +1738,15 @@
       });
     }
 
+    const SVG_ICONS = {
+      mic: `<svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>`,
+      stop: `<svg viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg>`,
+      phone: `<svg viewBox="0 0 24 24"><path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56a.977.977 0 0 0-1.01.24l-2.2 2.2a15.053 15.053 0 0 1-6.59-6.59l2.2-2.21a.96.96 0 0 0 .25-1A11.36 11.36 0 0 1 8.5 4c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1 0 9.39 7.61 17 17 17 .55 0 1-.45 1-1v-3.62c0-.55-.45-1-1-1z"/></svg>`,
+      phoneEnd: `<svg viewBox="0 0 24 24"><path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08a.996.996 0 0 1 0-1.41C3.28 8.91 7.42 7.5 12 7.5s8.72 1.41 11.71 4.17c.39.39.39 1.02 0 1.41l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.11-.7-.28-.79-.74-1.69-1.36-2.67-1.85-.33-.16-.56-.5-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z"/></svg>`,
+      send: `<svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>`,
+      loading: `<svg viewBox="0 0 24 24" class="spin"><path d="M12 4V2C6.48 2 2 6.48 2 12h2c0-4.41 3.59-8 8-8zm0 14c-4.41 0-8-3.59-8-8H2c0 5.52 4.48 10 10 10v-2zm8-6h2c0-5.52-4.48-10-10-10v2c4.41 0 8 3.59 8 8z"/></svg>`
+    };
+
     async function sendCameraSpeech(customText) {
       const input = document.getElementById('camVoiceInput');
       const text = (customText || (input ? input.value : '')).trim();
@@ -1727,7 +1758,7 @@
 
       if (btn) {
         btn.disabled = true;
-        btn.textContent = '⏳';
+        btn.innerHTML = SVG_ICONS.loading;
       }
       log.textContent += `\n[${time}] Phát giọng nói tới camera: "${text}"`;
 
@@ -1749,7 +1780,7 @@
       } finally {
         if (btn) {
           btn.disabled = false;
-          btn.textContent = '➤';
+          btn.innerHTML = SVG_ICONS.send;
         }
         log.scrollTop = log.scrollHeight;
       }
@@ -1802,7 +1833,7 @@
           isRecordingVoice = false;
           if (btn) {
             btn.classList.remove('recording');
-            btn.innerHTML = '🎤';
+            btn.innerHTML = SVG_ICONS.mic;
           }
           if (!isCalling) {
             if (idleView) idleView.style.display = 'flex';
@@ -1822,7 +1853,7 @@
           isRecordingVoice = false;
           if (btn) {
             btn.classList.remove('recording');
-            btn.innerHTML = '🎤';
+            btn.innerHTML = SVG_ICONS.mic;
           }
           if (idleView) idleView.style.display = 'flex';
           if (waveView) waveView.classList.remove('visible');
@@ -1837,7 +1868,7 @@
         isRecordingVoice = false;
         if (btn) {
           btn.classList.remove('recording');
-          btn.innerHTML = '🎤';
+          btn.innerHTML = SVG_ICONS.mic;
         }
         if (idleView) idleView.style.display = 'flex';
         if (waveView) waveView.classList.remove('visible');
@@ -1850,7 +1881,7 @@
           isRecordingVoice = true;
           if (btn) {
             btn.classList.add('recording');
-            btn.innerHTML = '⏹️';
+            btn.innerHTML = SVG_ICONS.stop;
           }
           if (idleView) idleView.style.display = 'none';
           if (waveView) waveView.classList.add('visible');
@@ -1888,7 +1919,7 @@
         // Bắt đầu cuộc gọi
         if (btn) {
           btn.classList.add('in-call');
-          btn.innerHTML = '📵';
+          btn.innerHTML = SVG_ICONS.phoneEnd;
           btn.title = 'Ngắt cuộc gọi đàm thoại';
         }
         if (statusBadge) statusBadge.classList.add('active-talk');
@@ -1917,7 +1948,7 @@
         // Kết thúc cuộc gọi
         if (btn) {
           btn.classList.remove('in-call');
-          btn.innerHTML = '📞';
+          btn.innerHTML = SVG_ICONS.phone;
           btn.title = 'Gọi trực tiếp qua loa camera';
         }
         if (statusBadge) statusBadge.classList.remove('active-talk');
