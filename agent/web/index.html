@@ -573,31 +573,179 @@
       transform: translateX(16px);
     }
 
-    /* COMPACT VOICE / CALL BAR CHO CAMERA */
+    /* COMPACT VOICE / CALL BAR CHO CAMERA (UI/UX PRO MAX DESIGN) */
     .cam-chat-box {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 12px 14px;
+      background: linear-gradient(180deg, rgba(26, 31, 46, 0.8) 0%, rgba(18, 22, 34, 0.95) 100%);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      padding: 16px 18px;
       display: flex;
       flex-direction: column;
-      gap: 10px;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+      gap: 14px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08);
       flex: 1;
       justify-content: space-between;
     }
+    .cam-chat-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .cam-chat-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-bright);
+      letter-spacing: -0.2px;
+    }
+    .cam-chat-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+    .cam-chat-badge.active-talk {
+      background: rgba(16, 185, 129, 0.12);
+      border-color: rgba(16, 185, 129, 0.3);
+      color: #34d399;
+    }
+
+    /* Live Intercom Display Area */
+    .cam-intercom-display {
+      flex: 1;
+      min-height: 120px;
+      background: rgba(10, 13, 20, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .intercom-idle {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      color: var(--text-muted);
+      text-align: center;
+    }
+    .intercom-idle-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: rgba(99, 102, 241, 0.08);
+      border: 1px solid rgba(99, 102, 241, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--accent);
+      font-size: 20px;
+    }
+    .intercom-active-wave {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+    }
+    .intercom-active-wave.visible {
+      display: flex;
+    }
+    .sound-wave {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      height: 32px;
+    }
+    .sound-wave .bar {
+      width: 4px;
+      height: 8px;
+      background: #10b981;
+      border-radius: 4px;
+      animation: soundWaveAnim 1.2s ease-in-out infinite alternate;
+    }
+    .sound-wave .bar:nth-child(2) { animation-delay: 0.15s; }
+    .sound-wave .bar:nth-child(3) { animation-delay: 0.3s; }
+    .sound-wave .bar:nth-child(4) { animation-delay: 0.45s; }
+    .sound-wave .bar:nth-child(5) { animation-delay: 0.2s; }
+    .sound-wave .bar:nth-child(6) { animation-delay: 0.35s; }
+    .sound-wave .bar:nth-child(7) { animation-delay: 0.5s; }
+    @keyframes soundWaveAnim {
+      0% { height: 6px; opacity: 0.4; }
+      100% { height: 28px; opacity: 1; }
+    }
+
+    /* Live Transcript Bubble */
+    .live-transcript {
+      max-width: 90%;
+      text-align: center;
+      font-size: 13px;
+      color: #f3f4f6;
+      font-weight: 500;
+      line-height: 1.5;
+      background: rgba(255, 255, 255, 0.06);
+      padding: 6px 14px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    /* Suggestions Row */
+    .cam-quick-chips {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 2px;
+    }
+    .cam-quick-chip {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: var(--text);
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .cam-quick-chip:hover {
+      background: rgba(99, 102, 241, 0.12);
+      border-color: rgba(99, 102, 241, 0.35);
+      color: var(--text-bright);
+      transform: translateY(-1px);
+    }
+
+    /* Input Pill Bar */
     .cam-input-row {
       display: flex;
       align-items: center;
       gap: 8px;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 24px;
-      padding: 4px 8px 4px 14px;
-      transition: border-color 0.15s ease;
+      background: rgba(11, 14, 23, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 28px;
+      padding: 6px 8px 6px 16px;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4);
     }
     .cam-input-row:focus-within {
-      border-color: var(--border-focus);
+      border-color: rgba(99, 102, 241, 0.6);
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15), inset 0 2px 4px rgba(0, 0, 0, 0.3);
     }
     .cam-input-row textarea {
       flex: 1;
@@ -606,70 +754,81 @@
       color: var(--text-bright);
       font-size: 13px;
       resize: none;
-      height: 24px;
-      padding: 3px 0;
+      height: 22px;
+      padding: 2px 0;
       outline: none;
       font-family: inherit;
+      line-height: 22px;
     }
+    .cam-input-row textarea::placeholder {
+      color: rgba(156, 163, 175, 0.6);
+      font-size: 13px;
+    }
+
+    /* Action Circle Buttons */
     .btn-circle-action {
-      width: 34px;
-      height: 34px;
+      width: 36px;
+      height: 36px;
       border-radius: 50%;
       border: none;
-      display: flex;
+      display: inline-flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      transition: all 0.15s ease;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
       flex-shrink: 0;
       font-size: 14px;
       color: #fff;
+      position: relative;
+    }
+    .btn-circle-action:hover {
+      transform: scale(1.06);
+    }
+    .btn-circle-action:active {
+      transform: scale(0.96);
     }
     .btn-circle-action.mic {
-      background: #374151;
-      color: #e5e7eb;
+      background: rgba(255, 255, 255, 0.08);
+      color: #d1d5db;
+      border: 1px solid rgba(255, 255, 255, 0.1);
     }
     .btn-circle-action.mic:hover {
-      background: #4b5563;
+      background: rgba(255, 255, 255, 0.15);
       color: #fff;
     }
     .btn-circle-action.mic.recording {
       background: #ef4444;
-      animation: pulse 1s infinite;
-      box-shadow: 0 0 10px rgba(239, 68, 68, 0.6);
+      color: #fff;
+      animation: pulseRecord 1.2s infinite;
+      box-shadow: 0 0 16px rgba(239, 68, 68, 0.6);
+      border-color: #ef4444;
     }
+    @keyframes pulseRecord {
+      0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+      50% { transform: scale(1.08); box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+    }
+
     .btn-circle-action.call {
-      background: #10b981;
-      box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
     }
     .btn-circle-action.call:hover {
-      background: #059669;
-      transform: scale(1.05);
+      background: linear-gradient(135deg, #059669 0%, #047857 100%);
+      box-shadow: 0 6px 16px rgba(16, 185, 129, 0.5);
     }
     .btn-circle-action.call.in-call {
-      background: #ef4444;
-      animation: pulse 1.2s infinite;
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      animation: pulseRecord 1.2s infinite;
+      box-shadow: 0 4px 14px rgba(239, 68, 68, 0.5);
     }
+
     .btn-circle-action.send {
-      background: var(--primary);
+      background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
     }
     .btn-circle-action.send:hover {
-      background: var(--primary-hover);
-      transform: scale(1.05);
-    }
-    .call-banner {
-      display: none;
-      align-items: center;
-      justify-content: space-between;
-      background: rgba(16, 185, 129, 0.12);
-      border: 1px solid rgba(16, 185, 129, 0.3);
-      padding: 8px 12px;
-      border-radius: 8px;
-      font-size: 12px;
-      color: #34d399;
-    }
-    .call-banner.active {
-      display: flex;
+      background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+      box-shadow: 0 6px 16px rgba(99, 102, 241, 0.5);
     }
 
     .log-terminal {
@@ -1006,44 +1165,63 @@
           </button>
         </div>
 
-        <!-- PHẦN DƯỚI: CHAT BOX DUY NHẤT: VOICE / CALL / TEXT CHO CAMERA -->
+        <!-- PHẦN DƯỚI: CHAT BOX DUY NHẤT: VOICE / CALL / TEXT CHO CAMERA (UI/UX PRO MAX DESIGN) -->
         <div class="cam-chat-box">
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <div class="card-title" style="margin:0; font-size:13px; display:flex; align-items:center; gap:6px;">
-              <span>🎙️</span> Đàm Thoại & Loa Camera
+          <div class="cam-chat-header">
+            <div class="cam-chat-title">
+              <span>🎙️</span>
+              <span>Đàm Thoại & Loa Camera</span>
             </div>
-            <span id="callStatusIndicator" style="font-size:11px; color:var(--text-muted);">Sẵn sàng</span>
+            <div class="cam-chat-badge" id="callStatusBadge">
+              <span class="pulse-dot" id="callStatusDot" style="width:6px; height:6px; background:#6b7280;"></span>
+              <span id="callStatusIndicator">Sẵn sàng</span>
+            </div>
           </div>
 
-          <!-- Trạng thái Call trực tiếp -->
-          <div class="call-banner" id="callBanner">
-            <div style="display:flex; align-items:center; gap:8px;">
-              <span class="pulse-dot" style="background:#10b981;"></span>
-              <span style="font-weight:600;" id="callDuration">Đang gọi 00:00</span>
+          <!-- Màn hình trạng thái âm thanh trực quan (Visual Intercom State) -->
+          <div class="cam-intercom-display" id="intercomDisplay">
+            <!-- Trạng thái chờ Idle -->
+            <div class="intercom-idle" id="intercomIdle">
+              <div class="intercom-idle-icon">🔊</div>
+              <div style="font-size:12px; font-weight:500; color:var(--text-bright);">Loa 2 Chiều Sẵn Sàng</div>
+              <div style="font-size:11px; max-width:240px; line-height:1.4;">Gõ văn bản để phát thông báo, chạm mic để nói hoặc bấm nút gọi để đàm thoại trực tiếp.</div>
             </div>
-            <span style="font-size:11px;">Loa camera đang bật 2 chiều</span>
+
+            <!-- Trạng thái Sóng âm Waveform khi đang nói hoặc gọi -->
+            <div class="intercom-active-wave" id="intercomActiveWave">
+              <div class="sound-wave">
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+              </div>
+              <div class="live-transcript" id="liveTranscriptText">Đang lắng nghe giọng nói...</div>
+              <div style="font-size:11px; color:#34d399; font-weight:600;" id="liveCallTimerText">Đang đàm thoại</div>
+            </div>
           </div>
 
-          <!-- Gợi ý nhanh -->
-          <div style="display:flex; flex-direction:column; gap:4px;">
-            <div style="display:flex; flex-wrap:wrap; gap:6px;">
-              <span class="chip" style="font-size:11px; padding:3px 8px; cursor:pointer;" onclick="fillVoiceText('Xin chào quý khách!')">👋 Chào khách</span>
-              <span class="chip" style="font-size:11px; padding:3px 8px; cursor:pointer;" onclick="fillVoiceText('Bạn cần tìm ai ạ?')">❓ Hỏi thăm</span>
-              <span class="chip" style="font-size:11px; padding:3px 8px; cursor:pointer;" onclick="fillVoiceText('Cảnh báo: Khu vực có camera an ninh!')">⚠️ Cảnh báo</span>
-            </div>
+          <!-- Gợi ý thông báo nhanh -->
+          <div class="cam-quick-chips">
+            <span class="cam-quick-chip" onclick="fillVoiceText('Xin chào quý khách!')">👋 Chào khách</span>
+            <span class="cam-quick-chip" onclick="fillVoiceText('Bạn cần tìm ai ạ?')">❓ Hỏi thăm</span>
+            <span class="cam-quick-chip" onclick="fillVoiceText('Mời bạn vào nhà ngồi chơi!')">🍵 Mời vào</span>
+            <span class="cam-quick-chip" onclick="fillVoiceText('Cảnh báo: Khu vực có ghi hình an ninh!')">⚠️ Cảnh báo</span>
           </div>
 
           <!-- Input Row tích hợp text + voice + call + send -->
           <div class="cam-input-row">
-            <textarea id="camVoiceInput" rows="1" placeholder="Nhập tin hoặc bấm mic nói..."></textarea>
+            <textarea id="camVoiceInput" rows="1" placeholder="Nhập câu thông báo hoặc bấm mic..."></textarea>
             
             <!-- Nút Giọng nói / Voice STT -->
-            <button class="btn-circle-action mic" id="btnCamMic" onclick="toggleSpeechRecognition()" title="Ghi âm giọng nói (Voice to Text)">
+            <button class="btn-circle-action mic" id="btnCamMic" onclick="toggleSpeechRecognition()" title="Ghi âm giọng nói tiếng Việt">
               🎤
             </button>
 
             <!-- Nút Call trực tiếp -->
-            <button class="btn-circle-action call" id="btnCamCall" onclick="toggleCameraCall()" title="Gọi trực tiếp qua loa camera">
+            <button class="btn-circle-action call" id="btnCamCall" onclick="toggleCameraCall()" title="Gọi trực tiếp 2 chiều">
               📞
             </button>
 
@@ -1597,6 +1775,12 @@
       const btn = document.getElementById('btnCamMic');
       const input = document.getElementById('camVoiceInput');
       const indicator = document.getElementById('callStatusIndicator');
+      const statusBadge = document.getElementById('callStatusBadge');
+      const statusDot = document.getElementById('callStatusDot');
+      const idleView = document.getElementById('intercomIdle');
+      const waveView = document.getElementById('intercomActiveWave');
+      const transcriptEl = document.getElementById('liveTranscriptText');
+      const timerText = document.getElementById('liveCallTimerText');
 
       if (!speechRecognition) {
         speechRecognition = initSpeechRecognition();
@@ -1611,6 +1795,7 @@
             transcript += event.results[i][0].transcript;
           }
           if (input) input.value = transcript;
+          if (transcriptEl) transcriptEl.textContent = `"${transcript}"`;
         };
 
         speechRecognition.onend = () => {
@@ -1619,9 +1804,15 @@
             btn.classList.remove('recording');
             btn.innerHTML = '🎤';
           }
-          if (indicator) indicator.textContent = 'Đã nghe xong';
+          if (!isCalling) {
+            if (idleView) idleView.style.display = 'flex';
+            if (waveView) waveView.classList.remove('visible');
+            if (statusBadge) statusBadge.classList.remove('active-talk');
+            if (statusDot) statusDot.style.background = '#6b7280';
+            if (indicator) indicator.textContent = 'Đã nghe xong';
+          }
           // Tự động phát khi nói xong nếu có nội dung
-          if (input && input.value.trim()) {
+          if (input && input.value.trim() && !isCalling) {
             sendCameraSpeech();
           }
         };
@@ -1633,6 +1824,10 @@
             btn.classList.remove('recording');
             btn.innerHTML = '🎤';
           }
+          if (idleView) idleView.style.display = 'flex';
+          if (waveView) waveView.classList.remove('visible');
+          if (statusBadge) statusBadge.classList.remove('active-talk');
+          if (statusDot) statusDot.style.background = '#ef4444';
           if (indicator) indicator.textContent = 'Lỗi mic: ' + event.error;
         };
       }
@@ -1644,6 +1839,10 @@
           btn.classList.remove('recording');
           btn.innerHTML = '🎤';
         }
+        if (idleView) idleView.style.display = 'flex';
+        if (waveView) waveView.classList.remove('visible');
+        if (statusBadge) statusBadge.classList.remove('active-talk');
+        if (statusDot) statusDot.style.background = '#6b7280';
         if (indicator) indicator.textContent = 'Sẵn sàng';
       } else {
         try {
@@ -1653,7 +1852,13 @@
             btn.classList.add('recording');
             btn.innerHTML = '⏹️';
           }
-          if (indicator) indicator.textContent = 'Đang lắng nghe tiếng Việt...';
+          if (idleView) idleView.style.display = 'none';
+          if (waveView) waveView.classList.add('visible');
+          if (transcriptEl) transcriptEl.textContent = 'Đang lắng nghe câu nói của bạn...';
+          if (timerText) timerText.textContent = 'Ghi âm phát loa';
+          if (statusBadge) statusBadge.classList.add('active-talk');
+          if (statusDot) statusDot.style.background = '#ef4444';
+          if (indicator) indicator.textContent = 'Đang nghe...';
         } catch (e) {
           console.error(e);
         }
@@ -1668,9 +1873,13 @@
 
     function toggleCameraCall() {
       const btn = document.getElementById('btnCamCall');
-      const banner = document.getElementById('callBanner');
-      const durationEl = document.getElementById('callDuration');
       const indicator = document.getElementById('callStatusIndicator');
+      const statusBadge = document.getElementById('callStatusBadge');
+      const statusDot = document.getElementById('callStatusDot');
+      const idleView = document.getElementById('intercomIdle');
+      const waveView = document.getElementById('intercomActiveWave');
+      const transcriptEl = document.getElementById('liveTranscriptText');
+      const timerText = document.getElementById('liveCallTimerText');
       const log = document.getElementById('termLog');
 
       isCalling = !isCalling;
@@ -1680,21 +1889,26 @@
         if (btn) {
           btn.classList.add('in-call');
           btn.innerHTML = '📵';
-          btn.title = 'Ngắt kết nối cuộc gọi';
+          btn.title = 'Ngắt cuộc gọi đàm thoại';
         }
-        if (banner) banner.classList.add('active');
-        if (indicator) indicator.textContent = 'Cuộc gọi đang diễn ra';
+        if (statusBadge) statusBadge.classList.add('active-talk');
+        if (statusDot) statusDot.style.background = '#10b981';
+        if (indicator) indicator.textContent = 'Đang gọi 2 chiều';
         
+        if (idleView) idleView.style.display = 'none';
+        if (waveView) waveView.classList.add('visible');
+        if (transcriptEl) transcriptEl.textContent = 'Đang truyền âm thanh trực tiếp tới Loa Camera...';
+
         callSeconds = 0;
-        if (durationEl) durationEl.textContent = 'Đang gọi 00:00';
+        if (timerText) timerText.textContent = 'Đang đàm thoại: 00:00';
         callTimerInterval = setInterval(() => {
           callSeconds++;
           const m = String(Math.floor(callSeconds / 60)).padStart(2, '0');
           const s = String(callSeconds % 60).padStart(2, '0');
-          if (durationEl) durationEl.textContent = `Đang gọi ${m}:${s}`;
+          if (timerText) timerText.textContent = `Đang đàm thoại: ${m}:${s}`;
         }, 1000);
 
-        log.textContent += `\n[${new Date().toLocaleTimeString()}] Bắt đầu đàm thoại trực tiếp với Camera...`;
+        log.textContent += `\n[${new Date().toLocaleTimeString()}] Bắt đầu đàm thoại 2 chiều trực tiếp với Camera...`;
         log.scrollTop = log.scrollHeight;
 
         // Kích hoạt nhận diện liên tục gửi lên loa camera
@@ -1706,9 +1920,13 @@
           btn.innerHTML = '📞';
           btn.title = 'Gọi trực tiếp qua loa camera';
         }
-        if (banner) banner.classList.remove('active');
+        if (statusBadge) statusBadge.classList.remove('active-talk');
+        if (statusDot) statusDot.style.background = '#6b7280';
         if (indicator) indicator.textContent = 'Đã kết thúc cuộc gọi';
         
+        if (idleView) idleView.style.display = 'flex';
+        if (waveView) waveView.classList.remove('visible');
+
         clearInterval(callTimerInterval);
         stopContinuousCallAudio();
 
@@ -1721,21 +1939,38 @@
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SpeechRecognition) return;
 
+      const transcriptEl = document.getElementById('liveTranscriptText');
       liveCallRecognition = new SpeechRecognition();
       liveCallRecognition.continuous = true;
-      liveCallRecognition.interimResults = false;
+      liveCallRecognition.interimResults = true;
       liveCallRecognition.lang = 'vi-VN';
 
       liveCallRecognition.onresult = (event) => {
         for (let i = event.resultIndex; i < event.results.length; ++i) {
+          const text = event.results[i][0].transcript;
+          if (transcriptEl) transcriptEl.textContent = `"${text}"`;
           if (event.results[i].isFinal) {
-            const spokenText = event.results[i][0].transcript.trim();
+            const spokenText = text.trim();
             if (spokenText && isCalling) {
               sendCameraSpeech(spokenText);
             }
           }
         }
       };
+
+      liveCallRecognition.onend = () => {
+        // Tự khởi động lại nếu vẫn đang trong cuộc gọi
+        if (isCalling && liveCallRecognition) {
+          try { liveCallRecognition.start(); } catch (e) {}
+        }
+      };
+
+      try {
+        liveCallRecognition.start();
+      } catch (e) {
+        console.warn('Call recognition start error:', e);
+      }
+    }
 
       liveCallRecognition.onend = () => {
         // Tự khởi động lại nếu vẫn đang trong cuộc gọi
