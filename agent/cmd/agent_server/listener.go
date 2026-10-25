@@ -100,15 +100,11 @@ func startCameraWakeWordListener(server *Server) {
 				if time.Since(lastLevelLog) >= time.Second {
 					if rms > 120.0 || isSpeaking || len(speechBuffer) > 0 {
 						level := math.Sqrt(windowSum / float64(windowSamples))
-						db := -96.0
-						if level > 0 {
-							db = 20 * math.Log10(level/32768)
-						}
 						state := "dưới ngưỡng"
 						if rms > 120.0 {
-							state = "vượt ngưỡng âm thanh (chưa xác nhận giọng nói)"
+							state = "vượt ngưỡng"
 						}
-						logMic("PCM nhận được | RMS=%.1f | peak=%d | %.1f dBFS | ngưỡng=120 | %s | đoạn thu=%.1fs", level, windowPeak, db, state, float64(len(speechBuffer))/32000)
+						logMic("PCM: RMS=%.0f, peak=%d, %s, thu=%.1fs", level, windowPeak, state, float64(len(speechBuffer))/32000)
 						lastLevelLog = time.Now()
 					}
 					windowSum, windowSamples, windowPeak = 0, 0, 0
@@ -200,7 +196,14 @@ func startCameraWakeWordListener(server *Server) {
 								}
 								lowerT := strings.ToLower(text)
 								if isWhisperHallucination(lowerT) {
+									logMic("Bỏ qua ảo giác Whisper: %q", text)
 									return
+								}
+								// Chuẩn hóa & đoán ý theo context nhà thông minh (vd: "tắt đầy/tắt này" -> "tắt đèn")
+								normalizedText := NormalizeSmartHomeQuery(text)
+								if normalizedText != text {
+									logMic("Đoán ý thông minh: %q -> %q", text, normalizedText)
+									text = normalizedText
 								}
 								logMic("STT [%s] nghe được: %q", engine, text)
 

@@ -5,6 +5,10 @@ import (
 )
 
 func isWhisperHallucination(s string) bool {
+	clean := strings.TrimSpace(strings.Trim(s, ".!,? "))
+	if clean == "cảm ơn" || clean == "cam on" || clean == "cảm ơn bạn" {
+		return true
+	}
 	return strings.Contains(s, "subscribe") ||
 		strings.Contains(s, "đăng ký") ||
 		strings.Contains(s, "ghiền mì gõ") ||
@@ -15,6 +19,44 @@ func isWhisperHallucination(s string) bool {
 		strings.Contains(s, "hẹn gặp lại") ||
 		strings.Contains(s, "chúc các bạn") ||
 		strings.Contains(s, "like và chia sẻ")
+}
+
+// NormalizeSmartHomeQuery đoán ý và nắn chỉnh các lỗi phát âm / STT phổ biến về câu lệnh chuẩn
+func NormalizeSmartHomeQuery(text string) string {
+	s := strings.TrimSpace(text)
+	lower := strings.ToLower(s)
+	lower = strings.ReplaceAll(lower, ".", "")
+	lower = strings.ReplaceAll(lower, ",", "")
+	lower = strings.ReplaceAll(lower, "!", "")
+	lower = strings.ReplaceAll(lower, "?", "")
+
+	// 1. Nhận diện ý "tắt đèn": người dùng nói "tắt đầy", "tắt này", "tất đầy", "tất đèn", "tắt đè"
+	if strings.Contains(lower, "tất đầy") ||
+		strings.Contains(lower, "tắt đầy") ||
+		strings.Contains(lower, "tắt này") ||
+		strings.Contains(lower, "tất này") ||
+		strings.Contains(lower, "tất đèn") ||
+		strings.Contains(lower, "tắt đè") {
+		return "tắt đèn"
+	}
+
+	// 2. Nhận diện ý "bật đèn": "bật đè", "bật đem", "mở đền", "bật đền"
+	if strings.Contains(lower, "bật đè") ||
+		strings.Contains(lower, "bật đem") ||
+		strings.Contains(lower, "mở đền") ||
+		strings.Contains(lower, "bật đền") {
+		return "bật đèn"
+	}
+
+	// 3. Nhận diện ý "mở TV / bật TV"
+	if strings.Contains(lower, "mở ti vi") ||
+		strings.Contains(lower, "mở tivi") ||
+		strings.Contains(lower, "bật ti vi") ||
+		strings.Contains(lower, "bật tivi") {
+		return "mở TV"
+	}
+
+	return s
 }
 
 func matchesWakeWord(text string) (bool, string) {

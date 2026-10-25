@@ -117,9 +117,11 @@ func AnalyzeAudioSegment(pcm []byte) AudioFeatures {
 	}
 
 	// 2. Tiếng động dạng xung ngắn / cơ học (Impulse Noise): cạch cửa, va quẹt, rơi đồ
-	isImpulseNoise := crestFactor > 12.0 || dur < 0.7
-	isHighFreqNoise := zcr > 0.38
-	isLowFreqRumble := zcr < 0.03
+	// Chỉ coi là tiếng động cơ học nếu Crest Factor cực cao (> 14) hoặc ZCR quá cao (> 0.42)
+	// Tránh chặn nhầm các từ ngắn của con người (như "tắt đèn", "mở", "bật", "ơ", "này")
+	isImpulseNoise := (crestFactor > 14.0 && dur < 0.6)
+	isHighFreqNoise := zcr > 0.42
+	isLowFreqRumble := zcr < 0.02 && rms < 200
 
 	if isImpulseNoise || isHighFreqNoise || isLowFreqRumble {
 		feat.Category = CategoryNoise
