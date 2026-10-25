@@ -1184,6 +1184,9 @@
         <div class="nav-item" id="nav-camera" onclick="switchNav('camera', this)">
           <span>📹</span> Camera
         </div>
+        <div class="nav-item" id="nav-automation" onclick="switchNav('automation', this)">
+          <span>⚡</span> Kịch Bản
+        </div>
       </div>
     </div>
 
@@ -1441,31 +1444,9 @@
       </div>
     </div>
 
-    <!-- 3. SETTINGS VIEW (CONTAINING SUB-TABS) -->
-    <div id="view-setting" class="view-content setting-view">
-      <div class="subtabs-bar">
-        <button class="subtab-btn active" id="btn-subtab-agent-cfg" onclick="switchSubTab('agent-cfg', this)">
-          <span>🧠</span> AI Engines
-        </button>
-        <button class="subtab-btn" id="btn-subtab-automation-cfg" onclick="switchSubTab('automation-cfg', this)">
-          <span>⚡</span> Kịch Bản (Automation)
-        </button>
-        <button class="subtab-btn" id="btn-subtab-camera-cfg" onclick="switchSubTab('camera-cfg', this)">
-          <span>📷</span> Camera Config
-        </button>
-        <button class="subtab-btn" id="btn-subtab-ha-cfg" onclick="switchSubTab('ha-cfg', this)">
-          <span>🏠</span> Home Assistant
-        </button>
-        <button class="subtab-btn" id="btn-subtab-auth-cfg" onclick="switchSubTab('auth-cfg', this)">
-          <span>🔑</span> Bearer Token
-        </button>
-        <button class="subtab-btn" id="btn-subtab-logs" onclick="switchSubTab('logs', this)">
-          <span>📋</span> Client Logs
-        </button>
-      </div>
-
-      <!-- SUBTAB AUTOMATION: KỊCH BẢN TỰ ĐỘNG HÓA & THIẾT BỊ THẬT -->
-      <div id="subtab-automation-cfg" class="subtab-panel grid-layout">
+    <!-- 2.5. AUTOMATION VIEW (KỊCH BẢN TỰ ĐỘNG HÓA & THIẾT BỊ THẬT) -->
+    <div id="view-automation" class="view-content setting-view">
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(460px, 720px)); gap: 24px; align-items: start; width: 100%;">
         <!-- Card 1: Tắt đèn khi vắng người -->
         <div class="card" style="padding:18px; gap:14px;">
           <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -1495,7 +1476,7 @@
               <label>Chọn các đèn cần tắt (Lấy trực tiếp từ Home Assistant):</label>
               <button class="btn-modern" style="padding:4px 10px; font-size:11px;" onclick="loadAutomationConfigAndDevices()">🔄 Tải lại thiết bị</button>
             </div>
-            <div id="autoIdleLightsChecklist" style="max-height:220px; overflow-y:auto; background:rgba(0,0,0,0.25); border:1px solid var(--border); border-radius:8px; padding:10px; display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+            <div id="autoIdleLightsChecklist" style="max-height:260px; overflow-y:auto; background:rgba(0,0,0,0.25); border:1px solid var(--border); border-radius:8px; padding:10px; display:grid; grid-template-columns:1fr 1fr; gap:8px;">
               <div style="font-size:12px; color:var(--text-muted);">Đang tải danh sách thiết bị từ Home Assistant...</div>
             </div>
           </div>
@@ -1581,6 +1562,27 @@
             <button class="btn-modern primary" id="btnSaveAutomation" onclick="saveAutomationConfigUI()">💾 Lưu Kịch Bản</button>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- 3. SETTINGS VIEW (CONTAINING SUB-TABS) -->
+    <div id="view-setting" class="view-content setting-view">
+      <div class="subtabs-bar">
+        <button class="subtab-btn active" id="btn-subtab-agent-cfg" onclick="switchSubTab('agent-cfg', this)">
+          <span>🧠</span> AI Engines
+        </button>
+        <button class="subtab-btn" id="btn-subtab-camera-cfg" onclick="switchSubTab('camera-cfg', this)">
+          <span>📷</span> Camera Config
+        </button>
+        <button class="subtab-btn" id="btn-subtab-ha-cfg" onclick="switchSubTab('ha-cfg', this)">
+          <span>🏠</span> Home Assistant
+        </button>
+        <button class="subtab-btn" id="btn-subtab-auth-cfg" onclick="switchSubTab('auth-cfg', this)">
+          <span>🔑</span> Bearer Token
+        </button>
+        <button class="subtab-btn" id="btn-subtab-logs" onclick="switchSubTab('logs', this)">
+          <span>📋</span> Client Logs
+        </button>
       </div>
 
       <!-- SUBTAB 1: AI ENGINES -->
@@ -1849,6 +1851,7 @@
       const titles = {
         'agent': 'Agent Chat',
         'camera': 'Camera Live & PTZ',
+        'automation': 'Kịch Bản Tự Động Hóa (Automation)',
         'setting': 'Settings'
       };
       document.getElementById('viewHeaderTitle').textContent = titles[name] || 'Home Sentinel';
@@ -1860,6 +1863,10 @@
       if (name === 'camera') {
         initCameraEventStream();
         loadDetectionStates();
+      }
+
+      if (name === 'automation') {
+        loadAutomationConfigAndDevices();
       }
 
       if (name === 'setting') {
