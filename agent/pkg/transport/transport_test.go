@@ -375,7 +375,7 @@ func TestInvalidInputEventReturns400(t *testing.T) {
 	}
 
 	for _, body := range invalidBodies {
-		req := httptest.NewRequest(http.MethodPost, "/ask", bytes.NewReader(body))
+		req := httptest.NewRequest(http.MethodPost, "/v2/ask", bytes.NewReader(body))
 		req.Header.Set(HeaderAuthorization, "Bearer "+testSecretToken)
 
 		recorder := httptest.NewRecorder()
