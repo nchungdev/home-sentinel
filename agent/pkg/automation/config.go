@@ -10,6 +10,13 @@ type Config struct {
 	EveningArrival    EveningArrivalRule    `json:"evening_arrival"`
 	IdleLivingRoom    IdleLivingRoomRule    `json:"idle_living_room"`
 	TVWelcomeGreeting TVWelcomeGreetingRule `json:"tv_welcome_greeting"`
+	SofaFan           SofaFanRule           `json:"sofa_fan"`
+}
+
+type SofaFanRule struct {
+	Enabled     bool   `json:"enabled"`
+	TargetFan   string `json:"target_fan"`
+	CooldownSec int    `json:"cooldown_sec"`
 }
 
 type EveningArrivalRule struct {
@@ -81,6 +88,11 @@ func DefaultConfig() Config {
 			CooldownSec: 900,
 			PromptText:  "Anh có muốn xem TV không? Em mở giúp anh nhé",
 			PresetToken: "1",
+		},
+		SofaFan: SofaFanRule{
+			Enabled:     true,
+			TargetFan:   "fan.dmaker_sg_548577868_p39_s_2_fan",
+			CooldownSec: 600,
 		},
 	}
 }

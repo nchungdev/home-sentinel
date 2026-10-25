@@ -68,6 +68,10 @@ func (s *Server) executeSmartHomeAction(query string, tNow string) {
 }
 
 func (s *Server) handleProactiveSofaPrompt() {
+	if s.AutomationMgr != nil {
+		go s.AutomationMgr.HandleSofaArrival()
+	}
+
 	tvHost := "192.168.1.8"
 	s.promptMutex.Lock()
 	if time.Since(s.lastTVPromptTime) < 15*time.Minute {

@@ -25,6 +25,7 @@ type Manager struct {
 	lastActivityTime time.Time
 	lastDoorTrigger  time.Time
 	lastTVPromptTime time.Time
+	lastFanTrigger   time.Time
 	activityMutex    sync.Mutex
 	stopChan         chan struct{}
 }
