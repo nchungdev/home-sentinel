@@ -573,6 +573,105 @@
       transform: translateX(16px);
     }
 
+    /* COMPACT VOICE / CALL BAR CHO CAMERA */
+    .cam-chat-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+      flex: 1;
+      justify-content: space-between;
+    }
+    .cam-input-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 4px 8px 4px 14px;
+      transition: border-color 0.15s ease;
+    }
+    .cam-input-row:focus-within {
+      border-color: var(--border-focus);
+    }
+    .cam-input-row textarea {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: var(--text-bright);
+      font-size: 13px;
+      resize: none;
+      height: 24px;
+      padding: 3px 0;
+      outline: none;
+      font-family: inherit;
+    }
+    .btn-circle-action {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      flex-shrink: 0;
+      font-size: 14px;
+      color: #fff;
+    }
+    .btn-circle-action.mic {
+      background: #374151;
+      color: #e5e7eb;
+    }
+    .btn-circle-action.mic:hover {
+      background: #4b5563;
+      color: #fff;
+    }
+    .btn-circle-action.mic.recording {
+      background: #ef4444;
+      animation: pulse 1s infinite;
+      box-shadow: 0 0 10px rgba(239, 68, 68, 0.6);
+    }
+    .btn-circle-action.call {
+      background: #10b981;
+      box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+    }
+    .btn-circle-action.call:hover {
+      background: #059669;
+      transform: scale(1.05);
+    }
+    .btn-circle-action.call.in-call {
+      background: #ef4444;
+      animation: pulse 1.2s infinite;
+    }
+    .btn-circle-action.send {
+      background: var(--primary);
+    }
+    .btn-circle-action.send:hover {
+      background: var(--primary-hover);
+      transform: scale(1.05);
+    }
+    .call-banner {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      color: #34d399;
+    }
+    .call-banner.active {
+      display: flex;
+    }
+
     .log-terminal {
       background: #06070a;
       border: 1px solid var(--border);
@@ -907,29 +1006,50 @@
           </button>
         </div>
 
-        <!-- PHẦN DƯỚI: PHÁT THÔNG BÁO GIỌNG NÓI ĐẾN CAMERA -->
-        <div class="card" style="flex: 1; display:flex; flex-direction:column; padding: 16px 20px; gap: 10px; overflow: hidden;">
-          <div class="card-title">Gửi Giọng Nói Đến Camera (TTS)</div>
-          <p style="font-size:12px; color:var(--text-muted); line-height: 1.4; margin:0;">
-            Gõ thông điệp tiếng Việt để phát trực tiếp qua loa tích hợp camera (PCM Alaw 8000Hz - Port 8800).
-          </p>
-
-          <div style="display:flex; flex-direction:column; gap:6px;">
-            <textarea id="camVoiceInput" rows="3" placeholder="Nhập câu thông báo... (Ví dụ: Xin chào, mời bạn vào nhà ngồi chơi!)" style="background:var(--bg); border:1px solid var(--border); color:var(--text-bright); padding:10px 12px; border-radius:10px; font-size:13px; outline:none; resize:none; font-family:inherit; line-height:1.4;"></textarea>
+        <!-- PHẦN DƯỚI: CHAT BOX DUY NHẤT: VOICE / CALL / TEXT CHO CAMERA -->
+        <div class="cam-chat-box">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div class="card-title" style="margin:0; font-size:13px; display:flex; align-items:center; gap:6px;">
+              <span>🎙️</span> Đàm Thoại & Loa Camera
+            </div>
+            <span id="callStatusIndicator" style="font-size:11px; color:var(--text-muted);">Sẵn sàng</span>
           </div>
 
-          <div style="display:flex; flex-direction:column; gap:6px;">
-            <div style="font-size:11px; color:var(--text-muted);">Gợi ý nhanh:</div>
+          <!-- Trạng thái Call trực tiếp -->
+          <div class="call-banner" id="callBanner">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span class="pulse-dot" style="background:#10b981;"></span>
+              <span style="font-weight:600;" id="callDuration">Đang gọi 00:00</span>
+            </div>
+            <span style="font-size:11px;">Loa camera đang bật 2 chiều</span>
+          </div>
+
+          <!-- Gợi ý nhanh -->
+          <div style="display:flex; flex-direction:column; gap:4px;">
             <div style="display:flex; flex-wrap:wrap; gap:6px;">
-              <span class="chip" style="font-size:11px; padding:4px 10px; cursor:pointer;" onclick="fillVoiceText('Xin chào quý khách!')">👋 Chào khách</span>
-              <span class="chip" style="font-size:11px; padding:4px 10px; cursor:pointer;" onclick="fillVoiceText('Bạn cần tìm ai ạ?')">❓ Hỏi thăm</span>
-              <span class="chip" style="font-size:11px; padding:4px 10px; cursor:pointer;" onclick="fillVoiceText('Cảnh báo: Bạn đang ở trong khu vực có ghi hình!')">⚠️ Cảnh báo</span>
+              <span class="chip" style="font-size:11px; padding:3px 8px; cursor:pointer;" onclick="fillVoiceText('Xin chào quý khách!')">👋 Chào khách</span>
+              <span class="chip" style="font-size:11px; padding:3px 8px; cursor:pointer;" onclick="fillVoiceText('Bạn cần tìm ai ạ?')">❓ Hỏi thăm</span>
+              <span class="chip" style="font-size:11px; padding:3px 8px; cursor:pointer;" onclick="fillVoiceText('Cảnh báo: Khu vực có camera an ninh!')">⚠️ Cảnh báo</span>
             </div>
           </div>
 
-          <div style="margin-top:auto; padding-top:8px;">
-            <button class="btn-modern primary" id="btnCamSpeak" style="width:100%; padding:11px;" onclick="sendCameraSpeech()">
-              📢 Phát Lên Loa Camera
+          <!-- Input Row tích hợp text + voice + call + send -->
+          <div class="cam-input-row">
+            <textarea id="camVoiceInput" rows="1" placeholder="Nhập tin hoặc bấm mic nói..."></textarea>
+            
+            <!-- Nút Giọng nói / Voice STT -->
+            <button class="btn-circle-action mic" id="btnCamMic" onclick="toggleSpeechRecognition()" title="Ghi âm giọng nói (Voice to Text)">
+              🎤
+            </button>
+
+            <!-- Nút Call trực tiếp -->
+            <button class="btn-circle-action call" id="btnCamCall" onclick="toggleCameraCall()" title="Gọi trực tiếp qua loa camera">
+              📞
+            </button>
+
+            <!-- Nút Gửi / Phát loa -->
+            <button class="btn-circle-action send" id="btnCamSpeak" onclick="sendCameraSpeech()" title="Phát lên loa camera">
+              ➤
             </button>
           </div>
         </div>
@@ -1407,17 +1527,30 @@
       log.scrollTop = log.scrollHeight;
     }
 
-    async function sendCameraSpeech() {
+    // GỬI LỜI NÓI / PHÁT LOA CAMERA
+    const camVoiceInput = document.getElementById('camVoiceInput');
+    if (camVoiceInput) {
+      camVoiceInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          sendCameraSpeech();
+        }
+      });
+    }
+
+    async function sendCameraSpeech(customText) {
       const input = document.getElementById('camVoiceInput');
-      const text = input.value.trim();
+      const text = (customText || (input ? input.value : '')).trim();
       if (!text) return;
 
       const log = document.getElementById('termLog');
       const btn = document.getElementById('btnCamSpeak');
       const time = new Date().toLocaleTimeString();
 
-      btn.disabled = true;
-      btn.textContent = '⏳ Đang phát...';
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = '⏳';
+      }
       log.textContent += `\n[${time}] Phát giọng nói tới camera: "${text}"`;
 
       try {
@@ -1429,16 +1562,199 @@
         const json = await res.json();
         if (json.ok) {
           log.textContent += `\n ➔ Thành công: ${json.message}`;
-          input.value = '';
+          if (input && !customText) input.value = '';
         } else {
           log.textContent += `\n ➔ Thất bại: ${json.error}`;
         }
       } catch (e) {
         log.textContent += `\n ➔ Lỗi phát âm: ${e.message}`;
       } finally {
-        btn.disabled = false;
-        btn.textContent = '📢 Phát Loa';
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = '➤';
+        }
         log.scrollTop = log.scrollHeight;
+      }
+    }
+
+    // TÍNH NĂNG 1: GIỌNG NÓI (VOICE / STT)
+    let speechRecognition = null;
+    let isRecordingVoice = false;
+
+    function initSpeechRecognition() {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        return null;
+      }
+      const recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = true;
+      recognition.lang = 'vi-VN';
+      return recognition;
+    }
+
+    function toggleSpeechRecognition() {
+      const btn = document.getElementById('btnCamMic');
+      const input = document.getElementById('camVoiceInput');
+      const indicator = document.getElementById('callStatusIndicator');
+
+      if (!speechRecognition) {
+        speechRecognition = initSpeechRecognition();
+        if (!speechRecognition) {
+          alert('Trình duyệt của bạn chưa hỗ trợ nhận diện giọng nói Web Speech API (Hãy dùng Chrome hoặc Edge).');
+          return;
+        }
+
+        speechRecognition.onresult = (event) => {
+          let transcript = '';
+          for (let i = event.resultIndex; i < event.results.length; ++i) {
+            transcript += event.results[i][0].transcript;
+          }
+          if (input) input.value = transcript;
+        };
+
+        speechRecognition.onend = () => {
+          isRecordingVoice = false;
+          if (btn) {
+            btn.classList.remove('recording');
+            btn.innerHTML = '🎤';
+          }
+          if (indicator) indicator.textContent = 'Đã nghe xong';
+          // Tự động phát khi nói xong nếu có nội dung
+          if (input && input.value.trim()) {
+            sendCameraSpeech();
+          }
+        };
+
+        speechRecognition.onerror = (event) => {
+          console.error('Speech error:', event.error);
+          isRecordingVoice = false;
+          if (btn) {
+            btn.classList.remove('recording');
+            btn.innerHTML = '🎤';
+          }
+          if (indicator) indicator.textContent = 'Lỗi mic: ' + event.error;
+        };
+      }
+
+      if (isRecordingVoice) {
+        speechRecognition.stop();
+        isRecordingVoice = false;
+        if (btn) {
+          btn.classList.remove('recording');
+          btn.innerHTML = '🎤';
+        }
+        if (indicator) indicator.textContent = 'Sẵn sàng';
+      } else {
+        try {
+          speechRecognition.start();
+          isRecordingVoice = true;
+          if (btn) {
+            btn.classList.add('recording');
+            btn.innerHTML = '⏹️';
+          }
+          if (indicator) indicator.textContent = 'Đang lắng nghe tiếng Việt...';
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    }
+
+    // TÍNH NĂNG 2: CALL / GỌI ĐÀM THOẠI TRỰC TIẾP TỚI CAMERA
+    let isCalling = false;
+    let callTimerInterval = null;
+    let callSeconds = 0;
+    let liveCallRecognition = null;
+
+    function toggleCameraCall() {
+      const btn = document.getElementById('btnCamCall');
+      const banner = document.getElementById('callBanner');
+      const durationEl = document.getElementById('callDuration');
+      const indicator = document.getElementById('callStatusIndicator');
+      const log = document.getElementById('termLog');
+
+      isCalling = !isCalling;
+
+      if (isCalling) {
+        // Bắt đầu cuộc gọi
+        if (btn) {
+          btn.classList.add('in-call');
+          btn.innerHTML = '📵';
+          btn.title = 'Ngắt kết nối cuộc gọi';
+        }
+        if (banner) banner.classList.add('active');
+        if (indicator) indicator.textContent = 'Cuộc gọi đang diễn ra';
+        
+        callSeconds = 0;
+        if (durationEl) durationEl.textContent = 'Đang gọi 00:00';
+        callTimerInterval = setInterval(() => {
+          callSeconds++;
+          const m = String(Math.floor(callSeconds / 60)).padStart(2, '0');
+          const s = String(callSeconds % 60).padStart(2, '0');
+          if (durationEl) durationEl.textContent = `Đang gọi ${m}:${s}`;
+        }, 1000);
+
+        log.textContent += `\n[${new Date().toLocaleTimeString()}] Bắt đầu đàm thoại trực tiếp với Camera...`;
+        log.scrollTop = log.scrollHeight;
+
+        // Kích hoạt nhận diện liên tục gửi lên loa camera
+        startContinuousCallAudio();
+      } else {
+        // Kết thúc cuộc gọi
+        if (btn) {
+          btn.classList.remove('in-call');
+          btn.innerHTML = '📞';
+          btn.title = 'Gọi trực tiếp qua loa camera';
+        }
+        if (banner) banner.classList.remove('active');
+        if (indicator) indicator.textContent = 'Đã kết thúc cuộc gọi';
+        
+        clearInterval(callTimerInterval);
+        stopContinuousCallAudio();
+
+        log.textContent += `\n[${new Date().toLocaleTimeString()}] Đã ngắt cuộc gọi đàm thoại Camera.`;
+        log.scrollTop = log.scrollHeight;
+      }
+    }
+
+    function startContinuousCallAudio() {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) return;
+
+      liveCallRecognition = new SpeechRecognition();
+      liveCallRecognition.continuous = true;
+      liveCallRecognition.interimResults = false;
+      liveCallRecognition.lang = 'vi-VN';
+
+      liveCallRecognition.onresult = (event) => {
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            const spokenText = event.results[i][0].transcript.trim();
+            if (spokenText && isCalling) {
+              sendCameraSpeech(spokenText);
+            }
+          }
+        }
+      };
+
+      liveCallRecognition.onend = () => {
+        // Tự khởi động lại nếu vẫn đang trong cuộc gọi
+        if (isCalling && liveCallRecognition) {
+          try { liveCallRecognition.start(); } catch (e) {}
+        }
+      };
+
+      try {
+        liveCallRecognition.start();
+      } catch (e) {
+        console.warn('Call recognition start error:', e);
+      }
+    }
+
+    function stopContinuousCallAudio() {
+      if (liveCallRecognition) {
+        try { liveCallRecognition.stop(); } catch (e) {}
+        liveCallRecognition = null;
       }
     }
 
