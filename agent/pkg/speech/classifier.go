@@ -95,20 +95,13 @@ func AnalyzeAudioSegment(pcm []byte) AudioFeatures {
 		Description:  "Yên tĩnh",
 	}
 
-	// 0. Lọc không gian yên tĩnh và tiếng tạp âm bên ngoài nhà vọng vào:
-	// Tạp âm ngoài đường, xe chạy qua, tiếng gió thường có RMS < 500 hoặc Peak < 3000
-	// Giọng nói của chủ nhà trong phòng khách khi ra lệnh thường đạt RMS 600 - 2500, Peak > 3500
-	if rms < 500.0 && maxPeak < 3000 {
-		return feat
-	}
-
 	crestFactor := 0.0
 	if rms > 0 {
 		crestFactor = float64(maxPeak) / rms
 	}
 
-	// 1. Nhận diện Tiếng Vỗ Tay (Hand Clap):
-	if clapPeaks > 0 && crestFactor > 6.0 && dur < 1.8 && zcr > 0.06 && zcr < 0.38 {
+	// 1. Nhận diện Tiếng Vỗ Tay (Hand Clap) - Ưu tiên nhận dạng trước khi xét ngưỡng ồn sàn:
+	if clapPeaks > 0 && crestFactor > 5.5 && dur < 1.8 && zcr > 0.06 && zcr < 0.38 {
 		feat.Category = CategoryClap
 		if clapPeaks >= 2 {
 			feat.Description = "Tiếng vỗ tay đôi (Double Clap)"
@@ -118,7 +111,14 @@ func AnalyzeAudioSegment(pcm []byte) AudioFeatures {
 		return feat
 	}
 
-	// 2. Tiếng động dạng xung ngắn / cơ học (Impulse Noise): cạch cửa, va quẹt, rơi đồ
+	// 2. Lọc không gian yên tĩnh và tiếng tạp âm bên ngoài nhà vọng vào:
+	// Tạp âm ngoài đường, xe chạy qua, tiếng gió thường có RMS < 500 hoặc Peak < 3000
+	// Giọng nói của chủ nhà trong phòng khách khi ra lệnh thường đạt RMS 600 - 2500, Peak > 3500
+	if rms < 500.0 && maxPeak < 3000 {
+		return feat
+	}
+
+	// 3. Tiếng động dạng xung ngắn / cơ học (Impulse Noise): cạch cửa, va quẹt, rơi đồ
 	// Hoặc âm thanh có ZCR quá thấp (ù gió, quạt, máy bay, xe cộ) hay quá cao (tiếng rít)
 	isImpulseNoise := (crestFactor > 12.0 && dur < 0.6) || (crestFactor > 15.0)
 	isHighFreqNoise := zcr > 0.38
