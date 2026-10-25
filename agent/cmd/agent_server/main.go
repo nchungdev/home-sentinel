@@ -841,6 +841,23 @@ func main() {
 	mux.HandleFunc("/api/llm/engines", server.handleConfigLLM)
 	mux.HandleFunc("/api/llm/test", server.handleLLMTest)
 	mux.HandleFunc("/api/token/generate", server.handleGenerateToken)
+	mux.HandleFunc("/api/bridge/accounts", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		client := &http.Client{Timeout: 3 * time.Second}
+		resp, err := client.Get("http://127.0.0.1:8088/api/v2/accounts")
+		if err != nil {
+			_ = json.NewEncoder(w).Encode([]interface{}{})
+			return
+		}
+		defer resp.Body.Close()
+		var data interface{}
+		if err := json.NewDecoder(resp.Body).Decode(&data); err == nil {
+			_ = json.NewEncoder(w).Encode(data)
+		} else {
+			_ = json.NewEncoder(w).Encode([]interface{}{})
+		}
+	})
+
 	mux.HandleFunc("/api/camera/scan", server.handleScanCameras)
 	mux.HandleFunc("/api/camera/config", server.handleCameraConfig)
 	mux.HandleFunc("/api/camera/test-rtsp", server.handleTestCameraRTSP)

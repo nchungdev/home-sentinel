@@ -873,25 +873,53 @@
 
       <!-- Agent Config -->
       <div id="subtab-agent-cfg" class="subtab-content grid-layout active">
+        <!-- Card 1: Thứ tự ưu tiên & Trạng thái tài khoản -->
         <div class="card">
-          <div class="card-title">Thứ tự ưu tiên AI Engine (Tự động chuyển khi lỗi/hết token)</div>
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div class="card-title">Thứ tự ưu tiên AI Engine (Tự động chuyển khi lỗi/hết token)</div>
+            <button class="btn-action" style="padding:4px 10px; font-size:11px;" onclick="loadEngines()">🔄 Cập nhật</button>
+          </div>
+          <p style="font-size:12px; color:var(--text-muted); margin: 0 0 10px 0;">
+            Sentinel tự động failover giữa các AI Engine khả dụng trên NAS. Bạn có thể sắp xếp mức độ ưu tiên theo nhu cầu.
+          </p>
           <div id="engineContainer" style="display:flex; flex-direction:column; gap:8px;"></div>
         </div>
+
+        <!-- Card 2: Quản lý Tài khoản & Cấu hình CLI / Token -->
         <div class="card">
-          <div class="card-title">API Keys & Endpoints</div>
-          <div class="form-group">
-            <label>Google Gemini API Key:</label>
-            <input type="password" id="geminiKeyInput" placeholder="AIzaSy...">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div class="card-title">Tài Khoản CLI & API Tokens</div>
+            <a href="http://192.168.1.37:8000/#settings" target="_blank" class="btn-action" style="padding:6px 12px; font-size:11px; text-decoration:none; display:inline-flex; align-items:center; gap:6px; color:#818cf8; border-color:rgba(99,102,241,0.4);">
+              <span>⚡ Mở Agent Bridge</span> ↗
+            </a>
           </div>
-          <div class="form-group">
-            <label>Local LLM URL (NAS):</label>
-            <input type="text" id="localUrlInput" value="http://127.0.0.1:9931/v1/chat/completions">
+          <p style="font-size:12px; color:var(--text-muted); margin: 4px 0 12px 0; line-height:1.5;">
+            Các engine CLI (Claude Code, OpenAI Codex, Google Antigravity) sử dụng phiên đăng nhập và hồ sơ quản lý tập trung trên NAS qua Agent Bridge.
+          </p>
+
+          <!-- Danh sách tài khoản đọc từ Agent Bridge -->
+          <div id="bridgeAccountsList" style="display:flex; flex-direction:column; gap:8px; margin-bottom:16px;">
+            <div style="font-size:12px; color:var(--text-muted); text-align:center; padding:12px; border:1px dashed var(--border); border-radius:8px;">
+              Đang đọc trạng thái đăng nhập từ Agent Bridge...
+            </div>
           </div>
-          <div style="display:flex; gap:12px; margin-top:8px;">
-            <button class="btn-save" id="btnSaveAI" onclick="saveAIConfig()">💾 Lưu Cấu Hình</button>
-            <button class="btn-action" style="padding:10px 18px;" onclick="testAIConnection()">⚡ Kiểm Tra Kết Nối</button>
+
+          <div style="border-top:1px solid var(--border); padding-top:14px;">
+            <div class="card-title" style="font-size:13px; margin-bottom:8px;">Cấu hình API Key & Endpoint Độc Lập</div>
+            <div class="form-group">
+              <label>Google Gemini API Key:</label>
+              <input type="password" id="geminiKeyInput" placeholder="AIzaSy...">
+            </div>
+            <div class="form-group" style="margin-top:8px;">
+              <label>Local LLM URL (NAS):</label>
+              <input type="text" id="localUrlInput" value="http://127.0.0.1:9931/v1/chat/completions">
+            </div>
+            <div style="display:flex; gap:12px; margin-top:12px;">
+              <button class="btn-save" id="btnSaveAI" onclick="saveAIConfig()">💾 Lưu Cấu Hình</button>
+              <button class="btn-action" style="padding:10px 18px;" onclick="testAIConnection()">⚡ Kiểm Tra Kết Nối</button>
+            </div>
+            <div id="aiTestResult" style="font-size:12px; margin-top:8px; line-height:1.4;"></div>
           </div>
-          <div id="aiTestResult" style="font-size:12px; margin-top:8px; line-height:1.4;"></div>
         </div>
       </div>
 
@@ -1361,6 +1389,57 @@
           renderEngines();
         }
       } catch (e) { console.error(e); }
+      loadBridgeAccounts();
+    }
+
+    async function loadBridgeAccounts() {
+      const container = document.getElementById('bridgeAccountsList');
+      if (!container) return;
+
+      try {
+        const res = await fetch('/api/bridge/accounts');
+        const groups = await res.json();
+        if (!groups || !Array.isArray(groups) || groups.length === 0) {
+          container.innerHTML = `
+            <div style="font-size:12px; color:var(--text-muted); text-align:center; padding:12px; border:1px dashed var(--border); border-radius:8px;">
+              Chưa kết nối được Agent Bridge (:8088). Hãy mở <a href="http://192.168.1.37:8000/#settings" target="_blank" style="color:var(--accent);">Agent Bridge Web</a> để đăng nhập tài khoản CLI.
+            </div>
+          `;
+          return;
+        }
+
+        let html = '';
+        groups.forEach(g => {
+          const engineName = g.engine === 'agy' ? 'Google Antigravity (AGY)' : (g.engine === 'claude' ? 'Claude Code (Anthropic)' : 'OpenAI Codex');
+          html += `<div style="background:rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:8px; padding:10px 14px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+              <span style="font-size:12px; font-weight:600; color:var(--text-bright);">${engineName}</span>
+              <span style="font-size:10px; color:var(--text-muted);">Engine: <code>${g.engine}</code></span>
+            </div>`;
+
+          if (g.accounts && g.accounts.length > 0) {
+            html += `<div style="display:flex; flex-direction:column; gap:4px;">`;
+            g.accounts.forEach(acc => {
+              const activeDot = acc.active ? '<span style="color:#10b981; font-size:10px;">● Đang dùng</span>' : '<span style="color:var(--text-muted); font-size:10px;">(Hồ sơ phụ)</span>';
+              html += `
+                <div style="font-size:11px; display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.2); padding:5px 8px; border-radius:6px;">
+                  <span style="color:#d1d5db;">👤 <b>${escapeHtml(acc.label)}</b>: ${escapeHtml(acc.detail || 'Đã đăng nhập')}</span>
+                  <span>${activeDot}</span>
+                </div>
+              `;
+            });
+            html += `</div>`;
+          } else {
+            html += `<div style="font-size:11px; color:#ef4444;">Chưa đăng nhập tài khoản nào cho ${g.engine}.</div>`;
+          }
+
+          html += `</div>`;
+        });
+
+        container.innerHTML = html;
+      } catch (e) {
+        container.innerHTML = `<div style="font-size:12px; color:#ef4444; padding:8px;">Lỗi đọc tài khoản: ${e.message}</div>`;
+      }
     }
 
     function renderEngines() {
