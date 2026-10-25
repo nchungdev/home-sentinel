@@ -899,7 +899,7 @@ func main() {
 			}
 			terminalLogMsg = fmt.Sprintf("[%s] 🚨 CẢNH BÁO: %s - Phát hiện người/chuyển động! (trạng thái: %s)", nowStr, fn, st)
 
-			// Logic Proactive: Khi phát hiện Người (hoặc chuyển động) mà TV đang TẮT
+			// Logic Proactive (Cách 2): Khi có người di chuyển trong phòng khách & TV đang TẮT
 			isPersonOrMotion := strings.Contains(eid, "person") || strings.Contains(eid, "motion") || et == "person_detected"
 			if isPersonOrMotion && st == "on" {
 				go func() {
@@ -918,9 +918,27 @@ func main() {
 					server.lastTVPromptTime = time.Now()
 					server.promptMutex.Unlock()
 
-					// TV đang TẮT và có người -> Phát lời chào qua Camera Tapo
+					// Đọc cấu hình camera
+					var cfg CameraConfigData
+					if data, err := os.ReadFile("sentinel_camera_config.json"); err == nil {
+						_ = json.Unmarshal(data, &cfg)
+					}
+					effectivePass := cfg.CloudPassword
+					if effectivePass == "" {
+						effectivePass = cfg.Password
+					}
+
+					// 1. Chủ động xoay Camera về Preset 1 (Sofa) để hướng đúng mục tiêu
+					if cfg.IP != "" && effectivePass != "" {
+						session := camstream.GetTapoSession(cfg.IP, cfg.Username, effectivePass)
+						_ = session.GotoPreset("1") // Token 1 = Sofa
+					}
+
+					// 2. Đợi 2 giây cho camera xoay xong và người ngồi ổn định vào ghế sofa
+					time.Sleep(2 * time.Second)
+
+					// 3. Loa camera Tapo cất giọng hỏi thăm
 					promptText := "Anh có muốn xem TV không? Em mở giúp anh nhé"
-					time.Sleep(1 * time.Second) // Đợi người ngồi ổn định 1 giây
 					_ = server.speakOnCamera(promptText, "female")
 				}()
 			}
