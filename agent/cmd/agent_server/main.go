@@ -908,6 +908,30 @@ func main() {
 		var payload map[string]interface{}
 		_ = json.NewDecoder(r.Body).Decode(&payload)
 		_ = server.BroadcastNotification(payload)
+
+		nowStr := time.Now().Format("15:04:05")
+		clientIP := r.RemoteAddr
+		if fwd := r.Header.Get("X-Forwarded-For"); fwd != "" {
+			clientIP = strings.Split(fwd, ",")[0]
+		}
+		summary := "Nhận sự kiện notification"
+		if src, ok := payload["source"].(string); ok && src == "home_assistant" {
+			fn, _ := payload["friendly_name"].(string)
+			et, _ := payload["event_type"].(string)
+			st, _ := payload["state"].(string)
+			summary = fmt.Sprintf("📡 HA Event [%s]: %s (trạng thái: %s)", et, fn, st)
+		} else if ev, ok := payload["event"].(string); ok {
+			summary = fmt.Sprintf("📡 Event: %s", ev)
+		}
+		server.AddClientLog(ClientLogEntry{
+			Timestamp: nowStr,
+			ClientIP:  clientIP,
+			Session:   "system_notify",
+			Text:      summary,
+			Source:    "ha_webhook",
+			Response:  "Đã tiếp nhận và broadcast qua UDP :8790",
+		})
+
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 	})
