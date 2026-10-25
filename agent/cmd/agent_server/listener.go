@@ -134,6 +134,18 @@ func startCameraWakeWordListener(server *Server) {
 							audioFeatures := speech.AnalyzeAudioSegment(audioToTranscribe)
 							tNow := time.Now().Format("15:04:05")
 
+							if audioFeatures.Category == speech.CategoryClap {
+								logMic("👏 [Phát Hiện Tiếng Vỗ Tay] %s! Peaks=%d, PeakVal=%d, RMS=%.0f, ZCR=%.3f",
+									audioFeatures.Description, audioFeatures.ClapCount, audioFeatures.Peak,
+									audioFeatures.RMS, audioFeatures.ZeroCrossing)
+								server.broadcastTerminal(fmt.Sprintf("[%s] 👏 Camera ghi nhận: %s (Peaks: %d, Max: %d)",
+									tNow, audioFeatures.Description, audioFeatures.ClapCount, audioFeatures.Peak))
+								if server.AutomationMgr != nil {
+									server.AutomationMgr.RecordActivity("tiếng vỗ tay")
+								}
+								continue
+							}
+
 							if audioFeatures.Category == speech.CategoryNoise {
 								logMic("🔊 [Phát hiện Tiếng Động Cơ Học] RMS=%.0f, Peak=%d, ZCR=%.3f, Dur=%.1fs (Không gửi Whisper)",
 									audioFeatures.RMS, audioFeatures.Peak, audioFeatures.ZeroCrossing, audioFeatures.DurationSec)

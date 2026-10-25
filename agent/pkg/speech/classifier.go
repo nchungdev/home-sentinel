@@ -8,7 +8,8 @@ type SoundCategory string
 
 const (
 	CategorySpeech SoundCategory = "speech" // Lời nói con người (hài âm, năng lượng liên tục, ZCR 0.05-0.35)
-	CategoryNoise  SoundCategory = "noise"  // Tiếng động/va quẹt, cạch cửa, rơi vỡ, ho, vỗ tay (ZCR cực cao hoặc xung cực ngắn)
+	CategoryClap   SoundCategory = "clap"   // Tiếng vỗ tay (xung cực nhọn, attack time cực dốc < 20ms, crest factor rất cao)
+	CategoryNoise  SoundCategory = "noise"  // Tiếng động/va quẹt, cạch cửa, rơi vỡ, ho, tiếng ồn cơ học
 	CategoryQuiet  SoundCategory = "quiet"  // Không gian yên tĩnh
 )
 
@@ -17,20 +18,30 @@ type AudioFeatures struct {
 	Peak         int
 	ZeroCrossing float64
 	DurationSec  float64
+	AttackRatio  float64
+	ClapCount    int
 	Category     SoundCategory
+	Description  string
 }
 
 // AnalyzeAudioSegment phân tích đặc trưng phổ âm thanh PCM 16-bit mono 16kHz
 func AnalyzeAudioSegment(pcm []byte) AudioFeatures {
 	samples := len(pcm) / 2
 	if samples == 0 {
-		return AudioFeatures{Category: CategoryQuiet}
+		return AudioFeatures{Category: CategoryQuiet, Description: "Yên tĩnh"}
 	}
 
 	var sumSq float64
 	var zeroCrossings int
 	maxPeak := 0
 	prevSign := 0
+
+	// Phát hiện xung đỉnh cho tiếng vỗ tay: vỗ tay có attack dốc đứng và suy giảm nhanh trong 50ms-150ms
+	// Một buffer có thể chứa 1 hoặc 2 tiếng vỗ tay (đôi)
+	peakWindowSize := 16000 * 20 / 1000 // 20ms = 320 samples
+	peakThreshold := 3500               // biên độ tối thiểu của tiếng vỗ tay
+	clapPeaks := 0
+	lastClapSample := -10000
 
 	for i := 0; i < samples; i++ {
 		val := int16(pcm[2*i]) | (int16(pcm[2*i+1]) << 8)
@@ -43,6 +54,16 @@ func AnalyzeAudioSegment(pcm []byte) AudioFeatures {
 		}
 		if absPeak > maxPeak {
 			maxPeak = absPeak
+		}
+
+		if absPeak > peakThreshold && (i-lastClapSample) > (16000*80/1000) { // cách nhau ít nhất 80ms
+			// Kiểm tra năng lượng trước đỉnh 20ms xem có phải attack đột ngột không
+			prevRMS := calcLocalRMS(pcm, i-peakWindowSize, i)
+			currRMS := calcLocalRMS(pcm, i, i+peakWindowSize)
+			if prevRMS < 800 && currRMS > 2500 {
+				clapPeaks++
+				lastClapSample = i
+			}
 		}
 
 		// Tính Zero Crossing Rate (ZCR)
@@ -69,34 +90,67 @@ func AnalyzeAudioSegment(pcm []byte) AudioFeatures {
 		Peak:         maxPeak,
 		ZeroCrossing: zcr,
 		DurationSec:  dur,
+		ClapCount:    clapPeaks,
 		Category:     CategoryQuiet,
+		Description:  "Yên tĩnh",
 	}
 
-	if rms < 100.0 {
-		feat.Category = CategoryQuiet
+	if rms < 100.0 && maxPeak < 1000 {
 		return feat
 	}
 
-	// 1. Tiếng động dạng xung ngắn (Impulse Noise): cạch cửa, va đập, gõ bàn, rơi đồ
-	// Thường có đỉnh Peak rất cao so với RMS trung bình (Crest Factor lớn), hoặc thời lượng < 0.6s
 	crestFactor := 0.0
 	if rms > 0 {
 		crestFactor = float64(maxPeak) / rms
 	}
 
-	// Tiếng động cơ học (cạch cửa, gõ cửa, đồ đạc va quẹt):
-	// - Crest factor > 10 hoặc ZCR > 0.40 (tần số cao lẹt xẹt) hoặc ZCR < 0.02 (tiếng ù/thổi gió)
-	// - Hoặc âm thanh ngắn < 0.7s
+	// 1. Nhận diện Tiếng Vỗ Tay (Hand Clap):
+	// Đặc điểm vỗ tay: crest factor rất cao (> 8), có ít nhất 1 xung dốc đứng, thời gian ngắn (< 1.2s nếu 1-2 vỗ)
+	if clapPeaks > 0 && crestFactor > 7.5 && dur < 1.8 && zcr > 0.08 && zcr < 0.36 {
+		feat.Category = CategoryClap
+		if clapPeaks >= 2 {
+			feat.Description = "Tiếng vỗ tay đôi (Double Clap)"
+		} else {
+			feat.Description = "Tiếng vỗ tay (Clap)"
+		}
+		return feat
+	}
+
+	// 2. Tiếng động dạng xung ngắn / cơ học (Impulse Noise): cạch cửa, va quẹt, rơi đồ
 	isImpulseNoise := crestFactor > 12.0 || dur < 0.7
 	isHighFreqNoise := zcr > 0.38
 	isLowFreqRumble := zcr < 0.03
 
 	if isImpulseNoise || isHighFreqNoise || isLowFreqRumble {
 		feat.Category = CategoryNoise
+		feat.Description = "Tiếng động / va quẹt cơ học"
 	} else {
-		// Giọng nói con người (tiếng Việt): dải tần 200Hz - 3400Hz, ZCR thường rơi vào 0.05 - 0.32
+		// Giọng nói con người
 		feat.Category = CategorySpeech
+		feat.Description = "Lời nói con người"
 	}
 
 	return feat
+}
+
+func calcLocalRMS(pcm []byte, startSample, endSample int) float64 {
+	totalSamples := len(pcm) / 2
+	if startSample < 0 {
+		startSample = 0
+	}
+	if endSample > totalSamples {
+		endSample = totalSamples
+	}
+	if endSample <= startSample {
+		return 0
+	}
+
+	var sumSq float64
+	count := endSample - startSample
+	for i := startSample; i < endSample; i++ {
+		val := int16(pcm[2*i]) | (int16(pcm[2*i+1]) << 8)
+		v := float64(val)
+		sumSq += v * v
+	}
+	return math.Sqrt(sumSq / float64(count))
 }
