@@ -74,7 +74,7 @@ func DefaultConfig() Config {
 		},
 		IdleLivingRoom: IdleLivingRoomRule{
 			Enabled:     true,
-			IdleMinutes: 15,
+			IdleMinutes: 1,
 			TargetLights: []string{
 				"light.dqsmart_0201bff7b7_1",
 				"light.dqsmart_0201bff7b7_2",
