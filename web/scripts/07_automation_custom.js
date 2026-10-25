@@ -68,69 +68,72 @@
                 </div>
               </div>
 
-              <div class="auto-editable-field" style="display:grid; grid-template-columns:1.4fr 1fr 1fr; gap:16px;">
-                <div class="form-group">
-                  <label>Tên kịch bản hiển thị trên Tab:</label>
-                  <input type="text" id="customName-${escapeHtml(rule.id)}" value="${escapeHtml(rule.name || '')}" placeholder="VD: Kịch bản 4: Tắt điện ban đêm" oninput="updateCustomTabTitle('${escapeHtml(rule.id)}', this.value)">
-                </div>
-                <div class="form-group">
-                  <label>Khi có sự kiện (When - Trigger):</label>
-                  <select id="customTrigger-${escapeHtml(rule.id)}">
-                    <option value="idle_room" ${rule.trigger_type === 'idle_room' ? 'selected' : ''}>Phòng vắng người quá X phút</option>
-                    <option value="person_detected" ${rule.trigger_type === 'person_detected' ? 'selected' : ''}>Camera phát hiện có người (Person)</option>
-                    <option value="clap_detected" ${rule.trigger_type === 'clap_detected' ? 'selected' : ''}>Thu được tiếng vỗ tay (Clapping)</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label>Thực hiện hành động (Then Do - Action):</label>
-                  <select id="customAction-${escapeHtml(rule.id)}">
-                    <option value="turn_off" ${rule.action_type !== 'turn_on' ? 'selected' : ''}>Tắt các thiết bị được chọn</option>
-                    <option value="turn_on" ${rule.action_type === 'turn_on' ? 'selected' : ''}>Bật các thiết bị được chọn</option>
-                  </select>
-                </div>
-              </div>
-
-              <div class="auto-editable-field" style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr 1fr; gap:14px;">
-                <div class="form-group">
-                  <label>Phút chờ vắng người:</label>
-                  <input type="number" id="customIdleMin-${escapeHtml(rule.id)}" value="${rule.idle_minutes || 5}" min="1" max="240">
-                </div>
-                <div class="form-group">
-                  <label>Từ giờ (0-23):</label>
-                  <input type="number" id="customStartHour-${escapeHtml(rule.id)}" value="${rule.start_hour ?? 0}" min="0" max="23">
-                </div>
-                <div class="form-group">
-                  <label>Đến giờ (0-23):</label>
-                  <input type="number" id="customEndHour-${escapeHtml(rule.id)}" value="${rule.end_hour ?? 0}" min="0" max="23">
-                </div>
-                <div class="form-group">
-                  <label>Điều kiện TV (And If):</label>
-                  <select id="customCheckTV-${escapeHtml(rule.id)}">
-                    <option value="false" ${!rule.check_tv_off ? 'selected' : ''}>Không kiểm tra TV</option>
-                    <option value="true" ${rule.check_tv_off ? 'selected' : ''}>Chỉ chạy khi TV đang TẮT</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label>Xoay Camera Preset:</label>
-                  <select id="customPreset-${escapeHtml(rule.id)}">
-                    <option value="" ${!rule.camera_preset ? 'selected' : ''}>-- Không xoay --</option>
-                    <option value="1" ${rule.camera_preset === '1' ? 'selected' : ''}>Preset 1 (Sofa)</option>
-                    <option value="2" ${rule.camera_preset === '2' ? 'selected' : ''}>Preset 2 (Bàn ăn)</option>
-                    <option value="3" ${rule.camera_preset === '3' ? 'selected' : ''}>Preset 3 (Cửa chính)</option>
-                  </select>
-                </div>
-              </div>
-
-              <div class="form-group">
-                <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:6px;">
-                  <label>Chọn các thiết bị áp dụng (Đèn / Quạt / Công tắc Home Assistant):</label>
-                  <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
-                    <input type="text" placeholder="Tìm nhanh thiết bị..." oninput="filterDeviceGrid('${escapeHtml(gridId)}', this.value)" style="padding:4px 10px; font-size:12px; border-radius:6px; background:var(--surface); border:1px solid var(--border); color:var(--text-bright); width:170px;">
-                    <button class="ha-filter-chip" onclick="filterSelectedOnly('${escapeHtml(gridId)}', this)">Chỉ hiện đã chọn</button>
+              <div class="ha-auto-body">
+                <div class="ha-auto-left auto-editable-field">
+                  <div class="form-group">
+                    <label>Tên kịch bản hiển thị trên Tab:</label>
+                    <input type="text" id="customName-${escapeHtml(rule.id)}" value="${escapeHtml(rule.name || '')}" placeholder="VD: Kịch bản 4: Tắt điện ban đêm" oninput="updateCustomTabTitle('${escapeHtml(rule.id)}', this.value)">
+                  </div>
+                  <div class="form-group">
+                    <label>Khi có sự kiện (When - Trigger):</label>
+                    <select id="customTrigger-${escapeHtml(rule.id)}">
+                      <option value="idle_room" ${rule.trigger_type === 'idle_room' ? 'selected' : ''}>Phòng vắng người quá X phút</option>
+                      <option value="person_detected" ${rule.trigger_type === 'person_detected' ? 'selected' : ''}>Camera phát hiện có người (Person)</option>
+                      <option value="clap_detected" ${rule.trigger_type === 'clap_detected' ? 'selected' : ''}>Thu được tiếng vỗ tay (Clapping)</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label>Thực hiện hành động (Then Do - Action):</label>
+                    <select id="customAction-${escapeHtml(rule.id)}">
+                      <option value="turn_off" ${rule.action_type !== 'turn_on' ? 'selected' : ''}>Tắt các thiết bị được chọn</option>
+                      <option value="turn_on" ${rule.action_type === 'turn_on' ? 'selected' : ''}>Bật các thiết bị được chọn</option>
+                    </select>
+                  </div>
+                  <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                    <div class="form-group">
+                      <label>Phút vắng người:</label>
+                      <input type="number" id="customIdleMin-${escapeHtml(rule.id)}" value="${rule.idle_minutes || 5}" min="1" max="240">
+                    </div>
+                    <div class="form-group">
+                      <label>Điều kiện TV:</label>
+                      <select id="customCheckTV-${escapeHtml(rule.id)}">
+                        <option value="false" ${!rule.check_tv_off ? 'selected' : ''}>Không xét TV</option>
+                        <option value="true" ${rule.check_tv_off ? 'selected' : ''}>Khi TV đang TẮT</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                    <div class="form-group">
+                      <label>Từ giờ (0-23):</label>
+                      <input type="number" id="customStartHour-${escapeHtml(rule.id)}" value="${rule.start_hour ?? 0}" min="0" max="23">
+                    </div>
+                    <div class="form-group">
+                      <label>Đến giờ (0-23):</label>
+                      <input type="number" id="customEndHour-${escapeHtml(rule.id)}" value="${rule.end_hour ?? 0}" min="0" max="23">
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label>Xoay Camera Preset:</label>
+                    <select id="customPreset-${escapeHtml(rule.id)}">
+                      <option value="" ${!rule.camera_preset ? 'selected' : ''}>-- Không xoay --</option>
+                      <option value="1" ${rule.camera_preset === '1' ? 'selected' : ''}>Preset 1 (Sofa)</option>
+                      <option value="2" ${rule.camera_preset === '2' ? 'selected' : ''}>Preset 2 (Bàn ăn)</option>
+                      <option value="3" ${rule.camera_preset === '3' ? 'selected' : ''}>Preset 3 (Cửa chính)</option>
+                    </select>
                   </div>
                 </div>
-                <div id="${escapeHtml(gridId)}" class="auto-editable-field ha-checklist-grid">
-                  ${devicesHtml}
+
+                <div class="ha-auto-right">
+                  <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+                    <label style="font-size:13px; font-weight:500; color:var(--text-bright);">Chọn thiết bị áp dụng (Home Assistant):</label>
+                    <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                      <input type="text" placeholder="Tìm nhanh thiết bị..." oninput="filterDeviceGrid('${escapeHtml(gridId)}', this.value)" style="padding:4px 10px; font-size:12px; border-radius:6px; background:var(--surface); border:1px solid var(--border); color:var(--text-bright); width:160px;">
+                      <button class="ha-filter-chip" onclick="filterSelectedOnly('${escapeHtml(gridId)}', this)">Chỉ hiện đã chọn</button>
+                    </div>
+                  </div>
+                  <div id="${escapeHtml(gridId)}" class="auto-editable-field ha-checklist-grid">
+                    ${devicesHtml}
+                  </div>
                 </div>
               </div>
             </div>

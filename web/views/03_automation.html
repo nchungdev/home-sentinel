@@ -39,7 +39,7 @@
               <span id="badge-count-idle" style="font-size:11.5px; color:var(--text-muted); background:rgba(255,255,255,0.04); padding:3px 9px; border-radius:6px; border:1px solid var(--border);">0 thiết bị</span>
             </div>
             <div style="display:flex; align-items:center; gap:8px;">
-              <button class="btn-action" style="padding:6px 12px; font-size:12px;" onclick="testAutomationRule('idle')" title="Chạy thử hành động của kịch bản này ngay lập tức">
+              <button class="btn-action" style="padding:6px 12px; font-size:12px;" onclick="testAutomationRule('idle')" title="Chạy thử kịch bản này">
                 <span class="mi" style="font-size:15px; color:#38bdf8;">play_arrow</span> Chạy thử
               </button>
               <button class="btn-action" id="btn-edit-idle" style="padding:6px 12px; font-size:12px;" onclick="toggleEditScenario('idle')">
@@ -50,48 +50,50 @@
               </label>
             </div>
           </div>
-          <p style="font-size:12.5px; color:var(--text-muted); line-height:1.5;">
-            Khi phòng khách không có người (Camera Person + Sensor Fusion âm thanh) vượt quá số phút quy định và thỏa điều kiện TV, hệ thống tự động tắt toàn bộ các đèn/thiết bị được chọn bên dưới.
-          </p>
-          <div class="auto-editable-field" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:14px;">
-            <div class="form-group">
-              <label><span class="mi" style="font-size:13px; color:var(--accent);">schedule</span> Khi vắng người liên tục (Phút):</label>
-              <input type="number" id="autoIdleMinutes" min="1" max="120" value="1">
-            </div>
-            <div class="form-group">
-              <label><span class="mi" style="font-size:13px; color:var(--accent);">tv</span> Điều kiện trạng thái TV (And If):</label>
-              <select id="autoIdleCheckTV">
-                <option value="true">Chỉ tắt đèn khi TV đang TẮT</option>
-                <option value="false">Tắt đèn bất kể TV bật hay tắt</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label><span class="mi" style="font-size:13px; color:var(--accent);">description</span> Script Home Assistant kèm theo (Then Do):</label>
-              <select id="autoIdleScript">
-                <option value="">-- Không dùng Script --</option>
-              </select>
-            </div>
-          </div>
-          <div class="form-group">
-            <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:6px;">
-              <label>Danh sách đèn cần tắt (Lấy trực tiếp từ Home Assistant):</label>
-              <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
-                <input type="text" placeholder="Tìm nhanh thiết bị..." oninput="filterDeviceGrid('autoIdleLightsChecklist', this.value)" style="padding:4px 10px; font-size:12px; border-radius:6px; background:var(--surface); border:1px solid var(--border); color:var(--text-bright); width:170px;">
-                <button class="ha-filter-chip" onclick="filterSelectedOnly('autoIdleLightsChecklist', this)">Chỉ hiện đã chọn</button>
-                <div class="ha-edit-toolbar" style="display:inline-flex; gap:6px;">
-                  <button class="ha-filter-chip" onclick="quickSelectByKeywords('auto-light-item', ['phòng khách', 'bếp', 'bàn ăn', 'cửa chính', 'toilet phụ'])">Chọn PK + Bếp + Cửa chính</button>
-                  <button class="ha-filter-chip" onclick="quickSelectByKeywords('auto-light-item', [])">Bỏ chọn hết</button>
-                </div>
+          <div class="ha-auto-body">
+            <div class="ha-auto-left auto-editable-field">
+              <p style="font-size:12.5px; color:var(--text-muted); line-height:1.5;">
+                Khi phòng khách không có người (Camera Person + Sensor Fusion) vượt quá số phút quy định và thỏa điều kiện TV, hệ thống tự động tắt toàn bộ các đèn/thiết bị bên phải.
+              </p>
+              <div class="form-group">
+                <label><span class="mi" style="font-size:13px; color:var(--accent);">schedule</span> Khi vắng người liên tục (Phút):</label>
+                <input type="number" id="autoIdleMinutes" min="1" max="120" value="1">
+              </div>
+              <div class="form-group">
+                <label><span class="mi" style="font-size:13px; color:var(--accent);">tv</span> Điều kiện trạng thái TV (And If):</label>
+                <select id="autoIdleCheckTV">
+                  <option value="true">Chỉ tắt đèn khi TV đang TẮT</option>
+                  <option value="false">Tắt đèn bất kể TV bật hay tắt</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label><span class="mi" style="font-size:13px; color:var(--accent);">description</span> Script Home Assistant (Then Do):</label>
+                <select id="autoIdleScript">
+                  <option value="">-- Không dùng Script --</option>
+                </select>
               </div>
             </div>
-            <div id="autoIdleLightsChecklist" class="auto-editable-field ha-checklist-grid">
-              <div style="font-size:12px; color:var(--text-muted);">Đang tải danh sách thiết bị từ Home Assistant...</div>
+            <div class="ha-auto-right">
+              <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+                <label style="font-size:13px; font-weight:500; color:var(--text-bright);">Danh sách đèn cần tắt (Home Assistant):</label>
+                <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                  <input type="text" placeholder="Tìm nhanh thiết bị..." oninput="filterDeviceGrid('autoIdleLightsChecklist', this.value)" style="padding:4px 10px; font-size:12px; border-radius:6px; background:var(--surface); border:1px solid var(--border); color:var(--text-bright); width:160px;">
+                  <button class="ha-filter-chip" onclick="filterSelectedOnly('autoIdleLightsChecklist', this)">Chỉ hiện đã chọn</button>
+                  <div class="ha-edit-toolbar" style="display:inline-flex; gap:6px;">
+                    <button class="ha-filter-chip" onclick="quickSelectByKeywords('auto-light-item', ['phòng khách', 'bếp', 'bàn ăn', 'cửa chính', 'toilet phụ'])">Chọn PK + Bếp + Cửa chính</button>
+                    <button class="ha-filter-chip" onclick="quickSelectByKeywords('auto-light-item', [])">Bỏ chọn hết</button>
+                  </div>
+                </div>
+              </div>
+              <div id="autoIdleLightsChecklist" class="auto-editable-field ha-checklist-grid">
+                <div style="font-size:12px; color:var(--text-muted);">Đang tải danh sách thiết bị từ Home Assistant...</div>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- TAB 2: Ngồi Sofa Vỗ Tay (Đồng bộ layout 3 cột + danh sách thiết bị giống Tab 1) -->
+      <!-- TAB 2: Ngồi Sofa Vỗ Tay -->
       <div id="autotab-clap" class="subtab-panel auto-tab-panel">
         <div class="card ha-auto-card" id="auto-card-clap">
           <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
@@ -103,7 +105,7 @@
               <span id="badge-count-clap" style="font-size:11.5px; color:var(--text-muted); background:rgba(255,255,255,0.04); padding:3px 9px; border-radius:6px; border:1px solid var(--border);">0 thiết bị</span>
             </div>
             <div style="display:flex; align-items:center; gap:8px;">
-              <button class="btn-action" style="padding:6px 12px; font-size:12px;" onclick="testAutomationRule('clap')" title="Chạy thử hành động của kịch bản này ngay lập tức">
+              <button class="btn-action" style="padding:6px 12px; font-size:12px;" onclick="testAutomationRule('clap')" title="Chạy thử kịch bản này">
                 <span class="mi" style="font-size:15px; color:#38bdf8;">play_arrow</span> Chạy thử
               </button>
               <button class="btn-action" id="btn-edit-clap" style="padding:6px 12px; font-size:12px;" onclick="toggleEditScenario('clap')">
@@ -114,41 +116,43 @@
               </label>
             </div>
           </div>
-          <p style="font-size:12.5px; color:var(--text-muted); line-height:1.5;">
-            Khi Camera phát hiện có người ngồi ở vùng Sofa (Preset 1) và thu được tiếng vỗ tay (YAMNet Clapping), hệ thống tự động đánh thức Android TV và bật các Quạt / Đèn / Công tắc được chọn bên dưới.
-          </p>
-          <div class="auto-editable-field" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:14px;">
-            <div class="form-group">
-              <label><span class="mi" style="font-size:13px; color:var(--accent);">tv</span> Địa chỉ IP Android TV cần mở (ADB):</label>
-              <input type="text" id="autoClapTV" value="192.168.1.8" placeholder="192.168.1.8">
-            </div>
-            <div class="form-group">
-              <label><span class="mi" style="font-size:13px; color:var(--accent);">timer</span> Thời gian chờ/Cooldown (Giây):</label>
-              <input type="number" id="autoClapWindow" value="60" min="10" max="600">
-            </div>
-            <div class="form-group">
-              <label><span class="mi" style="font-size:13px; color:var(--accent);">mode_fan</span> Thiết bị Quạt chính (Ưu tiên):</label>
-              <select id="autoClapFan">
-                <option value="">-- Chọn thiết bị quạt chính --</option>
-              </select>
-            </div>
-          </div>
-          <div class="form-group">
-            <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:6px;">
-              <label>Chọn các thiết bị cần bật khi vỗ tay (Quạt / Đèn / Công tắc Home Assistant):</label>
-              <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
-                <input type="text" placeholder="Tìm nhanh thiết bị..." oninput="filterDeviceGrid('autoClapDevicesChecklist', this.value)" style="padding:4px 10px; font-size:12px; border-radius:6px; background:var(--surface); border:1px solid var(--border); color:var(--text-bright); width:170px;">
-                <button class="ha-filter-chip" onclick="filterSelectedOnly('autoClapDevicesChecklist', this)">Chỉ hiện đã chọn</button>
+          <div class="ha-auto-body">
+            <div class="ha-auto-left auto-editable-field">
+              <p style="font-size:12.5px; color:var(--text-muted); line-height:1.5;">
+                Khi Camera phát hiện có người ngồi ở vùng Sofa (Preset 1) và thu được tiếng vỗ tay (YAMNet), hệ thống đánh thức Android TV và bật các thiết bị bên phải.
+              </p>
+              <div class="form-group">
+                <label><span class="mi" style="font-size:13px; color:var(--accent);">tv</span> Địa chỉ IP Android TV cần mở (ADB):</label>
+                <input type="text" id="autoClapTV" value="192.168.1.8" placeholder="192.168.1.8">
+              </div>
+              <div class="form-group">
+                <label><span class="mi" style="font-size:13px; color:var(--accent);">timer</span> Thời gian chờ/Cooldown (Giây):</label>
+                <input type="number" id="autoClapWindow" value="60" min="10" max="600">
+              </div>
+              <div class="form-group">
+                <label><span class="mi" style="font-size:13px; color:var(--accent);">mode_fan</span> Thiết bị Quạt chính (Ưu tiên):</label>
+                <select id="autoClapFan">
+                  <option value="">-- Chọn thiết bị quạt chính --</option>
+                </select>
               </div>
             </div>
-            <div id="autoClapDevicesChecklist" class="auto-editable-field ha-checklist-grid">
-              <div style="font-size:12px; color:var(--text-muted);">Đang tải danh sách thiết bị từ Home Assistant...</div>
+            <div class="ha-auto-right">
+              <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+                <label style="font-size:13px; font-weight:500; color:var(--text-bright);">Thiết bị cần bật khi vỗ tay (Quạt / Đèn / Công tắc):</label>
+                <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                  <input type="text" placeholder="Tìm nhanh thiết bị..." oninput="filterDeviceGrid('autoClapDevicesChecklist', this.value)" style="padding:4px 10px; font-size:12px; border-radius:6px; background:var(--surface); border:1px solid var(--border); color:var(--text-bright); width:160px;">
+                  <button class="ha-filter-chip" onclick="filterSelectedOnly('autoClapDevicesChecklist', this)">Chỉ hiện đã chọn</button>
+                </div>
+              </div>
+              <div id="autoClapDevicesChecklist" class="auto-editable-field ha-checklist-grid">
+                <div style="font-size:12px; color:var(--text-muted);">Đang tải danh sách thiết bị từ Home Assistant...</div>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- TAB 3: Đi làm về buổi tối (Đồng bộ layout 3 cột + danh sách thiết bị giống Tab 1) -->
+      <!-- TAB 3: Đi làm về buổi tối -->
       <div id="autotab-evening" class="subtab-panel auto-tab-panel">
         <div class="card ha-auto-card" id="auto-card-evening">
           <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
@@ -160,7 +164,7 @@
               <span id="badge-count-evening" style="font-size:11.5px; color:var(--text-muted); background:rgba(255,255,255,0.04); padding:3px 9px; border-radius:6px; border:1px solid var(--border);">0 thiết bị</span>
             </div>
             <div style="display:flex; align-items:center; gap:8px;">
-              <button class="btn-action" style="padding:6px 12px; font-size:12px;" onclick="testAutomationRule('evening')" title="Chạy thử hành động của kịch bản này ngay lập tức">
+              <button class="btn-action" style="padding:6px 12px; font-size:12px;" onclick="testAutomationRule('evening')" title="Chạy thử kịch bản này">
                 <span class="mi" style="font-size:15px; color:#38bdf8;">play_arrow</span> Chạy thử
               </button>
               <button class="btn-action" id="btn-edit-evening" style="padding:6px 12px; font-size:12px;" onclick="toggleEditScenario('evening')">
@@ -171,38 +175,40 @@
               </label>
             </div>
           </div>
-          <p style="font-size:12.5px; color:var(--text-muted); line-height:1.5;">
-            Khi phát hiện có người vào khung giờ buổi tối và khu vực đón đang tối, hệ thống tự động bật các đèn chào đón được chọn bên dưới và xoay Camera về Preset tương ứng.
-          </p>
-          <div class="auto-editable-field" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:14px;">
-            <div class="form-group">
-              <label><span class="mi" style="font-size:13px; color:var(--accent);">schedule</span> Khung giờ bắt đầu (0-23):</label>
-              <input type="number" id="autoEveningStart" value="18" min="0" max="23">
-            </div>
-            <div class="form-group">
-              <label><span class="mi" style="font-size:13px; color:var(--accent);">schedule</span> Khung giờ kết thúc (0-23):</label>
-              <input type="number" id="autoEveningEnd" value="6" min="0" max="23">
-            </div>
-            <div class="form-group">
-              <label><span class="mi" style="font-size:13px; color:var(--accent);">videocam</span> Xoay Camera về Preset:</label>
-              <select id="autoEveningPreset">
-                <option value="3">Preset 3 (Cửa chính)</option>
-                <option value="1">Preset 1 (Sofa)</option>
-                <option value="2">Preset 2 (Bàn ăn)</option>
-              </select>
-            </div>
-          </div>
-          <input type="hidden" id="autoEveningLight" value="">
-          <div class="form-group">
-            <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:6px;">
-              <label>Chọn các đèn cần bật đón khi phát hiện người vào buổi tối (Home Assistant):</label>
-              <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
-                <input type="text" placeholder="Tìm nhanh thiết bị..." oninput="filterDeviceGrid('autoEveningLightsChecklist', this.value)" style="padding:4px 10px; font-size:12px; border-radius:6px; background:var(--surface); border:1px solid var(--border); color:var(--text-bright); width:170px;">
-                <button class="ha-filter-chip" onclick="filterSelectedOnly('autoEveningLightsChecklist', this)">Chỉ hiện đã chọn</button>
+          <div class="ha-auto-body">
+            <div class="ha-auto-left auto-editable-field">
+              <p style="font-size:12.5px; color:var(--text-muted); line-height:1.5;">
+                Khi phát hiện có người vào khung giờ buổi tối, hệ thống tự động bật các đèn đón bên phải và xoay Camera về Preset tương ứng.
+              </p>
+              <div class="form-group">
+                <label><span class="mi" style="font-size:13px; color:var(--accent);">schedule</span> Khung giờ bắt đầu (0-23):</label>
+                <input type="number" id="autoEveningStart" value="18" min="0" max="23">
+              </div>
+              <div class="form-group">
+                <label><span class="mi" style="font-size:13px; color:var(--accent);">schedule</span> Khung giờ kết thúc (0-23):</label>
+                <input type="number" id="autoEveningEnd" value="6" min="0" max="23">
+              </div>
+              <div class="form-group">
+                <label><span class="mi" style="font-size:13px; color:var(--accent);">videocam</span> Xoay Camera về Preset:</label>
+                <select id="autoEveningPreset">
+                  <option value="3">Preset 3 (Cửa chính)</option>
+                  <option value="1">Preset 1 (Sofa)</option>
+                  <option value="2">Preset 2 (Bàn ăn)</option>
+                </select>
               </div>
             </div>
-            <div id="autoEveningLightsChecklist" class="auto-editable-field ha-checklist-grid">
-              <div style="font-size:12px; color:var(--text-muted);">Đang tải danh sách thiết bị từ Home Assistant...</div>
+            <div class="ha-auto-right">
+              <input type="hidden" id="autoEveningLight" value="">
+              <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+                <label style="font-size:13px; font-weight:500; color:var(--text-bright);">Chọn các đèn bật đón khi có người (Home Assistant):</label>
+                <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                  <input type="text" placeholder="Tìm nhanh thiết bị..." oninput="filterDeviceGrid('autoEveningLightsChecklist', this.value)" style="padding:4px 10px; font-size:12px; border-radius:6px; background:var(--surface); border:1px solid var(--border); color:var(--text-bright); width:160px;">
+                  <button class="ha-filter-chip" onclick="filterSelectedOnly('autoEveningLightsChecklist', this)">Chỉ hiện đã chọn</button>
+                </div>
+              </div>
+              <div id="autoEveningLightsChecklist" class="auto-editable-field ha-checklist-grid">
+                <div style="font-size:12px; color:var(--text-muted);">Đang tải danh sách thiết bị từ Home Assistant...</div>
+              </div>
             </div>
           </div>
         </div>
@@ -211,4 +217,3 @@
       <!-- CÁC TAB KỊCH BẢN TÙY CHỈNH (CUSTOM RULES) -->
       <div id="customAutoPanelsContainer"></div>
     </div>
-
