@@ -95,7 +95,9 @@ func AnalyzeAudioSegment(pcm []byte) AudioFeatures {
 		Description:  "Yên tĩnh",
 	}
 
-	if rms < 100.0 && maxPeak < 1000 {
+	// 0. Lọc không gian yên tĩnh và tiếng nhiễu sàn của camera (Floor noise / Mic hiss):
+	// Mic Tapo có tầng sôi/quạt gió RMS tầm 150-300, Peak < 2500. Giọng nói con người luôn có RMS > 350 hoặc Peak > 2500
+	if rms < 350.0 && maxPeak < 2500 {
 		return feat
 	}
 
@@ -105,8 +107,7 @@ func AnalyzeAudioSegment(pcm []byte) AudioFeatures {
 	}
 
 	// 1. Nhận diện Tiếng Vỗ Tay (Hand Clap):
-	// Đặc điểm vỗ tay: crest factor rất cao (> 8), có ít nhất 1 xung dốc đứng, thời gian ngắn (< 1.2s nếu 1-2 vỗ)
-	if clapPeaks > 0 && crestFactor > 7.5 && dur < 1.8 && zcr > 0.08 && zcr < 0.36 {
+	if clapPeaks > 0 && crestFactor > 6.0 && dur < 1.8 && zcr > 0.06 && zcr < 0.38 {
 		feat.Category = CategoryClap
 		if clapPeaks >= 2 {
 			feat.Description = "Tiếng vỗ tay đôi (Double Clap)"
@@ -117,19 +118,23 @@ func AnalyzeAudioSegment(pcm []byte) AudioFeatures {
 	}
 
 	// 2. Tiếng động dạng xung ngắn / cơ học (Impulse Noise): cạch cửa, va quẹt, rơi đồ
-	// Chỉ coi là tiếng động cơ học nếu Crest Factor cực cao (> 14) hoặc ZCR quá cao (> 0.42)
-	// Tránh chặn nhầm các từ ngắn của con người (như "tắt đèn", "mở", "bật", "ơ", "này")
-	isImpulseNoise := (crestFactor > 14.0 && dur < 0.6)
-	isHighFreqNoise := zcr > 0.42
-	isLowFreqRumble := zcr < 0.02 && rms < 200
+	// Hoặc âm thanh có ZCR quá thấp (ù gió, quạt, máy bay) hay quá cao (tiếng rít, lẹt xẹt điện tử)
+	isImpulseNoise := (crestFactor > 12.0 && dur < 0.6) || (crestFactor > 15.0)
+	isHighFreqNoise := zcr > 0.38
+	isLowFreqRumble := zcr < 0.045 // tiếng rền ù gió quạt
 
 	if isImpulseNoise || isHighFreqNoise || isLowFreqRumble {
 		feat.Category = CategoryNoise
 		feat.Description = "Tiếng động / va quẹt cơ học"
 	} else {
-		// Giọng nói con người
-		feat.Category = CategorySpeech
-		feat.Description = "Lời nói con người"
+		// Giọng nói thực sự của con người: RMS tối thiểu 350, dải ZCR 0.045 - 0.38, thời lượng ít nhất 0.8s
+		if dur >= 0.8 {
+			feat.Category = CategorySpeech
+			feat.Description = "Lời nói con người"
+		} else {
+			feat.Category = CategoryNoise
+			feat.Description = "Âm thanh thoáng qua"
+		}
 	}
 
 	return feat
