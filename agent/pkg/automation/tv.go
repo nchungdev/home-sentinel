@@ -8,44 +8,6 @@ import (
 	"time"
 )
 
-func (m *Manager) HandleSofaArrival() {
-	rule := m.store.Get().SofaFan
-	if !rule.Enabled || rule.TargetFan == "" {
-		return
-	}
-
-	cooldown := time.Duration(rule.CooldownSec) * time.Second
-	if cooldown <= 0 {
-		cooldown = 10 * time.Minute
-	}
-
-	m.activityMutex.Lock()
-	if time.Since(m.lastFanTrigger) < cooldown {
-		m.activityMutex.Unlock()
-		return
-	}
-	if m.isEntityOn(rule.TargetFan) {
-		m.activityMutex.Unlock()
-		return
-	}
-	m.lastFanTrigger = time.Now()
-	m.lastActivityTime = time.Now()
-	m.activityMutex.Unlock()
-
-	if m.haClient != nil && m.haClient.BaseURL != "" {
-		payload := map[string]interface{}{"entity_id": rule.TargetFan}
-		err := m.haClient.RequestJSON("/api/services/fan/turn_on", payload, nil)
-		if err == nil {
-			tNow := time.Now().Format("15:04:05")
-			msg := fmt.Sprintf("[%s] 🌪️ Phát hiện có người ngồi Sofa: Đã tự động bật quạt (%s)!", tNow, rule.TargetFan)
-			if m.broadcast != nil {
-				m.broadcast(msg)
-			}
-			fmt.Println(msg)
-		}
-	}
-}
-
 func IsTVScreenOn(tvHost string) bool {
 	if tvHost == "" {
 		return false
@@ -65,4 +27,58 @@ func IsTVScreenOn(tvHost string) bool {
 		return false
 	}
 	return strings.Contains(string(out), "mWakefulness=Awake")
+}
+
+// HandleClapOnSofa kích hoạt khi user ngồi sofa và vỗ tay -> Mở TV và Bật Quạt tức thì
+func (m *Manager) HandleClapOnSofa(userOnSofa bool) bool {
+	rule := m.store.Get().SofaClapAction
+	if !rule.Enabled || !userOnSofa {
+		return false
+	}
+
+	tNow := time.Now().Format("15:04:05")
+
+	// 1. Mở TV qua ADB
+	tvTarget := rule.TargetTV
+	if tvTarget == "" {
+		tvTarget = m.tvHost
+	}
+	if tvTarget != "" {
+		go func() {
+			_ = TurnOnTV(tvTarget)
+		}()
+	}
+
+	// 2. Bật Quạt qua Home Assistant
+	if m.haClient != nil && m.haClient.BaseURL != "" && rule.TargetFan != "" {
+		go func() {
+			payload := map[string]interface{}{"entity_id": rule.TargetFan}
+			_ = m.haClient.RequestJSON("/api/services/fan/turn_on", payload, nil)
+		}()
+	}
+
+	msg := fmt.Sprintf("[%s] 👏📺 [Vỗ tay trên Sofa] Đã mở TV & Bật quạt (%s)!", tNow, rule.TargetFan)
+	if m.broadcast != nil {
+		m.broadcast(msg)
+	}
+	fmt.Println(msg)
+	return true
+}
+
+func TurnOnTV(tvHost string) error {
+	if tvHost == "" {
+		return nil
+	}
+	adbBin := "/home/chungnh/bin/adb"
+	if _, err := os.Stat(adbBin); err != nil {
+		adbBin = "adb"
+	}
+	target := tvHost
+	if !strings.Contains(target, ":") {
+		target = target + ":5555"
+	}
+	_ = exec.Command(adbBin, "connect", target).Run()
+	_ = exec.Command(adbBin, "-s", target, "shell", "input keyevent 224").Run()
+	_ = exec.Command(adbBin, "-s", target, "shell", "input keyevent 3").Run()
+	return nil
 }

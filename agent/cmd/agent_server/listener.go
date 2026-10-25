@@ -144,6 +144,12 @@ func startCameraWakeWordListener(server *Server) {
 								server.broadcastTerminal(fmt.Sprintf("[%s] 👏 Camera: %s", tNow, audioFeatures.Description))
 								if server.AutomationMgr != nil {
 									server.AutomationMgr.RecordActivity("tiếng vỗ tay")
+									server.StateMutex.RLock()
+									userOnSofa := server.UserOnSofa
+									server.StateMutex.RUnlock()
+									if userOnSofa {
+										server.AutomationMgr.HandleClapOnSofa(userOnSofa)
+									}
 								}
 								continue
 							}

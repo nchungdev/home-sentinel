@@ -7,16 +7,16 @@ import (
 )
 
 type Config struct {
-	EveningArrival    EveningArrivalRule    `json:"evening_arrival"`
-	IdleLivingRoom    IdleLivingRoomRule    `json:"idle_living_room"`
-	TVWelcomeGreeting TVWelcomeGreetingRule `json:"tv_welcome_greeting"`
-	SofaFan           SofaFanRule           `json:"sofa_fan"`
+	EveningArrival EveningArrivalRule `json:"evening_arrival"`
+	IdleLivingRoom IdleLivingRoomRule `json:"idle_living_room"`
+	SofaClapAction SofaClapRule       `json:"sofa_clap_action"`
 }
 
-type SofaFanRule struct {
-	Enabled     bool   `json:"enabled"`
-	TargetFan   string `json:"target_fan"`
-	CooldownSec int    `json:"cooldown_sec"`
+type SofaClapRule struct {
+	Enabled       bool   `json:"enabled"`
+	TargetFan     string `json:"target_fan"`
+	TargetTV      string `json:"target_tv"`
+	WindowSeconds int    `json:"window_seconds"`
 }
 
 type EveningArrivalRule struct {
@@ -83,16 +83,11 @@ func DefaultConfig() Config {
 			TurnOffScript:   "script.dqsmart_1792859129663",
 			CheckTVPlayback: true,
 		},
-		TVWelcomeGreeting: TVWelcomeGreetingRule{
-			Enabled:     true,
-			CooldownSec: 900,
-			PromptText:  "Anh có muốn xem TV không? Em mở giúp anh nhé",
-			PresetToken: "1",
-		},
-		SofaFan: SofaFanRule{
-			Enabled:     true,
-			TargetFan:   "fan.dmaker_sg_548577868_p39_s_2_fan",
-			CooldownSec: 600,
+		SofaClapAction: SofaClapRule{
+			Enabled:       true,
+			TargetFan:     "fan.dmaker_sg_548577868_p39_s_2_fan",
+			TargetTV:      "192.168.1.8",
+			WindowSeconds: 60,
 		},
 	}
 }

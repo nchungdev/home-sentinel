@@ -68,22 +68,9 @@ func (s *Server) executeSmartHomeAction(query string, tNow string) {
 }
 
 func (s *Server) handleProactiveSofaPrompt() {
-	if s.AutomationMgr != nil {
-		go s.AutomationMgr.HandleSofaArrival()
-	}
-
-	tvHost := "192.168.1.8"
-	s.promptMutex.Lock()
-	if time.Since(s.lastTVPromptTime) < 15*time.Minute {
-		s.promptMutex.Unlock()
-		return
-	}
-	if isTVScreenOn(tvHost) {
-		s.promptMutex.Unlock()
-		return
-	}
-	s.lastTVPromptTime = time.Now()
-	s.promptMutex.Unlock()
+	s.StateMutex.Lock()
+	s.UserOnSofa = true
+	s.StateMutex.Unlock()
 
 	var cfg CameraConfigData
 	if data, err := os.ReadFile("sentinel_camera_config.json"); err == nil {
@@ -99,34 +86,13 @@ func (s *Server) handleProactiveSofaPrompt() {
 		_ = session.GotoPreset("1") // Token 1 = Sofa
 	}
 
-	time.Sleep(2 * time.Second)
-
-	promptText := "Anh có muốn xem TV không? Em mở giúp anh nhé"
-	s.broadcastTerminal(fmt.Sprintf("[%s] 🗣️ Duinch Camera chủ động hỏi: \"%s\"", time.Now().Format("15:04:05"), promptText))
-	_ = s.speakOnCamera(promptText, "female")
-
-	time.Sleep(3 * time.Second)
-	reply, err := recordAndTranscribe(cfg, 3)
-	if err == nil && reply != "" {
-		lowerReply := strings.ToLower(reply)
-		tReply := time.Now().Format("15:04:05")
-		s.broadcastTerminal(fmt.Sprintf("[%s] 🎤 User trả lời camera: \"%s\"", tReply, reply))
-
-		positiveIntent := strings.Contains(lowerReply, "ok") ||
-			strings.Contains(lowerReply, "mở") ||
-			strings.Contains(lowerReply, "bật") ||
-			strings.Contains(lowerReply, "có") ||
-			strings.Contains(lowerReply, "ừ") ||
-			strings.Contains(lowerReply, "xem") ||
-			strings.Contains(lowerReply, "yes") ||
-			strings.Contains(lowerReply, "được")
-
-		if positiveIntent {
-			s.broadcastTerminal(fmt.Sprintf("[%s] 📺 Duinch Camera: \"Dạ, em mở TV ngay đây ạ!\"", time.Now().Format("15:04:05")))
-			_ = s.speakOnCamera("Dạ, em mở TV ngay đây ạ!", "female")
-			_ = turnOnTV(tvHost)
-		}
-	}
+	// Đặt timer tự động hủy UserOnSofa sau 3 phút nếu không có hành động tiếp theo
+	go func() {
+		time.Sleep(3 * time.Minute)
+		s.StateMutex.Lock()
+		s.UserOnSofa = false
+		s.StateMutex.Unlock()
+	}()
 }
 
 func isTVScreenOn(tvHost string) bool {
