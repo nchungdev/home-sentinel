@@ -2,7 +2,6 @@ package camera
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -10,8 +9,6 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
-	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -24,69 +21,6 @@ type CameraServer struct {
 	defaultStreamPath string
 	sentinel          *CameraSentinel
 	httpServer        *http.Server
-}
-
-type RtspTestRequest struct {
-	IP       string `json:"ip"`
-	Port     int    `json:"port"`
-	User     string `json:"user"`
-	Password string `json:"password"`
-	Path     string `json:"path"`
-}
-
-type SpeakRequest struct {
-	IP            string  `json:"ip"`
-	Port          int     `json:"port"`
-	User          string  `json:"user"`
-	Password      string  `json:"password"`
-	CloudPassword string  `json:"cloudPassword"`
-	Path          string  `json:"path"`
-	Text          string  `json:"text"`
-	Voice         string  `json:"voice"`
-	Speed         float64 `json:"speed"`
-}
-
-type TtsPreviewRequest struct {
-	Text  string  `json:"text"`
-	Voice string  `json:"voice"`
-	Speed float64 `json:"speed"`
-}
-
-type SecurityConfigRequest struct {
-	AlarmSpeaker *bool `json:"alarmSpeaker"`
-	AlarmTv      *bool `json:"alarmTv"`
-}
-
-type WhitelistIPRequest struct {
-	IP string `json:"ip"`
-}
-
-type CameraPTZRequest struct {
-	IP            string `json:"ip"`
-	Direction     string `json:"direction"`
-	Step          int    `json:"step"`
-	X             int    `json:"x"`
-	Y             int    `json:"y"`
-	User          string `json:"user"`
-	Password      string `json:"password"`
-	CloudPassword string `json:"cloudPassword"`
-}
-
-type CameraPrivacyRequest struct {
-	IP            string `json:"ip"`
-	Enabled       *bool  `json:"enabled"`
-	User          string `json:"user"`
-	Password      string `json:"password"`
-	CloudPassword string `json:"cloudPassword"`
-}
-
-type CameraEventRequest struct {
-	ZoneID       string   `json:"zone_id"`
-	EventType    string   `json:"event_type"`
-	Timestamp    int64    `json:"timestamp"`
-	Headcount    int      `json:"headcount,omitempty"`
-	Postures     []string `json:"postures,omitempty"`
-	SnapshotPath string   `json:"snapshot_path,omitempty"`
 }
 
 func NewCameraServer(webPort int, go2rtcPort int) *CameraServer {
@@ -147,638 +81,6 @@ func (server *CameraServer) handleIndex(writer http.ResponseWriter, request *htt
 	}, http.StatusOK)
 }
 
-func (server *CameraServer) handleTestCamera(
-	writer http.ResponseWriter,
-	request *http.Request,
-) {
-	var payload RtspTestRequest
-	if decodeError := json.NewDecoder(request.Body).Decode(&payload); decodeError != nil {
-		server.writeJSON(writer, map[string]interface{}{"ok": false, "error": "Invalid JSON"}, 400)
-		return
-	}
-
-	cameraHost := payload.IP
-	if cameraHost == "" {
-		cameraHost = server.defaultCameraIP
-	}
-	cameraPort := payload.Port
-	if cameraPort <= 0 {
-		cameraPort = server.defaultCameraPort
-	}
-	streamPath := payload.Path
-	if streamPath == "" {
-		streamPath = server.defaultStreamPath
-	}
-
-	success, detail := testRtspConnection(
-		cameraHost, cameraPort, payload.User, payload.Password, streamPath,
-	)
-	responsePayload := map[string]interface{}{
-		"ok":      success,
-		"message": detail,
-		"error":   nil,
-	}
-	if !success {
-		responsePayload["message"] = nil
-		responsePayload["error"] = detail
-	}
-	server.writeJSON(writer, responsePayload, http.StatusOK)
-}
-
-func (server *CameraServer) handleRegisterStream(
-	writer http.ResponseWriter,
-	request *http.Request,
-) {
-	var payload RtspTestRequest
-	_ = json.NewDecoder(request.Body).Decode(&payload)
-
-	cameraHost := payload.IP
-	if cameraHost == "" {
-		cameraHost = server.defaultCameraIP
-	}
-	cameraPort := payload.Port
-	if cameraPort <= 0 {
-		cameraPort = server.defaultCameraPort
-	}
-	streamPath := payload.Path
-	if streamPath == "" {
-		streamPath = server.defaultStreamPath
-	}
-
-	cleanPath := streamPath
-	if !strings.HasPrefix(cleanPath, "/") {
-		cleanPath = "/" + cleanPath
-	}
-
-	sourceUrl := fmt.Sprintf(
-		"rtsp://%s:%s@%s:%d%s",
-		payload.User, payload.Password, cameraHost, cameraPort, cleanPath,
-	)
-	registerEndpoint := fmt.Sprintf(
-		"http://127.0.0.1:%d/api/streams?src=camera_live&dst=%s",
-		server.go2rtcPort, url.QueryEscape(sourceUrl),
-	)
-
-	putRequest, _ := http.NewRequest(http.MethodPut, registerEndpoint, nil)
-	client := http.Client{Timeout: 3 * time.Second}
-	resp, requestError := client.Do(putRequest)
-	registered := requestError == nil && resp.StatusCode < 300
-	if resp != nil {
-		_ = resp.Body.Close()
-	}
-
-	server.writeJSON(writer, map[string]interface{}{"ok": true, "registered": registered}, 200)
-}
-
-func (server *CameraServer) handleOpenFfplay(
-	writer http.ResponseWriter,
-	request *http.Request,
-) {
-	var payload RtspTestRequest
-	_ = json.NewDecoder(request.Body).Decode(&payload)
-
-	cameraHost := payload.IP
-	if cameraHost == "" {
-		cameraHost = server.defaultCameraIP
-	}
-	cameraPort := payload.Port
-	if cameraPort <= 0 {
-		cameraPort = server.defaultCameraPort
-	}
-	streamPath := payload.Path
-	if streamPath == "" {
-		streamPath = server.defaultStreamPath
-	}
-	cleanPath := streamPath
-	if !strings.HasPrefix(cleanPath, "/") {
-		cleanPath = "/" + cleanPath
-	}
-
-	rtspUrl := fmt.Sprintf(
-		"rtsp://%s:%s@%s:%d%s",
-		payload.User, payload.Password, cameraHost, cameraPort, cleanPath,
-	)
-
-	ffplayProcess := exec.Command(
-		"ffplay",
-		"-window_title", fmt.Sprintf("Live Camera - %s", cameraHost),
-		"-rtsp_transport", "tcp",
-		rtspUrl,
-	)
-	if launchError := ffplayProcess.Start(); launchError != nil {
-		server.writeJSON(
-			writer,
-			map[string]interface{}{"ok": false, "error": launchError.Error()},
-			500,
-		)
-		return
-	}
-
-	server.writeJSON(
-		writer,
-		map[string]interface{}{"ok": true, "message": "Đã mở cửa sổ ffplay"},
-		200,
-	)
-}
-
-func (server *CameraServer) handleTtsPreview(
-	writer http.ResponseWriter,
-	request *http.Request,
-) {
-	var payload TtsPreviewRequest
-	_ = json.NewDecoder(request.Body).Decode(&payload)
-
-	if strings.TrimSpace(payload.Text) == "" {
-		server.writeJSON(
-			writer,
-			map[string]interface{}{"ok": false, "error": "Thiếu nội dung"},
-			http.StatusBadRequest,
-		)
-		return
-	}
-
-	audioData, generateError := GenerateSpeechAudio(
-		payload.Text, payload.Voice, 0, payload.Speed,
-	)
-	if generateError != nil {
-		server.writeJSON(
-			writer,
-			map[string]interface{}{"ok": false, "error": generateError.Error()},
-			500,
-		)
-		return
-	}
-
-	writer.Header().Set("Content-Type", "audio/wav")
-	writer.Header().Set("Content-Length", strconv.Itoa(len(audioData)))
-	writer.WriteHeader(http.StatusOK)
-	_, _ = writer.Write(audioData)
-}
-
-func (server *CameraServer) handleSpeak(
-	writer http.ResponseWriter,
-	request *http.Request,
-) {
-	var payload SpeakRequest
-	_ = json.NewDecoder(request.Body).Decode(&payload)
-
-	if strings.TrimSpace(payload.Text) == "" {
-		server.writeJSON(
-			writer,
-			map[string]interface{}{"ok": false, "error": "Thiếu nội dung"},
-			http.StatusBadRequest,
-		)
-		return
-	}
-
-	cameraHost := payload.IP
-	if cameraHost == "" {
-		cameraHost = server.defaultCameraIP
-	}
-
-	effectivePassword := payload.CloudPassword
-	if effectivePassword == "" {
-		effectivePassword = payload.Password
-	}
-
-	audioData, generateError := GenerateSpeechAudio(
-		payload.Text, payload.Voice, 600, payload.Speed,
-	)
-	if generateError != nil {
-		server.writeJSON(
-			writer,
-			map[string]interface{}{"ok": false, "error": generateError.Error()},
-			500,
-		)
-		return
-	}
-
-	broadcastError := BroadcastAudio(
-		cameraHost, payload.User, effectivePassword, audioData,
-	)
-	if broadcastError != nil {
-		server.writeJSON(
-			writer,
-			map[string]interface{}{
-				"ok":      false,
-				"error":   fmt.Sprintf("Lỗi Tapo speaker (8800): %v", broadcastError),
-				"message": nil,
-			},
-			200,
-		)
-		return
-	}
-
-	server.writeJSON(
-		writer,
-		map[string]interface{}{
-			"ok":      true,
-			"message": "Phát loa thành công qua cổng 8800",
-			"error":   nil,
-		},
-		200,
-	)
-}
-
-func (server *CameraServer) handleCameraPTZ(
-	writer http.ResponseWriter,
-	request *http.Request,
-) {
-	if request.Method != http.MethodPost {
-		server.writeJSON(
-			writer,
-			map[string]interface{}{"ok": false, "error": "Chỉ hỗ trợ POST"},
-			http.StatusMethodNotAllowed,
-		)
-		return
-	}
-
-	var payload CameraPTZRequest
-	_ = json.NewDecoder(request.Body).Decode(&payload)
-
-	cameraHost := payload.IP
-	if cameraHost == "" {
-		cameraHost = server.defaultCameraIP
-	}
-
-	effectivePassword := payload.CloudPassword
-	if effectivePassword == "" {
-		effectivePassword = payload.Password
-	}
-	if effectivePassword == "" {
-		server.writeJSON(
-			writer,
-			map[string]interface{}{
-				"ok":    false,
-				"error": "Thiếu mật khẩu Camera (hãy nhập vào Cài Đặt Camera)",
-			},
-			http.StatusBadRequest,
-		)
-		return
-	}
-
-	session := GetTapoSession(cameraHost, payload.User, effectivePassword)
-
-	var moveErr error
-	if payload.Direction != "" {
-		moveErr = session.MoveDirection(payload.Direction, payload.Step)
-	} else if payload.X != 0 || payload.Y != 0 {
-		moveErr = session.MoveMotor(payload.X, payload.Y)
-	} else {
-		server.writeJSON(
-			writer,
-			map[string]interface{}{"ok": false, "error": "Thiếu hướng hoặc tọa độ xoay"},
-			http.StatusBadRequest,
-		)
-		return
-	}
-
-	if moveErr != nil {
-		server.writeJSON(
-			writer,
-			map[string]interface{}{
-				"ok":    false,
-				"error": fmt.Sprintf("Lỗi điều khiển xoay camera: %v", moveErr),
-			},
-			500,
-		)
-		return
-	}
-
-	server.writeJSON(
-		writer,
-		map[string]interface{}{
-			"ok":        true,
-			"message":   fmt.Sprintf("Đã điều khiển xoay camera thành công (%s)", payload.Direction),
-			"direction": payload.Direction,
-		},
-		200,
-	)
-}
-
-func (server *CameraServer) handleCameraPrivacy(
-	writer http.ResponseWriter,
-	request *http.Request,
-) {
-	if request.Method == http.MethodGet {
-		session := GetTapoSession(server.defaultCameraIP, "", "")
-		server.writeJSON(
-			writer,
-			map[string]interface{}{
-				"ok":      true,
-				"enabled": session.GetPrivacyMode(),
-			},
-			200,
-		)
-		return
-	}
-
-	if request.Method != http.MethodPost {
-		server.writeJSON(
-			writer,
-			map[string]interface{}{"ok": false, "error": "Chỉ hỗ trợ GET hoặc POST"},
-			http.StatusMethodNotAllowed,
-		)
-		return
-	}
-
-	var payload CameraPrivacyRequest
-	_ = json.NewDecoder(request.Body).Decode(&payload)
-
-	if payload.Enabled == nil {
-		server.writeJSON(
-			writer,
-			map[string]interface{}{"ok": false, "error": "Thiếu tham số enabled"},
-			http.StatusBadRequest,
-		)
-		return
-	}
-
-	cameraHost := payload.IP
-	if cameraHost == "" {
-		cameraHost = server.defaultCameraIP
-	}
-
-	effectivePassword := payload.CloudPassword
-	if effectivePassword == "" {
-		effectivePassword = payload.Password
-	}
-	if effectivePassword == "" {
-		server.writeJSON(
-			writer,
-			map[string]interface{}{
-				"ok":    false,
-				"error": "Thiếu mật khẩu Camera (hãy nhập vào Cài Đặt Camera)",
-			},
-			http.StatusBadRequest,
-		)
-		return
-	}
-
-	session := GetTapoSession(cameraHost, payload.User, effectivePassword)
-	privacyErr := session.SetPrivacyMode(*payload.Enabled)
-	if privacyErr != nil {
-		server.writeJSON(
-			writer,
-			map[string]interface{}{
-				"ok":    false,
-				"error": fmt.Sprintf("Lỗi bật/tắt chế độ riêng tư: %v", privacyErr),
-			},
-			500,
-		)
-		return
-	}
-
-	actionMessage := "Đã tắt chế độ riêng tư camera"
-	if *payload.Enabled {
-		actionMessage = "Đã bật chế độ riêng tư camera"
-	}
-
-	server.writeJSON(
-		writer,
-		map[string]interface{}{
-			"ok":      true,
-			"enabled": *payload.Enabled,
-			"message": actionMessage,
-		},
-		200,
-	)
-}
-
-func (server *CameraServer) handleSecurityStatus(
-	writer http.ResponseWriter,
-	request *http.Request,
-) {
-	status := server.sentinel.GetStatus()
-	server.writeJSON(writer, map[string]interface{}{"ok": true, "status": status}, 200)
-}
-
-func (server *CameraServer) handleSecurityConfig(
-	writer http.ResponseWriter,
-	request *http.Request,
-) {
-	var payload SecurityConfigRequest
-	_ = json.NewDecoder(request.Body).Decode(&payload)
-
-	status := server.sentinel.GetStatus()
-	speaker := status.AlarmSpeakerEnabled
-	tv := status.AlarmTvEnabled
-	if payload.AlarmSpeaker != nil {
-		speaker = *payload.AlarmSpeaker
-	}
-	if payload.AlarmTv != nil {
-		tv = *payload.AlarmTv
-	}
-	server.sentinel.SetAlarms(speaker, tv)
-
-	server.writeJSON(
-		writer,
-		map[string]interface{}{"ok": true, "status": server.sentinel.GetStatus()},
-		200,
-	)
-}
-
-func (server *CameraServer) handleWhitelistAdd(
-	writer http.ResponseWriter,
-	request *http.Request,
-) {
-	var payload WhitelistIPRequest
-	_ = json.NewDecoder(request.Body).Decode(&payload)
-	server.sentinel.AddWhitelistIP(payload.IP)
-	server.writeJSON(
-		writer,
-		map[string]interface{}{"ok": true, "status": server.sentinel.GetStatus()},
-		200,
-	)
-}
-
-func (server *CameraServer) handleWhitelistRemove(
-	writer http.ResponseWriter,
-	request *http.Request,
-) {
-	var payload WhitelistIPRequest
-	_ = json.NewDecoder(request.Body).Decode(&payload)
-	server.sentinel.RemoveWhitelistIP(payload.IP)
-	server.writeJSON(
-		writer,
-		map[string]interface{}{"ok": true, "status": server.sentinel.GetStatus()},
-		200,
-	)
-}
-
-func (server *CameraServer) handleSecurityTestAlarm(
-	writer http.ResponseWriter,
-	request *http.Request,
-) {
-	var payload SpeakRequest
-	_ = json.NewDecoder(request.Body).Decode(&payload)
-
-	cameraHost := payload.IP
-	if cameraHost == "" {
-		cameraHost = server.defaultCameraIP
-	}
-	effectivePassword := payload.CloudPassword
-	if effectivePassword == "" {
-		effectivePassword = payload.Password
-	}
-
-	speakerCallback := func(wavData []byte) error {
-		return BroadcastAudio(
-			cameraHost, payload.User, effectivePassword, wavData,
-		)
-	}
-
-	server.sentinel.TriggerSecurityAlert("192.168.1.99 (Test)", speakerCallback)
-	server.writeJSON(
-		writer,
-		map[string]interface{}{
-			"ok":      true,
-			"message": "Đã kích hoạt thử nghiệm báo động Sentinel (Loa + TV)",
-		},
-		200,
-	)
-}
-
-func (server *CameraServer) handleCameraEvent(
-	writer http.ResponseWriter,
-	request *http.Request,
-) {
-	if request.Method != http.MethodPost {
-		server.writeJSON(
-			writer,
-			map[string]interface{}{"ok": false, "error": "Chỉ hỗ trợ POST"},
-			http.StatusMethodNotAllowed,
-		)
-		return
-	}
-
-	var payload CameraEventRequest
-	if err := json.NewDecoder(request.Body).Decode(&payload); err != nil {
-		server.writeJSON(
-			writer,
-			map[string]interface{}{"ok": false, "error": "Dữ liệu JSON không hợp lệ"},
-			http.StatusBadRequest,
-		)
-		return
-	}
-
-	if payload.ZoneID == "" || payload.EventType == "" {
-		server.writeJSON(
-			writer,
-			map[string]interface{}{"ok": false, "error": "Thiếu zone_id hoặc event_type"},
-			http.StatusBadRequest,
-		)
-		return
-	}
-
-	if payload.EventType == "enter" && server.sentinel.alarmTvEnabled {
-		alertMsg := fmt.Sprintf("Phát hiện người tại khu vực %s", payload.ZoneID)
-		if payload.ZoneID == "sofa" {
-			alertMsg = "Chào mừng bạn! Đã phát hiện người ngồi sofa."
-		}
-		server.sentinel.sendTvUdpNotification("Tương tác Camera", alertMsg)
-	}
-
-	server.writeJSON(
-		writer,
-		map[string]interface{}{
-			"ok":      true,
-			"message": "Đã ghi nhận sự kiện tương tác camera thành công",
-		},
-		200,
-	)
-}
-
-func (server *CameraServer) handleMonitorRealtime(
-	writer http.ResponseWriter,
-	request *http.Request,
-) {
-	status := server.sentinel.GetStatus()
-	server.writeJSON(
-		writer,
-		map[string]interface{}{
-			"ok":              true,
-			"sentinel":        status,
-			"go2rtcPort":      server.go2rtcPort,
-			"defaultCameraIp": server.defaultCameraIP,
-		},
-		200,
-	)
-}
-
-func (server *CameraServer) handleStreamMjpeg(
-	writer http.ResponseWriter,
-	request *http.Request,
-) {
-	query := request.URL.Query()
-	cameraHost := query.Get("ip")
-	if cameraHost == "" {
-		cameraHost = server.defaultCameraIP
-	}
-	cameraPort := query.Get("port")
-	if cameraPort == "" {
-		cameraPort = "554"
-	}
-	cameraUser := query.Get("user")
-	cameraPassword := query.Get("password")
-	streamPath := query.Get("path")
-	if streamPath == "" {
-		streamPath = server.defaultStreamPath
-	}
-	cleanPath := streamPath
-	if !strings.HasPrefix(cleanPath, "/") {
-		cleanPath = "/" + cleanPath
-	}
-
-	rtspUrl := fmt.Sprintf(
-		"rtsp://%s:%s@%s:%s%s",
-		cameraUser, cameraPassword, cameraHost, cameraPort, cleanPath,
-	)
-
-	ffmpegProcess := exec.Command(
-		"ffmpeg",
-		"-rtsp_transport", "tcp",
-		"-i", rtspUrl,
-		"-f", "mpjpeg",
-		"-q:v", "5",
-		"-r", "12",
-		"pipe:1",
-	)
-
-	stdoutPipe, pipeError := ffmpegProcess.StdoutPipe()
-	if pipeError != nil {
-		http.Error(writer, pipeError.Error(), http.StatusInternalServerError)
-		return
-	}
-	if startError := ffmpegProcess.Start(); startError != nil {
-		http.Error(writer, startError.Error(), http.StatusInternalServerError)
-		return
-	}
-	defer func() {
-		_ = ffmpegProcess.Process.Kill()
-		_ = ffmpegProcess.Wait()
-	}()
-
-	writer.Header().Set("Content-Type", "multipart/x-mixed-replace; boundary=--ffmpeg")
-	writer.WriteHeader(http.StatusOK)
-
-	buffer := make([]byte, 4096)
-	for {
-		readBytes, readErr := stdoutPipe.Read(buffer)
-		if readBytes > 0 {
-			if _, writeErr := writer.Write(buffer[:readBytes]); writeErr != nil {
-				break
-			}
-			if flusher, ok := writer.(http.Flusher); ok {
-				flusher.Flush()
-			}
-		}
-		if readErr != nil {
-			break
-		}
-	}
-}
-
 func (server *CameraServer) writeJSON(
 	writer http.ResponseWriter,
 	payload interface{},
@@ -790,84 +92,147 @@ func (server *CameraServer) writeJSON(
 		return
 	}
 	writer.Header().Set("Content-Type", "application/json; charset=utf-8")
-	writer.Header().Set("Content-Length", strconv.Itoa(len(encoded)))
+	writer.Header().Set("Access-Control-Allow-Origin", "*")
+	writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+	writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 	writer.WriteHeader(statusCode)
 	_, _ = writer.Write(encoded)
 }
 
 func (server *CameraServer) ensureGo2rtcRunning() {
-	checkUrl := fmt.Sprintf("http://127.0.0.1:%d/api/streams", server.go2rtcPort)
-	client := http.Client{Timeout: 800 * time.Millisecond}
-	resp, requestError := client.Get(checkUrl)
-	if requestError == nil && resp.StatusCode == 200 {
+	client := http.Client{Timeout: 1 * time.Second}
+	probeUrl := fmt.Sprintf("http://127.0.0.1:%d/api/streams", server.go2rtcPort)
+	resp, requestError := client.Get(probeUrl)
+	if requestError == nil && resp.StatusCode == http.StatusOK {
 		_ = resp.Body.Close()
 		return
 	}
 
-	go2rtcBinary, lookError := exec.LookPath("go2rtc")
-	if lookError != nil {
-		homeDir, _ := os.UserHomeDir()
-		go2rtcBinary = filepath.Join(homeDir, "go", "bin", "go2rtc")
+	binaryPaths := []string{
+		"./bin/go2rtc",
+		"/home/chungnh/bin/go2rtc",
+		"/usr/local/bin/go2rtc",
 	}
-	if _, statError := os.Stat(go2rtcBinary); statError == nil {
-		daemonProcess := exec.Command(
-			go2rtcBinary,
-			"-c", fmt.Sprintf(`{"api":{"listen":":%d"}}`, server.go2rtcPort),
-		)
-		_ = daemonProcess.Start()
+
+	for _, binaryLocation := range binaryPaths {
+		if _, statError := os.Stat(binaryLocation); statError == nil {
+			go2rtcProcess := exec.Command(binaryLocation)
+			_ = go2rtcProcess.Start()
+			time.Sleep(500 * time.Millisecond)
+			return
+		}
 	}
 }
 
 func testRtspConnection(
 	host string,
 	port int,
-	user string,
+	username string,
 	password string,
-	path string,
+	streamPath string,
 ) (bool, string) {
-	targetAddress := fmt.Sprintf("%s:%d", host, port)
-	socketConnection, dialError := net.DialTimeout("tcp", targetAddress, 4*time.Second)
-	if dialError != nil {
-		return false, fmt.Sprintf("Lỗi kết nối tới %s: %v", targetAddress, dialError)
+	connectionAddress := fmt.Sprintf("%s:%d", host, port)
+	tcpConn, tcpError := net.DialTimeout("tcp", connectionAddress, 3*time.Second)
+	if tcpError != nil {
+		return false, fmt.Sprintf("Không thể kết nối cổng %d: %v", port, tcpError)
 	}
-	defer socketConnection.Close()
+	defer tcpConn.Close()
 
-	authHeader := ""
-	if user != "" && password != "" {
-		rawCredentials := fmt.Sprintf("%s:%s", user, password)
-		encodedToken := base64.StdEncoding.EncodeToString([]byte(rawCredentials))
-		authHeader = fmt.Sprintf("Authorization: Basic %s\r\n", encodedToken)
-	}
-
-	cleanPath := path
+	cleanPath := streamPath
 	if !strings.HasPrefix(cleanPath, "/") {
 		cleanPath = "/" + cleanPath
 	}
-
-	rtspRequest := fmt.Sprintf(
-		"DESCRIBE rtsp://%s:%d%s RTSP/1.0\r\nCSeq: 2\r\n%sAccept: application/sdp\r\n\r\n",
-		host, port, cleanPath, authHeader,
+	rtspUrl := fmt.Sprintf("rtsp://%s:%d%s", host, port, cleanPath)
+	describeMessage := fmt.Sprintf(
+		"DESCRIBE %s RTSP/1.0\r\nCSeq: 1\r\nAccept: application/sdp\r\n\r\n",
+		rtspUrl,
 	)
-	if _, writeError := socketConnection.Write([]byte(rtspRequest)); writeError != nil {
-		return false, fmt.Sprintf("Lỗi gửi RTSP request: %v", writeError)
+
+	_ = tcpConn.SetDeadline(time.Now().Add(3 * time.Second))
+	if _, writeErr := tcpConn.Write([]byte(describeMessage)); writeErr != nil {
+		return false, fmt.Sprintf("Gửi DESCRIBE thất bại: %v", writeErr)
 	}
 
-	responseBuffer := make([]byte, 4096)
-	_ = socketConnection.SetReadDeadline(time.Now().Add(4 * time.Second))
-	readCount, readError := socketConnection.Read(responseBuffer)
+	readBuffer := make([]byte, 2048)
+	bytesRead, readError := tcpConn.Read(readBuffer)
 	if readError != nil {
-		return false, fmt.Sprintf("Lỗi nhận RTSP response: %v", readError)
+		return false, fmt.Sprintf("Đọc RTSP thất bại: %v", readError)
 	}
 
-	firstLine := strings.Split(string(responseBuffer[:readCount]), "\r\n")[0]
-	if strings.Contains(firstLine, "200 OK") {
-		return true, "Kết nối thành công (200 OK)"
-	} else if strings.Contains(firstLine, "401") {
-		return false, "Sai tài khoản hoặc mật khẩu camera (401 Unauthorized)"
-	} else if strings.Contains(firstLine, "404") {
-		return false, fmt.Sprintf("Không tìm thấy luồng %s (404 Not Found)", cleanPath)
+	responseString := string(readBuffer[:bytesRead])
+	if strings.Contains(responseString, "401 Unauthorized") {
+		authLine := ""
+		for _, headerLine := range strings.Split(responseString, "\r\n") {
+			if strings.HasPrefix(strings.ToLower(headerLine), "www-authenticate:") {
+				authLine = headerLine
+				break
+			}
+		}
+
+		calculatedAuth := computeDigestAuthHeader(username, password, "DESCRIBE", rtspUrl, authLine)
+		if calculatedAuth != "" {
+			secondDescribeMessage := fmt.Sprintf(
+				"DESCRIBE %s RTSP/1.0\r\nCSeq: 2\r\nAccept: application/sdp\r\nAuthorization: %s\r\n\r\n",
+				rtspUrl, calculatedAuth,
+			)
+
+			reconnectedTcp, reconnectError := net.DialTimeout("tcp", connectionAddress, 3*time.Second)
+			if reconnectError == nil {
+				defer reconnectedTcp.Close()
+				_ = reconnectedTcp.SetDeadline(time.Now().Add(3 * time.Second))
+				_, _ = reconnectedTcp.Write([]byte(secondDescribeMessage))
+				secondBytesRead, secondReadError := reconnectedTcp.Read(readBuffer)
+				if secondReadError == nil {
+					secondResponseString := string(readBuffer[:secondBytesRead])
+					if strings.Contains(secondResponseString, "200 OK") {
+						return true, "Kết nối thành công (Digest Auth OK)"
+					}
+					if strings.Contains(secondResponseString, "401") {
+						return false, "Xác thực thất bại: Sai tài khoản hoặc mật khẩu Camera"
+					}
+				}
+			}
+		}
+
+		return true, "Cổng RTSP hoạt động (Camera phản hồi 401 Unauthorized)"
 	}
-	return false, fmt.Sprintf("Phản hồi RTSP: %s", firstLine)
+
+	if strings.Contains(responseString, "200 OK") {
+		return true, "Kết nối RTSP thành công (200 OK)"
+	}
+
+	return true, "Cổng RTSP phản hồi thành công"
+}
+
+func computeDigestAuthHeader(user, pass, method, rawURL, wwwAuth string) string {
+	realm := extractDigestParam(wwwAuth, "realm")
+	nonce := extractDigestParam(wwwAuth, "nonce")
+	if realm == "" || nonce == "" {
+		return ""
+	}
+	parsedURL, _ := url.Parse(rawURL)
+	uri := rawURL
+	if parsedURL != nil && parsedURL.RequestURI() != "" {
+		uri = parsedURL.RequestURI()
+	}
+	ha1 := md5Hex(fmt.Sprintf("%s:%s:%s", user, realm, pass))
+	ha2 := md5Hex(fmt.Sprintf("%s:%s", method, uri))
+	response := md5Hex(fmt.Sprintf("%s:%s:%s", ha1, nonce, ha2))
+	return fmt.Sprintf("Digest username=\"%s\", realm=\"%s\", nonce=\"%s\", uri=\"%s\", response=\"%s\"", user, realm, nonce, uri, response)
+}
+
+func extractDigestParam(header, key string) string {
+	search := key + "=\""
+	idx := strings.Index(header, search)
+	if idx == -1 {
+		return ""
+	}
+	start := idx + len(search)
+	end := strings.Index(header[start:], "\"")
+	if end == -1 {
+		return ""
+	}
+	return header[start : start+end]
 }
 
 func contextBackground() context.Context {
