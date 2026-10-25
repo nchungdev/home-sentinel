@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"os"
+	"strings"
 )
 
 func (s *Server) handleHAConfig(w http.ResponseWriter, r *http.Request) {
@@ -51,6 +52,61 @@ func (s *Server) handleHAConfig(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+}
+
+func (s *Server) handleHAEntities(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	if s.HAClient == nil {
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{"ok": false, "entities": []interface{}{}})
+		return
+	}
+
+	states, err := s.HAClient.GetStates()
+	if err != nil {
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"ok":       false,
+			"error":    err.Error(),
+			"entities": []interface{}{},
+		})
+		return
+	}
+
+	type DeviceItem struct {
+		EntityID string `json:"entity_id"`
+		Name     string `json:"name"`
+		Domain   string `json:"domain"`
+		State    string `json:"state"`
+	}
+
+	allowed := map[string]bool{
+		"light": true, "fan": true, "script": true, "switch": true, "climate": true,
+	}
+
+	var list []DeviceItem
+	for _, st := range states {
+		if st.State == "unavailable" || strings.Contains(st.EntityID, "_2_2") {
+			continue
+		}
+		parts := strings.SplitN(st.EntityID, ".", 2)
+		if len(parts) != 2 || !allowed[parts[0]] {
+			continue
+		}
+		name := st.EntityID
+		if fn, ok := st.Attributes["friendly_name"].(string); ok && strings.TrimSpace(fn) != "" {
+			name = strings.TrimSpace(fn)
+		}
+		list = append(list, DeviceItem{
+			EntityID: st.EntityID,
+			Name:     name,
+			Domain:   parts[0],
+			State:    st.State,
+		})
+	}
+
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"ok":       true,
+		"entities": list,
+	})
 }
 
 func (s *Server) handleGroqConfig(w http.ResponseWriter, r *http.Request) {

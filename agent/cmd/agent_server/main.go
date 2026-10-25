@@ -183,19 +183,8 @@ func NewServer() *Server {
 		},
 		server.broadcastTerminal,
 		"192.168.1.8",
-		"sentinel_automation_config.json",
+		"configs/automation.json",
 	)
-
-	server.Transcriber = speech.NewTranscriber(os.Getenv("GROQ_API_KEY"))
-	if data, err := os.ReadFile("sentinel_groq_config.json"); err == nil {
-		var groqCfg struct {
-			APIKey string `json:"api_key"`
-		}
-		if json.Unmarshal(data, &groqCfg) == nil && groqCfg.APIKey != "" {
-			server.Transcriber.UpdateGroqKey(groqCfg.APIKey)
-		}
-	}
-
 	return server
 }
 
@@ -257,6 +246,7 @@ func main() {
 	mux.HandleFunc("/api/camera/events", server.handleCameraEvents)
 
 	mux.HandleFunc("/api/ha/config", server.handleHAConfig)
+	mux.HandleFunc("/api/ha/entities", server.handleHAEntities)
 	mux.HandleFunc("/api/groq/config", server.handleGroqConfig)
 	mux.HandleFunc("/api/automation/config", server.handleAutomationConfig)
 	mux.HandleFunc("/notify", server.handleNotify)

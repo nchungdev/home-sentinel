@@ -1447,6 +1447,9 @@
         <button class="subtab-btn active" id="btn-subtab-agent-cfg" onclick="switchSubTab('agent-cfg', this)">
           <span>🧠</span> AI Engines
         </button>
+        <button class="subtab-btn" id="btn-subtab-automation-cfg" onclick="switchSubTab('automation-cfg', this)">
+          <span>⚡</span> Kịch Bản (Automation)
+        </button>
         <button class="subtab-btn" id="btn-subtab-camera-cfg" onclick="switchSubTab('camera-cfg', this)">
           <span>📷</span> Camera Config
         </button>
@@ -1459,6 +1462,125 @@
         <button class="subtab-btn" id="btn-subtab-logs" onclick="switchSubTab('logs', this)">
           <span>📋</span> Client Logs
         </button>
+      </div>
+
+      <!-- SUBTAB AUTOMATION: KỊCH BẢN TỰ ĐỘNG HÓA & THIẾT BỊ THẬT -->
+      <div id="subtab-automation-cfg" class="subtab-panel grid-layout">
+        <!-- Card 1: Tắt đèn khi vắng người -->
+        <div class="card" style="padding:18px; gap:14px;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div class="card-title" style="font-size:14px;">🌙 Kịch bản 1: Tự động tắt đèn khi vắng người</div>
+            <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:#10b981; cursor:pointer;">
+              <input type="checkbox" id="autoIdleEnabled" checked> Bật kịch bản
+            </label>
+          </div>
+          <p style="font-size:12px; color:var(--text-muted); line-height:1.5;">
+            Khi phòng khách không có người và không có âm thanh vượt quá số phút quy định (và TV đang tắt), hệ thống sẽ tự động tắt các đèn được chọn bên dưới.
+          </p>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div class="form-group">
+              <label>Thời gian chờ vắng người (Phút):</label>
+              <input type="number" id="autoIdleMinutes" min="1" max="120" value="1">
+            </div>
+            <div class="form-group">
+              <label>Kiểm tra trạng thái TV:</label>
+              <select id="autoIdleCheckTV">
+                <option value="true">Chỉ tắt đèn khi TV đang TẮT</option>
+                <option value="false">Tắt đèn bất kể TV bật hay tắt</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+              <label>Chọn các đèn cần tắt (Lấy trực tiếp từ Home Assistant):</label>
+              <button class="btn-modern" style="padding:4px 10px; font-size:11px;" onclick="loadAutomationConfigAndDevices()">🔄 Tải lại thiết bị</button>
+            </div>
+            <div id="autoIdleLightsChecklist" style="max-height:220px; overflow-y:auto; background:rgba(0,0,0,0.25); border:1px solid var(--border); border-radius:8px; padding:10px; display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+              <div style="font-size:12px; color:var(--text-muted);">Đang tải danh sách thiết bị từ Home Assistant...</div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Script tắt kèm theo (Tùy chọn):</label>
+            <select id="autoIdleScript">
+              <option value="">-- Không dùng Script --</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Card 2: Ngồi Sofa Vỗ Tay & Đi làm về buổi tối -->
+        <div style="display:flex; flex-direction:column; gap:20px;">
+          <!-- Ngồi Sofa Vỗ tay -->
+          <div class="card" style="padding:18px; gap:12px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <div class="card-title" style="font-size:14px;">👏 Kịch bản 2: Ngồi Sofa vỗ tay ➔ Mở TV & Quạt</div>
+              <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:#10b981; cursor:pointer;">
+                <input type="checkbox" id="autoClapEnabled" checked> Bật kịch bản
+              </label>
+            </div>
+            <p style="font-size:12px; color:var(--text-muted); line-height:1.5;">
+              Khi Camera phát hiện có người ngồi ở vùng Sofa (Preset 1) và thu được tiếng vỗ tay (YAMNet Clapping), tự động bật TV và Quạt.
+            </p>
+            <div class="form-group">
+              <label>Thiết bị Quạt cần bật (Home Assistant):</label>
+              <select id="autoClapFan">
+                <option value="">-- Chọn thiết bị quạt --</option>
+              </select>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+              <div class="form-group">
+                <label>Địa chỉ IP Android TV (ADB):</label>
+                <input type="text" id="autoClapTV" value="192.168.1.8" placeholder="192.168.1.8">
+              </div>
+              <div class="form-group">
+                <label>Thời gian chờ/Cooldown (Giây):</label>
+                <input type="number" id="autoClapWindow" value="60" min="10" max="600">
+              </div>
+            </div>
+          </div>
+
+          <!-- Đi làm về buổi tối -->
+          <div class="card" style="padding:18px; gap:12px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <div class="card-title" style="font-size:14px;">🌆 Kịch bản 3: Phát hiện người buổi tối ➔ Bật đèn đón</div>
+              <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:#10b981; cursor:pointer;">
+                <input type="checkbox" id="autoEveningEnabled" checked> Bật kịch bản
+              </label>
+            </div>
+            <div class="form-group">
+              <label>Đèn tự động bật khi phát hiện người vào buổi tối:</label>
+              <select id="autoEveningLight">
+                <option value="">-- Chọn đèn bật đón --</option>
+              </select>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;">
+              <div class="form-group">
+                <label>Từ giờ (0-23):</label>
+                <input type="number" id="autoEveningStart" value="18" min="0" max="23">
+              </div>
+              <div class="form-group">
+                <label>Đến giờ (0-23):</label>
+                <input type="number" id="autoEveningEnd" value="6" min="0" max="23">
+              </div>
+              <div class="form-group">
+                <label>Camera Preset:</label>
+                <select id="autoEveningPreset">
+                  <option value="3">Preset 3 (Cửa chính)</option>
+                  <option value="1">Preset 1 (Sofa)</option>
+                  <option value="2">Preset 2 (Bàn ăn)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Nút lưu toàn bộ kịch bản -->
+          <div class="card" style="padding:16px 18px; flex-direction:row; justify-content:space-between; align-items:center;">
+            <div>
+              <div style="font-size:13px; font-weight:600; color:var(--text-bright);">Lưu vào configs/automation.json</div>
+              <div id="autoSaveStatus" style="font-size:12px; color:var(--text-muted); margin-top:2px;">Áp dụng ngay lập tức mà không cần khởi động lại server.</div>
+            </div>
+            <button class="btn-modern primary" id="btnSaveAutomation" onclick="saveAutomationConfigUI()">💾 Lưu Kịch Bản</button>
+          </div>
+        </div>
       </div>
 
       <!-- SUBTAB 1: AI ENGINES -->
@@ -1712,6 +1834,7 @@
       } catch (e) {}
 
       if (subtabId === 'agent-cfg') loadEngines();
+      if (subtabId === 'automation-cfg') loadAutomationConfigAndDevices();
       if (subtabId === 'logs') loadClientLogs();
     }
 
@@ -2727,9 +2850,154 @@
       }
     }
 
+    // AUTOMATION CONFIG & REAL HOME ASSISTANT DEVICES
+    let currentAutoCfg = null;
+    let haDevicesCache = [];
+
+    async function loadAutomationConfigAndDevices() {
+      const checklistEl = document.getElementById('autoIdleLightsChecklist');
+      try {
+        const [cfgRes, entRes] = await Promise.all([
+          fetch('/api/automation/config'),
+          fetch('/api/ha/entities')
+        ]);
+        const cfgData = await cfgRes.json();
+        const entData = await entRes.json();
+
+        if (cfgData.ok && cfgData.config) {
+          currentAutoCfg = cfgData.config;
+        }
+        if (entData.ok && Array.isArray(entData.entities)) {
+          haDevicesCache = entData.entities;
+        }
+        renderAutomationUI();
+      } catch (e) {
+        if (checklistEl) {
+          checklistEl.innerHTML = `<div style="color:#ef4444; font-size:12px;">Lỗi tải danh sách thiết bị: ${e.message}</div>`;
+        }
+      }
+    }
+
+    function renderAutomationUI() {
+      if (!currentAutoCfg) return;
+      const idle = currentAutoCfg.idle_living_room || {};
+      const clap = currentAutoCfg.sofa_clap_action || {};
+      const eve = currentAutoCfg.evening_arrival || {};
+
+      document.getElementById('autoIdleEnabled').checked = !!idle.enabled;
+      document.getElementById('autoIdleMinutes').value = idle.idle_minutes || 1;
+      document.getElementById('autoIdleCheckTV').value = idle.check_tv_playback !== false ? 'true' : 'false';
+
+      document.getElementById('autoClapEnabled').checked = !!clap.enabled;
+      document.getElementById('autoClapTV').value = clap.target_tv || '192.168.1.8';
+      document.getElementById('autoClapWindow').value = clap.window_seconds || 60;
+
+      document.getElementById('autoEveningEnabled').checked = !!eve.enabled;
+      document.getElementById('autoEveningStart').value = eve.start_hour ?? 18;
+      document.getElementById('autoEveningEnd').value = eve.end_hour ?? 6;
+      document.getElementById('autoEveningPreset').value = eve.target_preset || '3';
+
+      const lights = haDevicesCache.filter(d => d.domain === 'light');
+      const fans = haDevicesCache.filter(d => d.domain === 'fan' || d.domain === 'switch');
+      const scripts = haDevicesCache.filter(d => d.domain === 'script');
+
+      // 1. Render checklist đèn cần tắt
+      const checklistEl = document.getElementById('autoIdleLightsChecklist');
+      const selectedLights = new Set(idle.target_lights || []);
+      if (lights.length === 0) {
+        checklistEl.innerHTML = `<div style="font-size:12px; color:var(--text-muted); grid-column:span 2;">Chưa tải được danh sách đèn từ Home Assistant.</div>`;
+      } else {
+        checklistEl.innerHTML = lights.map(l => {
+          const checked = selectedLights.has(l.entity_id) ? 'checked' : '';
+          const stateColor = l.state === 'on' ? '#10b981' : '#64748b';
+          const stateText = l.state === 'on' ? 'ĐANG BẬT' : 'TẮT';
+          return `
+            <label style="display:flex; align-items:center; justify-content:space-between; gap:6px; padding:6px 8px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:6px; cursor:pointer; font-size:12px; color:var(--text-bright);">
+              <span style="display:flex; align-items:center; gap:6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                <input type="checkbox" class="auto-light-item" value="${escapeHtml(l.entity_id)}" ${checked}>
+                <span title="${escapeHtml(l.entity_id)}">${escapeHtml(l.name)}</span>
+              </span>
+              <span style="font-size:10px; color:${stateColor}; font-weight:600; flex-shrink:0;">${stateText}</span>
+            </label>
+          `;
+        }).join('');
+      }
+
+      // 2. Render Script dropdown
+      const scriptSel = document.getElementById('autoIdleScript');
+      scriptSel.innerHTML = `<option value="">-- Không dùng Script --</option>` +
+        scripts.map(s => `<option value="${escapeHtml(s.entity_id)}" ${idle.turn_off_script === s.entity_id ? 'selected' : ''}>${escapeHtml(s.name)} (${escapeHtml(s.entity_id)})</option>`).join('');
+
+      // 3. Render Fan dropdown
+      const fanSel = document.getElementById('autoClapFan');
+      fanSel.innerHTML = `<option value="">-- Chọn thiết bị quạt --</option>` +
+        fans.map(f => `<option value="${escapeHtml(f.entity_id)}" ${clap.target_fan === f.entity_id ? 'selected' : ''}>[${f.domain.toUpperCase()}] ${escapeHtml(f.name)} (${f.state.toUpperCase()})</option>`).join('');
+
+      // 4. Render Evening Light dropdown
+      const eveLightSel = document.getElementById('autoEveningLight');
+      eveLightSel.innerHTML = `<option value="">-- Chọn đèn bật đón --</option>` +
+        lights.map(l => `<option value="${escapeHtml(l.entity_id)}" ${eve.target_light === l.entity_id ? 'selected' : ''}>${escapeHtml(l.name)} (${escapeHtml(l.entity_id)})</option>`).join('');
+    }
+
+    async function saveAutomationConfigUI() {
+      const btn = document.getElementById('btnSaveAutomation');
+      const statusEl = document.getElementById('autoSaveStatus');
+      const checkedLights = Array.from(document.querySelectorAll('.auto-light-item:checked')).map(el => el.value);
+
+      const payload = {
+        config: {
+          idle_living_room: {
+            enabled: document.getElementById('autoIdleEnabled').checked,
+            idle_minutes: parseInt(document.getElementById('autoIdleMinutes').value, 10) || 1,
+            target_lights: checkedLights,
+            turn_off_script: document.getElementById('autoIdleScript').value,
+            check_tv_playback: document.getElementById('autoIdleCheckTV').value === 'true'
+          },
+          sofa_clap_action: {
+            enabled: document.getElementById('autoClapEnabled').checked,
+            target_fan: document.getElementById('autoClapFan').value,
+            target_tv: document.getElementById('autoClapTV').value.trim() || '192.168.1.8',
+            window_seconds: parseInt(document.getElementById('autoClapWindow').value, 10) || 60
+          },
+          evening_arrival: {
+            enabled: document.getElementById('autoEveningEnabled').checked,
+            target_light: document.getElementById('autoEveningLight').value,
+            target_preset: document.getElementById('autoEveningPreset').value,
+            cooldown_sec: (currentAutoCfg && currentAutoCfg.evening_arrival && currentAutoCfg.evening_arrival.cooldown_sec) || 300,
+            start_hour: parseInt(document.getElementById('autoEveningStart').value, 10) || 18,
+            end_hour: parseInt(document.getElementById('autoEveningEnd').value, 10) || 6,
+            sound_keywords: (currentAutoCfg && currentAutoCfg.evening_arrival && currentAutoCfg.evening_arrival.sound_keywords) || []
+          }
+        }
+      };
+
+      btn.disabled = true;
+      btn.textContent = '⏳ Đang lưu...';
+      try {
+        const res = await fetch('/api/automation/config', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data.ok) {
+          currentAutoCfg = data.config;
+          statusEl.innerHTML = `<span style="color:#10b981;">✅ Đã lưu kịch bản vào configs/automation.json (${checkedLights.length} đèn)!</span>`;
+        } else {
+          statusEl.innerHTML = `<span style="color:#ef4444;">❌ Lỗi lưu cấu hình</span>`;
+        }
+      } catch (e) {
+        statusEl.innerHTML = `<span style="color:#ef4444;">❌ Lỗi: ${e.message}</span>`;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '💾 Lưu Kịch Bản';
+      }
+    }
+
     // Tự động load config khi mở
     loadSavedCameraConfig();
     loadSavedHAConfig();
+    loadAutomationConfigAndDevices();
     renderSavedChat();
 
     // Khôi phục tab đang chọn từ localStorage (tránh bị reset khi F5)

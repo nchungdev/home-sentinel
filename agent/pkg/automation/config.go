@@ -3,6 +3,7 @@ package automation
 import (
 	"encoding/json"
 	"os"
+	"path/filepath"
 	"sync"
 )
 
@@ -111,6 +112,9 @@ func (s *ConfigStore) load() {
 }
 
 func (s *ConfigStore) save() {
+	if dir := filepath.Dir(s.path); dir != "" && dir != "." {
+		_ = os.MkdirAll(dir, 0755)
+	}
 	data, err := json.MarshalIndent(s.config, "", "  ")
 	if err == nil {
 		_ = os.WriteFile(s.path, data, 0644)
