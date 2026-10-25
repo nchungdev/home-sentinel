@@ -105,12 +105,12 @@
 
     .view-content {
       flex: 1;
-      display: none;
+      display: none !important;
       height: calc(100vh - 55px);
       overflow-y: auto;
     }
     .view-content.active {
-      display: flex;
+      display: flex !important;
     }
 
     /* VIEW 1: AGENT CHAT BOX */
@@ -406,13 +406,13 @@
       <h2>Home Sentinel</h2>
     </div>
     <div class="nav-list">
-      <div class="nav-item active" onclick="showMainView('agent')">
+      <div class="nav-item active" onclick="showMainView('agent', this)">
         <span>🤖</span> Agent
       </div>
-      <div class="nav-item" onclick="showMainView('camera')">
+      <div class="nav-item" onclick="showMainView('camera', this)">
         <span>📹</span> Camera
       </div>
-      <div class="nav-item" onclick="showMainView('setting')">
+      <div class="nav-item" onclick="showMainView('setting', this)">
         <span>⚙️</span> Setting
       </div>
     </div>
@@ -574,19 +574,24 @@
   </main>
 
   <script>
-    function showMainView(viewName) {
-      document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-      document.querySelectorAll('.view-content').forEach(el => el.classList.remove('active'));
+    function showMainView(viewName, el) {
+      document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+      document.querySelectorAll('.view-content').forEach(view => view.classList.remove('active'));
 
-      event.currentTarget.classList.add('active');
-      document.getElementById('view-' + viewName).classList.add('active');
+      if (el) {
+        el.classList.add('active');
+      }
+      const targetView = document.getElementById('view-' + viewName);
+      if (targetView) {
+        targetView.classList.add('active');
+      }
 
       const titles = {
         'agent': 'Agent AI Chatbot',
         'camera': 'Camera Live & PTZ Command Center',
         'setting': 'Cài Đặt Hệ Thống Home Sentinel'
       };
-      document.getElementById('currentViewTitle').textContent = titles[viewName];
+      document.getElementById('currentViewTitle').textContent = titles[viewName] || 'Home Sentinel';
 
       if (viewName === 'setting') {
         loadEngines();
