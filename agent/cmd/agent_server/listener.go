@@ -119,6 +119,26 @@ func startCameraWakeWordListener(server *Server) {
 							audioFeatures := speech.AnalyzeAudioSegment(audioToTranscribe)
 							tNow := time.Now().Format("15:04:05")
 
+							// 1. Kiểm tra qua AI Audio Classifier (YAMNet) trước nếu khả dụng
+							yamRes, yerr := speech.ClassifyYAMNet(audioToTranscribe)
+							if yerr == nil && yamRes != nil && yamRes.TopLabel != "" {
+								logMic("🧠 [YAMNet AI] %s (%.0f%%), Speech=%v, Alarm=%v, Clap=%v",
+									yamRes.TopLabel, yamRes.TopScore*100, yamRes.IsSpeech, yamRes.IsAlarm, yamRes.IsClap)
+
+								if yamRes.IsAlarm {
+									audioFeatures.Category = speech.CategoryAlarm
+									audioFeatures.Description = "Còi báo cháy (" + yamRes.TopLabel + ")"
+								} else if yamRes.IsClap {
+									audioFeatures.Category = speech.CategoryClap
+									audioFeatures.Description = "Tiếng vỗ tay (" + yamRes.TopLabel + ")"
+								} else if yamRes.IsSpeech {
+									audioFeatures.Category = speech.CategorySpeech
+								} else if yamRes.TopScore > 0.40 {
+									logMic("Bỏ qua âm thanh môi trường: %s (%.0f%%)", yamRes.TopLabel, yamRes.TopScore*100)
+									continue
+								}
+							}
+
 							if audioFeatures.Category == speech.CategoryClap {
 								logMic("👏 [Phát Hiện Tiếng Vỗ Tay] %s (Peaks=%d, Max=%d)", audioFeatures.Description, audioFeatures.ClapCount, audioFeatures.Peak)
 								server.broadcastTerminal(fmt.Sprintf("[%s] 👏 Camera: %s", tNow, audioFeatures.Description))
@@ -254,24 +274,6 @@ func (s *Server) handleWakeWordQuery(query string, rawPCM []byte, cfg CameraConf
 
 	if query != "" {
 		s.executeSmartHomeAction(query, tNow)
-	}
-}
-
-func (s *Server) executeSmartHomeAction(query string, tNow string) {
-	lowerQuery := strings.ToLower(query)
-	if strings.Contains(lowerQuery, "mở tv") || strings.Contains(lowerQuery, "bật tv") {
-		s.broadcastTerminal(fmt.Sprintf("[%s] 📺 Duinch Camera: \"Dạ, em mở TV ngay đây ạ!\"", tNow))
-		_ = s.speakOnCamera("Dạ, em mở TV ngay đây ạ!", "female")
-		_ = turnOnTV("192.168.1.8")
-	} else if strings.Contains(lowerQuery, "tắt tv") {
-		s.broadcastTerminal(fmt.Sprintf("[%s] 📺 Duinch Camera: \"Dạ, em tắt TV đây ạ!\"", tNow))
-		_ = s.speakOnCamera("Dạ, em tắt TV đây ạ!", "female")
-		adbBin := "/home/chungnh/bin/adb"
-		_ = exec.Command(adbBin, "-s", "192.168.1.8:5555", "shell", "input keyevent 26").Run()
-	} else {
-		reply := askAgentQuery(s, query)
-		s.broadcastTerminal(fmt.Sprintf("[%s] 🤖 Duinch Camera trả lời: \"%s\"", tNow, reply))
-		_ = s.speakOnCamera(reply, "female")
 	}
 }
 

@@ -49,6 +49,24 @@ func (s *Server) speakOnCamera(text string, voice string) error {
 	return nil
 }
 
+func (s *Server) executeSmartHomeAction(query string, tNow string) {
+	lowerQuery := strings.ToLower(query)
+	if strings.Contains(lowerQuery, "mở tv") || strings.Contains(lowerQuery, "bật tv") {
+		s.broadcastTerminal(fmt.Sprintf("[%s] 📺 Duinch Camera: \"Dạ, em mở TV ngay đây ạ!\"", tNow))
+		_ = s.speakOnCamera("Dạ, em mở TV ngay đây ạ!", "female")
+		_ = turnOnTV("192.168.1.8")
+	} else if strings.Contains(lowerQuery, "tắt tv") {
+		s.broadcastTerminal(fmt.Sprintf("[%s] 📺 Duinch Camera: \"Dạ, em tắt TV đây ạ!\"", tNow))
+		_ = s.speakOnCamera("Dạ, em tắt TV đây ạ!", "female")
+		adbBin := "/home/chungnh/bin/adb"
+		_ = exec.Command(adbBin, "-s", "192.168.1.8:5555", "shell", "input keyevent 26").Run()
+	} else {
+		reply := askAgentQuery(s, query)
+		s.broadcastTerminal(fmt.Sprintf("[%s] 🤖 Duinch Camera trả lời: \"%s\"", tNow, reply))
+		_ = s.speakOnCamera(reply, "female")
+	}
+}
+
 func (s *Server) handleProactiveSofaPrompt() {
 	tvHost := "192.168.1.8"
 	s.promptMutex.Lock()
