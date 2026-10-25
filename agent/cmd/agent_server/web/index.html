@@ -285,7 +285,7 @@
       transform: scale(1.05);
     }
 
-    /* 2. CAMERA VIEW - 3 CỘT ĐỘC LẬP TẬN DỤNG TOÀN BỘ MÀN HÌNH */
+    /* 2. CAMERA VIEW - 2 CỘT CÂN ĐỐI TẬN DỤNG TOÀN BỘ MÀN HÌNH */
     .camera-view {
       padding: 20px 28px;
       gap: 20px;
@@ -294,7 +294,7 @@
       box-sizing: border-box;
       align-items: stretch;
       display: grid !important;
-      grid-template-columns: minmax(500px, 1.8fr) minmax(280px, 1fr) minmax(320px, 1.1fr);
+      grid-template-columns: minmax(540px, 1.8fr) minmax(360px, 1.1fr);
       overflow: hidden;
     }
     .camera-col {
@@ -426,8 +426,8 @@
       width: 100%;
     }
     .dpad-circle {
-      width: 200px;
-      height: 200px;
+      width: 170px;
+      height: 170px;
       background: radial-gradient(circle, #1a1e2d 0%, #0d0f17 100%);
       border-radius: 50%;
       border: 1px solid rgba(255, 255, 255, 0.1);
@@ -442,7 +442,7 @@
       background: transparent;
       border: none;
       color: var(--text-bright);
-      font-size: 18px;
+      font-size: 16px;
       cursor: pointer;
       display: flex;
       align-items: center;
@@ -457,13 +457,13 @@
     .dpad-btn:active {
       opacity: 0.6;
     }
-    .dpad-up { top: 12px; left: 50%; transform: translateX(-50%); width: 48px; height: 38px; }
-    .dpad-down { bottom: 12px; left: 50%; transform: translateX(-50%); width: 48px; height: 38px; }
-    .dpad-left { left: 12px; top: 50%; transform: translateY(-50%); width: 38px; height: 48px; }
-    .dpad-right { right: 12px; top: 50%; transform: translateY(-50%); width: 38px; height: 48px; }
+    .dpad-up { top: 8px; left: 50%; transform: translateX(-50%); width: 44px; height: 34px; }
+    .dpad-down { bottom: 8px; left: 50%; transform: translateX(-50%); width: 44px; height: 34px; }
+    .dpad-left { left: 8px; top: 50%; transform: translateY(-50%); width: 34px; height: 44px; }
+    .dpad-right { right: 8px; top: 50%; transform: translateY(-50%); width: 34px; height: 44px; }
     .dpad-center {
-      width: 72px;
-      height: 72px;
+      width: 60px;
+      height: 60px;
       background: linear-gradient(145deg, #1f2537, #131722);
       border: 1px solid rgba(255, 255, 255, 0.12);
       border-radius: 50%;
@@ -471,7 +471,7 @@
       align-items: center;
       justify-content: center;
       color: var(--text-muted);
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 700;
       letter-spacing: 0.5px;
       box-shadow: 0 4px 14px rgba(0,0,0,0.5);
@@ -737,12 +737,13 @@
         </div>
       </div>
 
-      <!-- CỘT 2: CAMERA CONTROL (PTZ REMOTE + PRIVACY) -->
+      <!-- CỘT 2: CONTROL (PTZ REMOTE & PRIVACY) + VOICE BROADCAST (TTS) -->
       <div class="camera-col">
-        <div class="card" style="align-items: center; text-align: center; height:100%;">
-          <div class="card-title" style="align-self: flex-start;">Điều Khiển Camera (PTZ)</div>
+        <!-- PHẦN TRÊN: ĐIỀU KHIỂN CAMERA & PRIVACY -->
+        <div class="card" style="align-items: center; text-align: center; padding: 16px 20px; gap: 12px; flex-shrink: 0;">
+          <div class="card-title" style="align-self: flex-start; margin-bottom: 2px;">Điều Khiển Camera (PTZ)</div>
           
-          <div class="remote-container">
+          <div class="remote-container" style="flex: initial; margin: 4px 0;">
             <div class="dpad-circle">
               <button class="dpad-btn dpad-up" onclick="callCamera('ptz', {direction: 'up'})" title="Lên">▲</button>
               <button class="dpad-btn dpad-left" onclick="callCamera('ptz', {direction: 'left'})" title="Trái">◀</button>
@@ -752,27 +753,24 @@
             </div>
           </div>
 
-          <button class="btn-modern" id="btnPrivacyToggle" style="width:100%; margin-top:auto;" onclick="togglePrivacy()">
+          <button class="btn-modern" id="btnPrivacyToggle" style="width:100%; padding: 10px 14px;" onclick="togglePrivacy()">
             👁️ Chế độ riêng tư: Đang TẮT (Bấm để Bật)
           </button>
         </div>
-      </div>
 
-      <!-- CỘT 3: SEND MESSAGE TO CAMERA SPEAKER (TTS) -->
-      <div class="camera-col">
-        <div class="card" style="height:100%; display:flex; flex-direction:column;">
+        <!-- PHẦN DƯỚI: PHÁT THÔNG BÁO GIỌNG NÓI ĐẾN CAMERA -->
+        <div class="card" style="flex: 1; display:flex; flex-direction:column; padding: 16px 20px; gap: 10px; overflow: hidden;">
           <div class="card-title">Gửi Giọng Nói Đến Camera (TTS)</div>
-          <p style="font-size:12px; color:var(--text-muted); line-height: 1.5; margin:0;">
-            Gõ thông điệp bằng tiếng Việt để phát trực tiếp qua loa tích hợp trên camera thông qua chuẩn âm thanh PCM Alaw (Port 8800).
+          <p style="font-size:12px; color:var(--text-muted); line-height: 1.4; margin:0;">
+            Gõ thông điệp tiếng Việt để phát trực tiếp qua loa tích hợp camera (PCM Alaw 8000Hz - Port 8800).
           </p>
 
-          <div style="display:flex; flex-direction:column; gap:8px; margin-top:12px;">
-            <label style="font-size:12px; color:var(--text-muted);">Tin nhắn phát thanh:</label>
-            <textarea id="camVoiceInput" rows="4" placeholder="Nhập câu thông báo... (Ví dụ: Xin chào, mời bạn vào nhà ngồi chơi!)" style="background:var(--bg); border:1px solid var(--border); color:var(--text-bright); padding:10px 12px; border-radius:10px; font-size:13px; outline:none; resize:none; font-family:inherit; line-height:1.5;"></textarea>
+          <div style="display:flex; flex-direction:column; gap:6px;">
+            <textarea id="camVoiceInput" rows="3" placeholder="Nhập câu thông báo... (Ví dụ: Xin chào, mời bạn vào nhà ngồi chơi!)" style="background:var(--bg); border:1px solid var(--border); color:var(--text-bright); padding:10px 12px; border-radius:10px; font-size:13px; outline:none; resize:none; font-family:inherit; line-height:1.4;"></textarea>
           </div>
 
-          <div style="display:flex; flex-direction:column; gap:8px; margin-top:12px;">
-            <label style="font-size:12px; color:var(--text-muted);">Gợi ý nhanh:</label>
+          <div style="display:flex; flex-direction:column; gap:6px;">
+            <div style="font-size:11px; color:var(--text-muted);">Gợi ý nhanh:</div>
             <div style="display:flex; flex-wrap:wrap; gap:6px;">
               <span class="chip" style="font-size:11px; padding:4px 10px; cursor:pointer;" onclick="fillVoiceText('Xin chào quý khách!')">👋 Chào khách</span>
               <span class="chip" style="font-size:11px; padding:4px 10px; cursor:pointer;" onclick="fillVoiceText('Bạn cần tìm ai ạ?')">❓ Hỏi thăm</span>
@@ -780,8 +778,8 @@
             </div>
           </div>
 
-          <div style="margin-top:auto; padding-top:16px;">
-            <button class="btn-modern primary" id="btnCamSpeak" style="width:100%; padding:12px;" onclick="sendCameraSpeech()">
+          <div style="margin-top:auto; padding-top:8px;">
+            <button class="btn-modern primary" id="btnCamSpeak" style="width:100%; padding:11px;" onclick="sendCameraSpeech()">
               📢 Phát Lên Loa Camera
             </button>
           </div>
