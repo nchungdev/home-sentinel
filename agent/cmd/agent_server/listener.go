@@ -29,17 +29,9 @@ func startCameraWakeWordListener(server *Server) {
 		for {
 			var cfg CameraConfigData
 			data, err := os.ReadFile("sentinel_camera_config.json")
-			if err != nil {
+			if err != nil || json.Unmarshal(data, &cfg) != nil || cfg.IP == "" || cfg.Username == "" || cfg.Password == "" {
 				if !waitingForConfig {
-					logMic("Chưa có sentinel_camera_config.json; chờ cấu hình...")
-					waitingForConfig = true
-				}
-				time.Sleep(5 * time.Second)
-				continue
-			}
-			if err := json.Unmarshal(data, &cfg); err != nil || cfg.IP == "" || cfg.Username == "" || cfg.Password == "" {
-				if !waitingForConfig {
-					logMic("Cấu hình camera chưa đủ IP/user/pass; chờ cập nhật...")
+					logMic("Chưa có cấu hình camera hợp lệ; chờ cập nhật...")
 					waitingForConfig = true
 				}
 				time.Sleep(5 * time.Second)
@@ -206,7 +198,7 @@ func startCameraWakeWordListener(server *Server) {
 								fmt.Printf("[Mic Camera Heard]: \"%s\"\n", text)
 								server.broadcastTerminal(fmt.Sprintf("[%s] 🎤 Camera Mic thu được: \"%s\"", tNow, text))
 
-								server.handleWakeWordQuery(query, cfg, tNow)
+								server.handleWakeWordQuery(query, rawPCM, cfg, tNow)
 							}(audioToTranscribe, cfg)
 						} else {
 							logMic("Bỏ đoạn âm thanh quá ngắn: %.2fs.", float64(len(speechBuffer))/32000)
@@ -224,38 +216,59 @@ func startCameraWakeWordListener(server *Server) {
 	}()
 }
 
-func (s *Server) handleWakeWordQuery(query string, cfg CameraConfigData, tNow string) {
+func (s *Server) handleWakeWordQuery(query string, rawPCM []byte, cfg CameraConfigData, tNow string) {
 	fmt.Printf("🎯 [WakeWord Triggered] Duinch! Query: \"%s\"\n", query)
-	s.broadcastTerminal(fmt.Sprintf("[%s] 🎯 Duinch đã nhận diện từ khóa đánh thức! Lệnh: \"%s\"", tNow, query))
+	s.broadcastTerminal(fmt.Sprintf("[%s] 🎯 Duinch đã nhận diện từ khóa đánh thức!", tNow))
 
+	// TRƯỜNG HỢP 1: User chỉ gọi "Duinch ơi" rồi dừng lại
 	if query == "" {
 		s.broadcastTerminal(fmt.Sprintf("[%s] 🗣️ Duinch Camera phản hồi: \"Dạ, em nghe đây ạ!\"", tNow))
 		_ = s.speakOnCamera("Dạ, em nghe đây ạ!", "female")
-		time.Sleep(2 * time.Second)
+		time.Sleep(1500 * time.Millisecond)
 		// Thu âm câu lệnh tiếp theo và gửi sang Groq Whisper Large-v3 để nhận diện siêu chính xác
 		followUp, ferr := s.recordAndTranscribeCloud(cfg, 4)
 		if ferr == nil && followUp != "" {
-			query = followUp
+			query = NormalizeSmartHomeQuery(followUp)
 			s.broadcastTerminal(fmt.Sprintf("[%s] 🎤 User nói tiếp: \"%s\"", time.Now().Format("15:04:05"), query))
+		}
+	} else {
+		// TRƯỜNG HỢP 2: User nói liền mạch luôn (vd: "Duinch ơi bật đèn")
+		// Gửi ngay toàn bộ rawPCM đoạn này sang Groq Whisper Large-v3 để giải mã nguyên vẹn câu lệnh
+		if s.Transcriber != nil && s.Transcriber.HasGroqKey() {
+			cloudText, _, err := s.Transcriber.TranscribeCloud(rawPCM)
+			if err == nil && cloudText != "" {
+				s.broadcastTerminal(fmt.Sprintf("[%s] ☁️ Groq Whisper nhận diện chính xác: \"%s\"", tNow, cloudText))
+				_, cloudQuery := matchesWakeWord(cloudText)
+				if cloudQuery != "" {
+					query = cloudQuery
+				} else {
+					query = cloudText
+				}
+				query = NormalizeSmartHomeQuery(query)
+			}
 		}
 	}
 
 	if query != "" {
-		lowerQuery := strings.ToLower(query)
-		if strings.Contains(lowerQuery, "mở tv") || strings.Contains(lowerQuery, "bật tv") {
-			s.broadcastTerminal(fmt.Sprintf("[%s] 📺 Duinch Camera: \"Dạ, em mở TV ngay đây ạ!\"", time.Now().Format("15:04:05")))
-			_ = s.speakOnCamera("Dạ, em mở TV ngay đây ạ!", "female")
-			_ = turnOnTV("192.168.1.8")
-		} else if strings.Contains(lowerQuery, "tắt tv") {
-			s.broadcastTerminal(fmt.Sprintf("[%s] 📺 Duinch Camera: \"Dạ, em tắt TV đây ạ!\"", time.Now().Format("15:04:05")))
-			_ = s.speakOnCamera("Dạ, em tắt TV đây ạ!", "female")
-			adbBin := "/home/chungnh/bin/adb"
-			_ = exec.Command(adbBin, "-s", "192.168.1.8:5555", "shell", "input keyevent 26").Run()
-		} else {
-			reply := askAgentQuery(s, query)
-			s.broadcastTerminal(fmt.Sprintf("[%s] 🤖 Duinch Camera trả lời: \"%s\"", time.Now().Format("15:04:05"), reply))
-			_ = s.speakOnCamera(reply, "female")
-		}
+		s.executeSmartHomeAction(query, tNow)
+	}
+}
+
+func (s *Server) executeSmartHomeAction(query string, tNow string) {
+	lowerQuery := strings.ToLower(query)
+	if strings.Contains(lowerQuery, "mở tv") || strings.Contains(lowerQuery, "bật tv") {
+		s.broadcastTerminal(fmt.Sprintf("[%s] 📺 Duinch Camera: \"Dạ, em mở TV ngay đây ạ!\"", tNow))
+		_ = s.speakOnCamera("Dạ, em mở TV ngay đây ạ!", "female")
+		_ = turnOnTV("192.168.1.8")
+	} else if strings.Contains(lowerQuery, "tắt tv") {
+		s.broadcastTerminal(fmt.Sprintf("[%s] 📺 Duinch Camera: \"Dạ, em tắt TV đây ạ!\"", tNow))
+		_ = s.speakOnCamera("Dạ, em tắt TV đây ạ!", "female")
+		adbBin := "/home/chungnh/bin/adb"
+		_ = exec.Command(adbBin, "-s", "192.168.1.8:5555", "shell", "input keyevent 26").Run()
+	} else {
+		reply := askAgentQuery(s, query)
+		s.broadcastTerminal(fmt.Sprintf("[%s] 🤖 Duinch Camera trả lời: \"%s\"", tNow, reply))
+		_ = s.speakOnCamera(reply, "female")
 	}
 }
 
