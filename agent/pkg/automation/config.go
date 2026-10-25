@@ -15,75 +15,6 @@ type Config struct {
 	CustomRules    []CustomRule       `json:"custom_rules"`
 }
 
-type Rule struct {
-	ID             string   `json:"id"`
-	Name           string   `json:"name"`
-	Description    string   `json:"description,omitempty"`
-	Icon           string   `json:"icon,omitempty"`
-	Enabled        bool     `json:"enabled"`
-	TriggerType    string   `json:"trigger_type"` // "idle_room", "clap_sound", "person_detected", "time_schedule"
-	TriggerPreset  string   `json:"trigger_preset,omitempty"`
-	IdleMinutes    int      `json:"idle_minutes,omitempty"`
-	TimeCondition  string   `json:"time_condition,omitempty"` // "all_day", "range"
-	StartHour      int      `json:"start_hour,omitempty"`
-	EndHour        int      `json:"end_hour,omitempty"`
-	TVCondition    string   `json:"tv_condition,omitempty"` // "any", "off", "on"
-	CooldownSec    int      `json:"cooldown_sec,omitempty"`
-	ActionType     string   `json:"action_type"` // "turn_off", "turn_on"
-	TargetEntities []string `json:"target_entities"`
-	TargetTV       string   `json:"target_tv,omitempty"`
-	CameraPreset   string   `json:"camera_preset,omitempty"`
-	ScriptID       string   `json:"script_id,omitempty"`
-}
-
-type CustomRule struct {
-	ID             string   `json:"id"`
-	Name           string   `json:"name"`
-	Enabled        bool     `json:"enabled"`
-	TriggerType    string   `json:"trigger_type"`
-	IdleMinutes    int      `json:"idle_minutes"`
-	StartHour      int      `json:"start_hour"`
-	EndHour        int      `json:"end_hour"`
-	ActionType     string   `json:"action_type"`
-	TargetEntities []string `json:"target_entities"`
-	CameraPreset   string   `json:"camera_preset"`
-	CheckTVOff     bool     `json:"check_tv_off"`
-}
-
-type SofaClapRule struct {
-	Enabled        bool     `json:"enabled"`
-	TargetFan      string   `json:"target_fan"`
-	TargetEntities []string `json:"target_entities,omitempty"`
-	TargetTV       string   `json:"target_tv"`
-	WindowSeconds  int      `json:"window_seconds"`
-}
-
-type EveningArrivalRule struct {
-	Enabled        bool     `json:"enabled"`
-	TargetLight    string   `json:"target_light"`
-	TargetEntities []string `json:"target_entities,omitempty"`
-	TargetPreset   string   `json:"target_preset"`
-	CooldownSec    int      `json:"cooldown_sec"`
-	StartHour      int      `json:"start_hour"`
-	EndHour        int      `json:"end_hour"`
-	SoundKeywords  []string `json:"sound_keywords"`
-}
-
-type IdleLivingRoomRule struct {
-	Enabled         bool     `json:"enabled"`
-	IdleMinutes     int      `json:"idle_minutes"`
-	TargetLights    []string `json:"target_lights"`
-	TurnOffScript   string   `json:"turn_off_script"`
-	CheckTVPlayback bool     `json:"check_tv_playback"`
-}
-
-type TVWelcomeGreetingRule struct {
-	Enabled     bool   `json:"enabled"`
-	CooldownSec int    `json:"cooldown_sec"`
-	PromptText  string `json:"prompt_text"`
-	PresetToken string `json:"preset_token"`
-}
-
 type ConfigStore struct {
 	path   string
 	config Config
@@ -178,15 +109,55 @@ func (s *ConfigStore) Update(cfg Config) {
 }
 
 func (c *Config) NormalizeRules() {
-	if len(c.Rules) > 0 {
-		return
+	if len(c.Rules) == 0 {
+		c.buildDefaultRulesFromLegacy()
 	}
-	var rules []Rule
+	for i := range c.Rules {
+		r := &c.Rules[i]
+		if len(r.Triggers) == 0 && r.TriggerType != "" {
+			r.Triggers = []TriggerItem{{
+				Type:        r.TriggerType,
+				IdleMinutes: r.IdleMinutes,
+				Preset:      r.TriggerPreset,
+			}}
+		}
+		if len(r.Conditions) == 0 {
+			if r.TimeCondition == "range" {
+				r.Conditions = append(r.Conditions, ConditionItem{
+					Type: "time_range", StartHour: r.StartHour, EndHour: r.EndHour,
+				})
+			}
+			if r.TVCondition == "off" || r.TVCondition == "on" {
+				r.Conditions = append(r.Conditions, ConditionItem{
+					Type: "tv_state", TVState: r.TVCondition,
+				})
+			}
+		}
+		if len(r.Actions) == 0 {
+			if len(r.TargetEntities) > 0 || r.ActionType != "" {
+				r.Actions = append(r.Actions, ActionItem{
+					Type: "entities", Service: r.ActionType, TargetEntities: r.TargetEntities,
+				})
+			}
+			if r.TargetTV != "" {
+				r.Actions = append(r.Actions, ActionItem{Type: "tv", TargetTV: r.TargetTV})
+			}
+			if r.CameraPreset != "" {
+				r.Actions = append(r.Actions, ActionItem{Type: "camera", CameraPreset: r.CameraPreset})
+			}
+			if r.ScriptID != "" {
+				r.Actions = append(r.Actions, ActionItem{Type: "script", ScriptID: r.ScriptID})
+			}
+		}
+	}
+}
+
+func (c *Config) buildDefaultRulesFromLegacy() {
 	idleTV := "off"
 	if !c.IdleLivingRoom.CheckTVPlayback {
 		idleTV = "any"
 	}
-	rules = append(rules, Rule{
+	c.Rules = append(c.Rules, Rule{
 		ID: "idle", Name: "Tắt đèn khi vắng người", Icon: "bedtime",
 		Description: "Tự động tắt các thiết bị khi phòng khách không có người và TV tắt.",
 		Enabled: c.IdleLivingRoom.Enabled, TriggerType: "idle_room",
@@ -199,7 +170,7 @@ func (c *Config) NormalizeRules() {
 	if len(clapTargets) == 0 && c.SofaClapAction.TargetFan != "" {
 		clapTargets = []string{c.SofaClapAction.TargetFan}
 	}
-	rules = append(rules, Rule{
+	c.Rules = append(c.Rules, Rule{
 		ID: "clap", Name: "Ngồi Sofa vỗ tay", Icon: "front_hand",
 		Description: "Camera phát hiện người ở Sofa kết hợp tiếng vỗ tay sẽ bật thiết bị và mở TV.",
 		Enabled: c.SofaClapAction.Enabled, TriggerType: "clap_sound",
@@ -212,7 +183,7 @@ func (c *Config) NormalizeRules() {
 	if len(eveTargets) == 0 && c.EveningArrival.TargetLight != "" {
 		eveTargets = []string{c.EveningArrival.TargetLight}
 	}
-	rules = append(rules, Rule{
+	c.Rules = append(c.Rules, Rule{
 		ID: "evening", Name: "Phát hiện người buổi tối", Icon: "wb_twilight",
 		Description: "Phát hiện có người vào khung giờ buổi tối sẽ tự động bật đèn đón và quay camera.",
 		Enabled: c.EveningArrival.Enabled, TriggerType: "person_detected",
@@ -220,37 +191,28 @@ func (c *Config) NormalizeRules() {
 		StartHour: c.EveningArrival.StartHour, EndHour: c.EveningArrival.EndHour,
 		ActionType: "turn_on", TargetEntities: eveTargets, CameraPreset: c.EveningArrival.TargetPreset,
 	})
-
-	for _, cr := range c.CustomRules {
-		timeCond := "all_day"
-		if cr.StartHour != cr.EndHour {
-			timeCond = "range"
-		}
-		tvCond := "any"
-		if cr.CheckTVOff {
-			tvCond = "off"
-		}
-		rules = append(rules, Rule{
-			ID:             cr.ID,
-			Name:           cr.Name,
-			Enabled:        cr.Enabled,
-			TriggerType:    cr.TriggerType,
-			IdleMinutes:    cr.IdleMinutes,
-			TimeCondition:  timeCond,
-			StartHour:      cr.StartHour,
-			EndHour:        cr.EndHour,
-			TVCondition:    tvCond,
-			ActionType:     cr.ActionType,
-			TargetEntities: cr.TargetEntities,
-			CameraPreset:   cr.CameraPreset,
-			Icon:           "auto_awesome",
-		})
-	}
-	c.Rules = rules
 }
 
 func (c *Config) SyncLegacy() {
-	for _, r := range c.Rules {
+	for i := range c.Rules {
+		r := &c.Rules[i]
+		if len(r.Triggers) > 0 {
+			r.TriggerType = r.Triggers[0].Type
+			r.IdleMinutes = r.Triggers[0].IdleMinutes
+			r.TriggerPreset = r.Triggers[0].Preset
+		}
+		for _, a := range r.Actions {
+			if a.Type == "entities" {
+				r.ActionType = a.Service
+				r.TargetEntities = a.TargetEntities
+			} else if a.Type == "tv" {
+				r.TargetTV = a.TargetTV
+			} else if a.Type == "camera" {
+				r.CameraPreset = a.CameraPreset
+			} else if a.Type == "script" {
+				r.ScriptID = a.ScriptID
+			}
+		}
 		switch r.ID {
 		case "idle":
 			c.IdleLivingRoom.Enabled = r.Enabled

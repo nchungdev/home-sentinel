@@ -42,6 +42,32 @@ func (m *Manager) EvaluateCustomRules(triggerType string) {
 }
 
 func (m *Manager) executeRule(rule Rule, force bool) int {
+	totalAffected := 0
+	if len(rule.Actions) > 0 {
+		for _, action := range rule.Actions {
+			switch action.Type {
+			case "entities":
+				totalAffected += m.executeEntitiesAction(
+					rule.Name, action.Service, action.TargetEntities, "", "", force,
+				)
+			case "tv":
+				if action.TargetTV != "" {
+					go func(host string) { _ = TurnOnTV(host) }(action.TargetTV)
+				}
+			case "camera":
+				if action.CameraPreset != "" {
+					m.pointCameraToPreset(action.CameraPreset)
+				}
+			case "script":
+				if action.ScriptID != "" && m.haClient != nil && m.haClient.BaseURL != "" {
+					_ = m.haClient.RequestJSON("/api/services/script/turn_on", map[string]interface{}{
+						"entity_id": action.ScriptID,
+					}, nil)
+				}
+			}
+		}
+		return totalAffected
+	}
 	if rule.TargetTV != "" && rule.ActionType == "turn_on" {
 		go func(host string) { _ = TurnOnTV(host) }(rule.TargetTV)
 	}

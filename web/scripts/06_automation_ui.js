@@ -1,4 +1,4 @@
-    // AUTOMATION UI LOGIC & STATE (MÔ HÌNH KỊCH BẢN TỰ ĐỘNG HÓA TỔNG QUÁT)
+    // AUTOMATION UI LOGIC & STATE (CHUẨN HOME ASSISTANT: WHEN / AND IF / THEN DO)
     let currentAutoCfg = { rules: [] };
     let haDevicesCache = [];
     const editingRulesSet = new Set();
@@ -15,9 +15,7 @@
 
         if (cfgData.ok && cfgData.config) {
           currentAutoCfg = cfgData.config;
-          if (!Array.isArray(currentAutoCfg.rules) || currentAutoCfg.rules.length === 0) {
-            initDefaultRulesOnClient();
-          }
+          ensureNormalizedRules();
         }
         if (entData.ok && Array.isArray(entData.entities)) {
           haDevicesCache = entData.entities;
@@ -30,55 +28,44 @@
       }
     }
 
-    function initDefaultRulesOnClient() {
-      currentAutoCfg.rules = [
-        {
-          id: 'idle',
-          name: 'Kịch bản 1: Tắt đèn khi vắng người',
-          description: 'Khi phòng khách không có người quá số phút quy định và TV đang tắt, tự động tắt toàn bộ thiết bị.',
-          icon: 'bedtime',
-          enabled: true,
-          trigger_type: 'idle_room',
-          idle_minutes: 1,
-          time_condition: 'all_day',
-          tv_condition: 'off',
-          action_type: 'turn_off',
-          target_entities: [],
-          script_id: ''
-        },
-        {
-          id: 'clap',
-          name: 'Kịch bản 2: Ngồi Sofa vỗ tay',
-          description: 'Khi Camera phát hiện người ngồi ở Sofa và thu được tiếng vỗ tay, đánh thức Android TV và bật thiết bị.',
-          icon: 'front_hand',
-          enabled: true,
-          trigger_type: 'clap_sound',
-          trigger_preset: '1',
-          cooldown_sec: 60,
-          time_condition: 'all_day',
-          tv_condition: 'any',
-          action_type: 'turn_on',
-          target_entities: [],
-          target_tv: '192.168.1.8',
-          camera_preset: '1'
-        },
-        {
-          id: 'evening',
-          name: 'Kịch bản 3: Đèn đón buổi tối',
-          description: 'Khi phát hiện có người vào khung giờ buổi tối, tự động bật đèn đón và xoay Camera về cửa chính.',
-          icon: 'wb_twilight',
-          enabled: true,
-          trigger_type: 'person_detected',
-          trigger_preset: '3',
-          time_condition: 'range',
-          start_hour: 18,
-          end_hour: 6,
-          tv_condition: 'any',
-          action_type: 'turn_on',
-          target_entities: [],
-          camera_preset: '3'
-        }
-      ];
+    function ensureNormalizedRules() {
+      if (!Array.isArray(currentAutoCfg.rules) || currentAutoCfg.rules.length === 0) {
+        currentAutoCfg.rules = [
+          {
+            id: 'idle', name: 'Tắt đèn khi vắng người', icon: 'bedtime', enabled: true,
+            description: 'Tự động tắt các thiết bị khi phòng khách không có người và TV tắt.',
+            triggers: [{ type: 'idle_room', idle_minutes: 1 }],
+            conditions: [{ type: 'tv_state', tv_state: 'off' }],
+            actions: [{ type: 'entities', service: 'turn_off', target_entities: [] }]
+          },
+          {
+            id: 'clap', name: 'Ngồi Sofa vỗ tay', icon: 'front_hand', enabled: true,
+            description: 'Camera phát hiện người ở Sofa kết hợp tiếng vỗ tay sẽ bật thiết bị và mở TV.',
+            triggers: [{ type: 'clap_sound', preset: '1' }],
+            conditions: [],
+            actions: [
+              { type: 'entities', service: 'turn_on', target_entities: [] },
+              { type: 'tv', target_tv: '192.168.1.8' },
+              { type: 'camera', camera_preset: '1' }
+            ]
+          },
+          {
+            id: 'evening', name: 'Phát hiện người buổi tối', icon: 'wb_twilight', enabled: true,
+            description: 'Phát hiện có người vào khung giờ buổi tối sẽ tự động bật đèn đón và quay camera.',
+            triggers: [{ type: 'person_detected', preset: '3' }],
+            conditions: [{ type: 'time_range', start_hour: 18, end_hour: 6 }],
+            actions: [
+              { type: 'entities', service: 'turn_on', target_entities: [] },
+              { type: 'camera', camera_preset: '3' }
+            ]
+          }
+        ];
+      }
+      currentAutoCfg.rules.forEach(r => {
+        if (!Array.isArray(r.triggers)) r.triggers = [{ type: r.trigger_type || 'idle_room', idle_minutes: r.idle_minutes || 1, preset: r.trigger_preset || '' }];
+        if (!Array.isArray(r.conditions)) r.conditions = [];
+        if (!Array.isArray(r.actions)) r.actions = [{ type: 'entities', service: r.action_type || 'turn_off', target_entities: r.target_entities || [] }];
+      });
     }
 
     function collectRuleFromDOM(rule) {
@@ -86,44 +73,49 @@
       const nameInput = document.getElementById(`rule-name-${id}`);
       if (nameInput) rule.name = nameInput.value.trim() || rule.name;
 
-      const triggerSel = document.getElementById(`rule-trigger-${id}`);
-      if (triggerSel) rule.trigger_type = triggerSel.value;
-
-      const idleInput = document.getElementById(`rule-idle-min-${id}`);
-      if (idleInput) rule.idle_minutes = parseInt(idleInput.value, 10) || 1;
-
-      const trigPresetSel = document.getElementById(`rule-trigger-preset-${id}`);
-      if (trigPresetSel) rule.trigger_preset = trigPresetSel.value;
-
-      const timeCondSel = document.getElementById(`rule-time-cond-${id}`);
-      if (timeCondSel) rule.time_condition = timeCondSel.value;
-
-      const startInput = document.getElementById(`rule-start-hour-${id}`);
-      if (startInput) rule.start_hour = parseInt(startInput.value, 10) || 0;
-
-      const endInput = document.getElementById(`rule-end-hour-${id}`);
-      if (endInput) rule.end_hour = parseInt(endInput.value, 10) || 0;
-
-      const tvCondSel = document.getElementById(`rule-tv-cond-${id}`);
-      if (tvCondSel) rule.tv_condition = tvCondSel.value;
-
-      const actionSel = document.getElementById(`rule-action-type-${id}`);
-      if (actionSel) rule.action_type = actionSel.value;
-
-      const tvInput = document.getElementById(`rule-target-tv-${id}`);
-      if (tvInput) rule.target_tv = tvInput.value.trim();
-
-      const camPresetSel = document.getElementById(`rule-cam-preset-${id}`);
-      if (camPresetSel) rule.camera_preset = camPresetSel.value;
-
-      const scriptSel = document.getElementById(`rule-script-id-${id}`);
-      if (scriptSel) rule.script_id = scriptSel.value;
-
-      const selectedEntities = [];
-      document.querySelectorAll(`.device-checkbox-${id}:checked`).forEach(cb => {
-        selectedEntities.push(cb.value);
+      // Collect Triggers
+      (rule.triggers || []).forEach((trig, idx) => {
+        const typeSel = document.getElementById(`trig-type-${id}-${idx}`);
+        if (typeSel) trig.type = typeSel.value;
+        const idleInput = document.getElementById(`trig-idle-${id}-${idx}`);
+        if (idleInput) trig.idle_minutes = parseInt(idleInput.value, 10) || 1;
+        const presetSel = document.getElementById(`trig-preset-${id}-${idx}`);
+        if (presetSel) trig.preset = presetSel.value;
       });
-      rule.target_entities = selectedEntities;
+
+      // Collect Conditions
+      (rule.conditions || []).forEach((cond, idx) => {
+        const typeSel = document.getElementById(`cond-type-${id}-${idx}`);
+        if (typeSel) cond.type = typeSel.value;
+        const startInput = document.getElementById(`cond-start-${id}-${idx}`);
+        if (startInput) cond.start_hour = parseInt(startInput.value, 10) || 0;
+        const endInput = document.getElementById(`cond-end-${id}-${idx}`);
+        if (endInput) cond.end_hour = parseInt(endInput.value, 10) || 0;
+        const tvSel = document.getElementById(`cond-tv-${id}-${idx}`);
+        if (tvSel) cond.tv_state = tvSel.value;
+      });
+
+      // Collect Actions
+      (rule.actions || []).forEach((act, idx) => {
+        const typeSel = document.getElementById(`act-type-${id}-${idx}`);
+        if (typeSel) act.type = typeSel.value;
+        const srvSel = document.getElementById(`act-srv-${id}-${idx}`);
+        if (srvSel) act.service = srvSel.value;
+        const tvInput = document.getElementById(`act-tv-${id}-${idx}`);
+        if (tvInput) act.target_tv = tvInput.value.trim();
+        const camSel = document.getElementById(`act-cam-${id}-${idx}`);
+        if (camSel) act.camera_preset = camSel.value;
+        const scriptSel = document.getElementById(`act-script-${id}-${idx}`);
+        if (scriptSel) act.script_id = scriptSel.value;
+
+        if (act.type === 'entities') {
+          const selected = [];
+          document.querySelectorAll(`.device-checkbox-${id}-${idx}:checked`).forEach(cb => {
+            selected.push(cb.value);
+          });
+          act.target_entities = selected;
+        }
+      });
     }
 
     async function saveAllAutomationRulesUI() {
@@ -169,13 +161,13 @@
         const affected = data.affected !== undefined ? data.affected : 0;
         alert(`Đã chạy thử kịch bản thành công! Số thiết bị tác động: ${affected}`);
       } catch (e) {
-        alert('Lỗi chạy thử kịch bản: ' + e.message);
+        alert('Lỗi chạy thử: ' + e.message);
       }
     }
 
     function toggleEditScenario(ruleId) {
+      const rule = (currentAutoCfg.rules || []).find(r => r.id === ruleId);
       if (editingRulesSet.has(ruleId)) {
-        const rule = (currentAutoCfg.rules || []).find(r => r.id === ruleId);
         if (rule) collectRuleFromDOM(rule);
         editingRulesSet.delete(ruleId);
         saveAllAutomationRulesUI();
@@ -207,19 +199,13 @@
       const count = (currentAutoCfg.rules || []).length + 1;
       const newRule = {
         id: newId,
-        name: `Kịch bản ${count}: Tùy chỉnh mới`,
-        description: 'Tùy chỉnh hành động khi sự kiện xảy ra theo chuẩn Home Assistant.',
+        name: `Kịch bản ${count}: Tự động hóa mới`,
         icon: 'auto_awesome',
         enabled: true,
-        trigger_type: 'person_detected',
-        trigger_preset: '3',
-        time_condition: 'all_day',
-        start_hour: 18,
-        end_hour: 6,
-        tv_condition: 'any',
-        action_type: 'turn_on',
-        target_entities: [],
-        camera_preset: '3'
+        description: 'Tùy chỉnh sự kiện kích hoạt, điều kiện lọc và chuỗi hành động thực thi.',
+        triggers: [{ type: 'person_detected', preset: '3' }],
+        conditions: [{ type: 'time_range', start_hour: 18, end_hour: 6 }],
+        actions: [{ type: 'entities', service: 'turn_on', target_entities: [] }]
       };
       if (!Array.isArray(currentAutoCfg.rules)) currentAutoCfg.rules = [];
       currentAutoCfg.rules.push(newRule);
@@ -227,16 +213,31 @@
       renderAllAutomationUI(newId);
     }
 
-    function onDeviceCheckboxChange(checkboxEl, ruleId) {
-      const label = checkboxEl.closest('.ha-device-item');
-      if (label) label.classList.toggle('checked', checkboxEl.checked);
-      updateBadgeCount(ruleId);
+    function addStepToRule(ruleId, stepType) {
+      const rule = (currentAutoCfg.rules || []).find(r => r.id === ruleId);
+      if (!rule) return;
+      collectRuleFromDOM(rule);
+      if (!Array.isArray(rule[stepType])) rule[stepType] = [];
+      if (stepType === 'triggers') rule.triggers.push({ type: 'idle_room', idle_minutes: 5 });
+      if (stepType === 'conditions') rule.conditions.push({ type: 'tv_state', tv_state: 'off' });
+      if (stepType === 'actions') rule.actions.push({ type: 'entities', service: 'turn_off', target_entities: [] });
+      renderAllAutomationUI(ruleId);
     }
 
-    function updateBadgeCount(ruleId) {
-      const count = document.querySelectorAll(`.device-checkbox-${ruleId}:checked`).length;
-      const badge = document.getElementById(`badge-count-${ruleId}`);
-      if (badge) badge.textContent = `${count} thiết bị`;
+    function removeStepFromRule(ruleId, stepType, idx) {
+      const rule = (currentAutoCfg.rules || []).find(r => r.id === ruleId);
+      if (!rule || !Array.isArray(rule[stepType])) return;
+      collectRuleFromDOM(rule);
+      rule[stepType].splice(idx, 1);
+      renderAllAutomationUI(ruleId);
+    }
+
+    function onDeviceCheckboxChange(checkboxEl, ruleId, actionIdx) {
+      const label = checkboxEl.closest('.ha-device-item');
+      if (label) label.classList.toggle('checked', checkboxEl.checked);
+      const count = document.querySelectorAll(`.device-checkbox-${ruleId}-${actionIdx}:checked`).length;
+      const badge = document.getElementById(`badge-act-${ruleId}-${actionIdx}`);
+      if (badge) badge.textContent = `${count} thiết bị đã chọn`;
     }
 
     function filterDeviceGrid(gridId, query) {
@@ -255,31 +256,29 @@
       const isActive = btnEl.classList.toggle('active');
       grid.querySelectorAll('.ha-device-item').forEach(item => {
         const cb = item.querySelector('input[type="checkbox"]');
-        if (isActive) {
-          item.style.display = (cb && cb.checked) ? 'flex' : 'none';
-        } else {
-          item.style.display = 'flex';
-        }
+        item.style.display = (isActive ? (cb && cb.checked) : true) ? 'flex' : 'none';
       });
     }
 
-    function quickSelectByDomain(ruleId, domain) {
-      document.querySelectorAll(`.device-checkbox-${ruleId}`).forEach(cb => {
-        const val = cb.value || '';
-        if (val.startsWith(domain + '.')) {
+    function quickSelectByDomain(ruleId, actionIdx, domain) {
+      document.querySelectorAll(`.device-checkbox-${ruleId}-${actionIdx}`).forEach(cb => {
+        if ((cb.value || '').startsWith(domain + '.')) {
           cb.checked = true;
           const label = cb.closest('.ha-device-item');
           if (label) label.classList.add('checked');
         }
       });
-      updateBadgeCount(ruleId);
+      const count = document.querySelectorAll(`.device-checkbox-${ruleId}-${actionIdx}:checked`).length;
+      const badge = document.getElementById(`badge-act-${ruleId}-${actionIdx}`);
+      if (badge) badge.textContent = `${count} thiết bị đã chọn`;
     }
 
-    function quickSelectClear(ruleId) {
-      document.querySelectorAll(`.device-checkbox-${ruleId}`).forEach(cb => {
+    function quickSelectClear(ruleId, actionIdx) {
+      document.querySelectorAll(`.device-checkbox-${ruleId}-${actionIdx}`).forEach(cb => {
         cb.checked = false;
         const label = cb.closest('.ha-device-item');
         if (label) label.classList.remove('checked');
       });
-      updateBadgeCount(ruleId);
+      const badge = document.getElementById(`badge-act-${ruleId}-${actionIdx}`);
+      if (badge) badge.textContent = `0 thiết bị đã chọn`;
     }
