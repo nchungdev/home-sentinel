@@ -529,6 +529,75 @@
       white-space: pre-wrap;
     }
 
+    /* 4. CLIENT LOGS VIEW */
+    .client-logs-view {
+      padding: 24px 32px;
+      flex-direction: column !important;
+      width: 100%;
+      height: calc(100vh - 61px);
+      box-sizing: border-box;
+      gap: 16px;
+    }
+    .client-logs-container {
+      background: #06070a;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      flex: 1;
+      overflow-y: auto;
+      font-family: ui-monospace, Menlo, Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.6;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .client-log-item {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 8px;
+      padding: 12px 14px;
+      transition: border-color 0.15s ease;
+    }
+    .client-log-item:hover {
+      border-color: rgba(99, 102, 241, 0.3);
+    }
+    .client-log-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 6px;
+      font-size: 11px;
+    }
+    .client-badge {
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-weight: 600;
+      font-size: 10px;
+      text-transform: uppercase;
+    }
+    .client-badge.tv {
+      background: rgba(99, 102, 241, 0.2);
+      color: #818cf8;
+      border: 1px solid rgba(99, 102, 241, 0.4);
+    }
+    .client-badge.web {
+      background: rgba(16, 185, 129, 0.2);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.4);
+    }
+    .client-log-prompt {
+      color: #f3f4f6;
+      font-weight: 600;
+      margin-bottom: 4px;
+      word-break: break-word;
+    }
+    .client-log-resp {
+      color: #9ca3af;
+      word-break: break-word;
+      white-space: pre-wrap;
+    }
+
     /* 3. SETTING VIEW */
     .setting-view {
       padding: 24px 32px;
@@ -658,6 +727,9 @@
         <div class="nav-item" id="nav-camera" onclick="switchNav('camera', this)">
           <span>📹</span> Camera Live
         </div>
+        <div class="nav-item" id="nav-logs" onclick="switchNav('logs', this)">
+          <span>📋</span> Client Logs
+        </div>
       </div>
     </div>
 
@@ -681,12 +753,15 @@
 
     <!-- 1. AGENT VIEW (MINIMALIST MODERN CHAT) -->
     <div id="view-agent" class="view-content agent-view active">
-      <div class="chips-bar">
-        <div class="chip" onclick="quickSend('trạng thái nhà')">🏠 Trạng thái nhà</div>
-        <div class="chip" onclick="quickSend('bật đèn phòng khách')">💡 Bật đèn PK</div>
-        <div class="chip" onclick="quickSend('tắt đèn phòng khách')">💡 Tắt đèn PK</div>
-        <div class="chip" onclick="quickSend('bật quạt phòng ngủ')">🌀 Bật quạt</div>
-        <div class="chip" onclick="quickSend('tìm phim avatar')">🎬 Tìm phim</div>
+      <div class="chips-bar" style="justify-content: space-between;">
+        <div style="display:flex; gap:8px; overflow-x:auto;">
+          <div class="chip" onclick="quickSend('trạng thái nhà')">🏠 Trạng thái nhà</div>
+          <div class="chip" onclick="quickSend('bật đèn phòng khách')">💡 Bật đèn PK</div>
+          <div class="chip" onclick="quickSend('tắt đèn phòng khách')">💡 Tắt đèn PK</div>
+          <div class="chip" onclick="quickSend('bật quạt phòng ngủ')">🌀 Bật quạt</div>
+          <div class="chip" onclick="quickSend('tìm phim avatar')">🎬 Tìm phim</div>
+        </div>
+        <div class="chip" style="color:var(--text-muted); flex-shrink:0;" onclick="clearChatHistory()">🗑️ Xóa lịch sử</div>
       </div>
 
       <div class="chat-messages" id="chatList">
@@ -925,6 +1000,26 @@
         </div>
       </div>
     </div>
+
+    <!-- 4. CLIENT LOGS VIEW (TIN NHẮN TỪ TV LAUNCHER & CLIENTS) -->
+    <div id="view-logs" class="view-content client-logs-view">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <h4 style="margin:0; font-size:16px; color:var(--text-bright);">Client Message Console</h4>
+          <p style="margin:4px 0 0 0; font-size:12px; color:var(--text-muted);">
+            Theo dõi tất cả tin nhắn, lệnh điều khiển từ TV Launcher và các Client thiết bị ngoại vi gửi lên Sentinel Server.
+          </p>
+        </div>
+        <div style="display:flex; gap:10px;">
+          <button class="btn-action" style="padding:8px 14px; font-size:12px;" onclick="loadClientLogs()">🔄 Làm mới</button>
+          <button class="btn-action" style="padding:8px 14px; font-size:12px; background:rgba(239,68,68,0.15); color:#ef4444;" onclick="clearServerClientLogs()">🗑️ Xóa logs</button>
+        </div>
+      </div>
+
+      <div class="client-logs-container" id="clientLogsContainer">
+        <div style="color:var(--text-muted); text-align:center; padding:30px;">Đang tải danh sách logs...</div>
+      </div>
+    </div>
   </main>
 
   <script>
@@ -962,7 +1057,12 @@
       const target = document.getElementById('view-' + name);
       if (target) target.classList.add('active');
 
-      const titles = { 'agent': 'Agent Chat', 'camera': 'Camera Live & PTZ', 'setting': 'Settings' };
+      const titles = {
+        'agent': 'Agent Chat',
+        'camera': 'Camera Live & PTZ',
+        'logs': 'Client Message Console',
+        'setting': 'Settings'
+      };
       document.getElementById('viewHeaderTitle').textContent = titles[name] || 'Home Sentinel';
 
       try {
@@ -970,6 +1070,7 @@
       } catch (e) {}
 
       if (name === 'setting') loadEngines();
+      if (name === 'logs') loadClientLogs();
     }
 
     function switchSubTab(id, el) {
@@ -985,9 +1086,10 @@
       } catch (e) {}
     }
 
-    // CHAT
+    // CHAT & HISTORY (LocalStorage)
     const promptInput = document.getElementById('promptInput');
     const chatList = document.getElementById('chatList');
+    const CHAT_STORAGE_KEY = 'sentinel_chat_history_v1';
 
     promptInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey) {
@@ -1001,14 +1103,53 @@
       sendChat();
     }
 
+    function getChatHistory() {
+      try {
+        const raw = localStorage.getItem(CHAT_STORAGE_KEY);
+        return raw ? JSON.parse(raw) : [];
+      } catch (e) {
+        return [];
+      }
+    }
+
+    function saveChatHistory(history) {
+      try {
+        if (history.length > 50) history = history.slice(history.length - 50);
+        localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(history));
+      } catch (e) {}
+    }
+
+    function renderSavedChat() {
+      const history = getChatHistory();
+      if (!history || history.length === 0) return;
+
+      // Giữ tin nhắn chào ban đầu và append các tin nhắn cũ
+      history.forEach(item => {
+        appendBubble(item.sender, item.text, false);
+      });
+    }
+
+    function clearChatHistory() {
+      if (!confirm('Bạn có chắc muốn xóa toàn bộ lịch sử đoạn chat này không?')) return;
+      try {
+        localStorage.removeItem(CHAT_STORAGE_KEY);
+      } catch (e) {}
+      chatList.innerHTML = `
+        <div class="message-row agent">
+          <div class="avatar ai">AI</div>
+          <div class="bubble">Xin chào! Tôi là Trợ lý Home Sentinel. Tôi kết nối trực tiếp với Local LLM trên NAS và có cơ chế tự động dự phòng sang Gemini/Claude. Bạn cần tôi hỗ trợ gì?</div>
+        </div>
+      `;
+    }
+
     async function sendChat() {
       const text = promptInput.value.trim();
       if (!text) return;
 
-      appendBubble('user', text);
+      appendBubble('user', text, true);
       promptInput.value = '';
 
-      const agentBubble = appendBubble('agent', '…');
+      const agentBubble = appendBubble('agent', '…', false);
 
       try {
         const res = await fetch('/ask', {
@@ -1020,18 +1161,27 @@
         agentBubble.textContent = '';
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
+        let fullAnswer = '';
 
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
-          agentBubble.textContent += decoder.decode(value, { stream: true });
+          const chunk = decoder.decode(value, { stream: true });
+          agentBubble.textContent += chunk;
+          fullAnswer += chunk;
+          chatList.scrollTop = chatList.scrollHeight;
         }
+
+        // Lưu câu trả lời của agent vào lịch sử
+        const history = getChatHistory();
+        history.push({ sender: 'agent', text: fullAnswer });
+        saveChatHistory(history);
       } catch (err) {
         agentBubble.textContent = 'Lỗi kết nối: ' + err.message;
       }
     }
 
-    function appendBubble(sender, text) {
+    function appendBubble(sender, text, shouldSave = false) {
       const row = document.createElement('div');
       row.className = 'message-row ' + sender;
 
@@ -1048,7 +1198,73 @@
 
       chatList.appendChild(row);
       chatList.scrollTop = chatList.scrollHeight;
+
+      if (shouldSave) {
+        const history = getChatHistory();
+        history.push({ sender: sender, text: text });
+        saveChatHistory(history);
+      }
+
       return bubble;
+    }
+
+    // CLIENT LOGS CONSOLE (TV Launcher & Clients)
+    async function loadClientLogs() {
+      const container = document.getElementById('clientLogsContainer');
+      if (!container) return;
+
+      try {
+        const res = await fetch('/api/logs/client');
+        const data = await res.json();
+        if (!data.ok || !data.logs || data.logs.length === 0) {
+          container.innerHTML = '<div style="color:var(--text-muted); text-align:center; padding:30px;">Chưa có tin nhắn nào từ Client được gửi lên server.</div>';
+          return;
+        }
+
+        let html = '';
+        // Hiển thị tin mới nhất trước (reverse)
+        const reversed = [...data.logs].reverse();
+        reversed.forEach(item => {
+          const isWeb = item.source === 'web';
+          const badgeClass = isWeb ? 'web' : 'tv';
+          const badgeText = isWeb ? 'WEB UI' : 'CLIENT / TV';
+          html += `
+            <div class="client-log-item">
+              <div class="client-log-header">
+                <span class="client-badge ${badgeClass}">${badgeText}</span>
+                <span style="color:#6b7280;">[${escapeHtml(item.timestamp || '')}]</span>
+                <span style="color:#9ca3af;">IP: ${escapeHtml(item.client_ip || 'unknown')}</span>
+                <span style="color:#6b7280;">Session: ${escapeHtml(item.session || 'none')}</span>
+              </div>
+              <div class="client-log-prompt">💬 ${escapeHtml(item.text || '')}</div>
+              <div class="client-log-resp">🤖 ${escapeHtml(item.response || '(đang phản hồi hoặc trống)')}</div>
+            </div>
+          `;
+        });
+        container.innerHTML = html;
+      } catch (e) {
+        container.innerHTML = `<div style="color:#ef4444; text-align:center; padding:20px;">Lỗi tải logs: ${e.message}</div>`;
+      }
+    }
+
+    async function clearServerClientLogs() {
+      if (!confirm('Bạn có chắc muốn xóa danh sách Client Message Logs trên server?')) return;
+      try {
+        await fetch('/api/logs/client', { method: 'DELETE' });
+        loadClientLogs();
+      } catch (e) {
+        alert('Lỗi: ' + e.message);
+      }
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
     }
 
     // CAMERA LOGS
@@ -1454,6 +1670,7 @@
     // Tự động load config khi mở
     loadSavedCameraConfig();
     loadSavedHAConfig();
+    renderSavedChat();
 
     // Khôi phục tab đang chọn từ localStorage (tránh bị reset khi F5)
     (function restoreNavigationState() {

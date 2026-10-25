@@ -39,6 +39,26 @@ type Server struct {
 	UserOnSofa     bool
 	StateMutex     sync.RWMutex
 	RequestLimiter chan struct{}
+	ClientLogs     []ClientLogEntry
+	LogsMutex      sync.RWMutex
+}
+
+type ClientLogEntry struct {
+	Timestamp string `json:"timestamp"`
+	ClientIP  string `json:"client_ip"`
+	Session   string `json:"session"`
+	Text      string `json:"text"`
+	Source    string `json:"source"`
+	Response  string `json:"response"`
+}
+
+func (s *Server) AddClientLog(entry ClientLogEntry) {
+	s.LogsMutex.Lock()
+	defer s.LogsMutex.Unlock()
+	s.ClientLogs = append(s.ClientLogs, entry)
+	if len(s.ClientLogs) > 100 {
+		s.ClientLogs = s.ClientLogs[len(s.ClientLogs)-100:]
+	}
 }
 
 func NewServer() *Server {
@@ -168,7 +188,26 @@ func (s *Server) handleAsk(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 1. Kiểm tra lệnh Home Assistant trước
+	clientIP, _, _ := net.SplitHostPort(r.RemoteAddr)
+	if clientIP == "" {
+		clientIP = r.RemoteAddr
+	}
+	source := "client"
+	if req.Session == "web_session" || strings.HasPrefix(req.Session, "web_") {
+		source = "web"
+	}
+
+	timeStr := time.Now().Format("15:04:05")
+
 	if reply, handled := s.HAClient.HandleCommand(text); handled {
+		s.AddClientLog(ClientLogEntry{
+			Timestamp: timeStr,
+			ClientIP:  clientIP,
+			Session:   req.Session,
+			Text:      text,
+			Source:    source,
+			Response:  reply,
+		})
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		_, _ = w.Write([]byte(reply))
 		return
@@ -178,11 +217,42 @@ func (s *Server) handleAsk(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	flusher, canFlush := w.(http.Flusher)
 
+	var fullResponse strings.Builder
 	s.LLMManager.StreamChat(text, func(chunk string) {
+		fullResponse.WriteString(chunk)
 		_, _ = w.Write([]byte(chunk))
 		if canFlush {
 			flusher.Flush()
 		}
+	})
+
+	s.AddClientLog(ClientLogEntry{
+		Timestamp: timeStr,
+		ClientIP:  clientIP,
+		Session:   req.Session,
+		Text:      text,
+		Source:    source,
+		Response:  fullResponse.String(),
+	})
+}
+
+func (s *Server) handleClientLogs(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	if r.Method == http.MethodDelete {
+		s.LogsMutex.Lock()
+		s.ClientLogs = nil
+		s.LogsMutex.Unlock()
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{"ok": true, "logs": []ClientLogEntry{}})
+		return
+	}
+
+	s.LogsMutex.RLock()
+	defer s.LogsMutex.RUnlock()
+	logs := make([]ClientLogEntry, len(s.ClientLogs))
+	copy(logs, s.ClientLogs)
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"ok":   true,
+		"logs": logs,
 	})
 }
 
@@ -767,6 +837,7 @@ func main() {
 	})
 
 	mux.HandleFunc("/ask", server.handleAsk)
+	mux.HandleFunc("/api/logs/client", server.handleClientLogs)
 	mux.HandleFunc("/api/llm/engines", server.handleConfigLLM)
 	mux.HandleFunc("/api/llm/test", server.handleLLMTest)
 	mux.HandleFunc("/api/token/generate", server.handleGenerateToken)
