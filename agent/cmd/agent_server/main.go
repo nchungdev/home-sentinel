@@ -13,6 +13,7 @@ import (
 
 	"github.com/nchungdev/home-sentinel/agent/pkg/arbitration"
 	"github.com/nchungdev/home-sentinel/agent/pkg/haclient"
+	"github.com/nchungdev/home-sentinel/agent/pkg/llm"
 	"github.com/nchungdev/home-sentinel/agent/pkg/mediabridge"
 )
 
@@ -28,6 +29,7 @@ type Server struct {
 	Arbitrator     *arbitration.AudioArbitrator
 	HAClient       *haclient.Client
 	MediaBridge    *mediabridge.Bridge
+	LLMEngine      *llm.Engine
 	UserOnSofa     bool
 	StateMutex     sync.RWMutex
 	RequestLimiter chan struct{}
@@ -76,6 +78,7 @@ func NewServer() *Server {
 		Arbitrator:     arbitration.NewAudioArbitrator(0.15),
 		HAClient:       haclient.NewClient("", ""),
 		MediaBridge:    mediabridge.NewBridge(""),
+		LLMEngine:      llm.NewEngine(),
 		RequestLimiter: make(chan struct{}, 4),
 	}
 }
@@ -242,7 +245,14 @@ func (s *Server) handleAsk(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	_, _ = w.Write([]byte("Tôi đã ghi nhận yêu cầu: " + text))
+	flusher, canFlush := w.(http.Flusher)
+
+	_ = s.LLMEngine.StreamChat(text, func(chunk string) {
+		_, _ = w.Write([]byte(chunk))
+		if canFlush {
+			flusher.Flush()
+		}
+	})
 }
 
 func main() {
