@@ -52,6 +52,9 @@ type Server struct {
 
 	lastTVPromptTime time.Time
 	promptMutex      sync.Mutex
+
+	lastDoorLightTrigger time.Time
+	doorLightMutex       sync.Mutex
 }
 
 type ClientLogEntry struct {
@@ -997,6 +1000,20 @@ func startCameraWakeWordListener(server *Server) {
 								fmt.Printf("[Mic Camera Heard]: \"%s\"\n", text)
 								server.broadcastTerminal(fmt.Sprintf("[%s] 🎤 Camera Mic thu được: \"%s\"", tNow, text))
 
+								// Tự động kiểm tra âm thanh/câu nói liên quan mở cửa, về nhà vào buổi tối
+								isDoorOrHomeSound := strings.Contains(lowerT, "mở cửa") ||
+									strings.Contains(lowerT, "về rồi") ||
+									strings.Contains(lowerT, "về nhà") ||
+									strings.Contains(lowerT, "đã về") ||
+									strings.Contains(lowerT, "cạch") ||
+									strings.Contains(lowerT, "két") ||
+									strings.Contains(lowerT, "hello") ||
+									strings.Contains(lowerT, "chào")
+
+								if isDoorOrHomeSound {
+									go server.triggerEveningArrivalAutomation("âm thanh mở cửa / lời chào về nhà")
+								}
+
 								matched, query := matchesWakeWord(text)
 								if matched {
 									fmt.Printf("🎯 [WakeWord Triggered] Duinch! Query: \"%s\"\n", query)
@@ -1347,8 +1364,13 @@ func main() {
 			}
 			terminalLogMsg = fmt.Sprintf("[%s] 🚨 CẢNH BÁO: %s - Phát hiện người/chuyển động! (trạng thái: %s)", nowStr, fn, st)
 
-			// Logic Proactive (Cách 2): Khi có người di chuyển trong phòng khách & TV đang TẮT
+			// Tự động kiểm tra chuyển động vào buổi tối để bật Đèn trần cửa chính
 			isPersonOrMotion := strings.Contains(eid, "person") || strings.Contains(eid, "motion") || et == "person_detected"
+			if isPersonOrMotion && st == "on" {
+				go server.triggerEveningArrivalAutomation("phát hiện chuyển động / người")
+			}
+
+			// Logic Proactive (Cách 2): Khi có người di chuyển trong phòng khách & TV đang TẮT
 			if isPersonOrMotion && st == "on" {
 				go func() {
 					tvHost := "192.168.1.8"
@@ -1524,5 +1546,82 @@ func main() {
 	fmt.Printf("Home Sentinel Server (Go) listening on :%d\n", server.Port)
 	if err := http.ListenAndServe(fmt.Sprintf(":%d", server.Port), mux); err != nil {
 		fmt.Printf("Sentinel server failed: %v\n", err)
+	}
+}
+
+// triggerEveningArrivalAutomation tự động bật Đèn trần cửa chính khi trời tối & có chuyển động hoặc âm thanh mở cửa
+func (s *Server) triggerEveningArrivalAutomation(triggerReason string) {
+	// 1. Kiểm tra điều kiện buổi tối (18:00 - 06:00 hoặc sun.sun == below_horizon)
+	hour := time.Now().Hour()
+	isEvening := hour >= 18 || hour < 6
+
+	if s.HAClient != nil && s.HAClient.BaseURL != "" {
+		var sunState struct {
+			State string `json:"state"`
+		}
+		if err := s.HAClient.RequestJSON("/api/states/sun.sun", nil, &sunState); err == nil {
+			if sunState.State == "below_horizon" {
+				isEvening = true
+			}
+		}
+	}
+
+	if !isEvening {
+		return
+	}
+
+	// 2. Cooldown 5 phút để tránh bật/tắt liên tục
+	s.doorLightMutex.Lock()
+	if time.Since(s.lastDoorLightTrigger) < 5*time.Minute {
+		s.doorLightMutex.Unlock()
+		return
+	}
+
+	// 3. Kiểm tra trạng thái hiện tại của đèn cửa chính
+	targetEntity := "light.dqsmart_020119140c_1"
+	if s.HAClient != nil && s.HAClient.BaseURL != "" {
+		var lightState struct {
+			State string `json:"state"`
+		}
+		if err := s.HAClient.RequestJSON("/api/states/"+targetEntity, nil, &lightState); err == nil {
+			if lightState.State == "on" {
+				// Đèn đã bật sẵn rồi, không cần thao tác thêm
+				s.doorLightMutex.Unlock()
+				return
+			}
+		}
+	}
+
+	s.lastDoorLightTrigger = time.Now()
+	s.doorLightMutex.Unlock()
+
+	// 4. Bật đèn cửa chính qua Home Assistant API
+	tNow := time.Now().Format("15:04:05")
+	if s.HAClient != nil && s.HAClient.BaseURL != "" {
+		payload := map[string]interface{}{
+			"entity_id": targetEntity,
+		}
+		err := s.HAClient.RequestJSON("/api/services/light/turn_on", payload, nil)
+		if err == nil {
+			logMsg := fmt.Sprintf("[%s] 💡 [Tự động buổi tối] Nhận diện %s: Đã bật Đèn trần cửa chính!", tNow, triggerReason)
+			s.broadcastTerminal(logMsg)
+			fmt.Println(logMsg)
+		} else {
+			fmt.Printf("[%s] ❌ Lỗi bật đèn cửa chính: %v\n", tNow, err)
+		}
+	}
+
+	// 5. Quay Camera nhẹ về hướng Cửa chính (Preset 3) để đón người về
+	var cfg CameraConfigData
+	if data, err := os.ReadFile("sentinel_camera_config.json"); err == nil {
+		_ = json.Unmarshal(data, &cfg)
+	}
+	effectivePass := cfg.CloudPassword
+	if effectivePass == "" {
+		effectivePass = cfg.Password
+	}
+	if cfg.IP != "" && effectivePass != "" {
+		session := camstream.GetTapoSession(cfg.IP, cfg.Username, effectivePass)
+		_ = session.GotoPreset("3") // Preset 3 = Cửa chính
 	}
 }
