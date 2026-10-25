@@ -285,20 +285,19 @@
       transform: scale(1.05);
     }
 
-    /* 2. CAMERA VIEW */
+    /* 2. CAMERA VIEW - 3 CỘT */
     .camera-view {
-      padding: 24px 32px;
-      gap: 24px;
+      padding: 24px 28px;
+      gap: 20px;
       width: 100%;
-      align-items: flex-start;
-      justify-content: flex-start;
+      align-items: stretch;
+      display: grid !important;
+      grid-template-columns: minmax(460px, 1.4fr) minmax(260px, 0.8fr) minmax(280px, 0.9fr);
     }
-    .camera-left-col {
+    .camera-col {
       display: flex;
       flex-direction: column;
       gap: 16px;
-      width: 680px;
-      max-width: 100%;
     }
     .camera-screen {
       width: 100%;
@@ -312,7 +311,7 @@
     }
     .stream-feed {
       width: 100%;
-      height: 400px;
+      height: 360px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -399,20 +398,13 @@
     }
 
     .camera-meta {
-      padding: 12px 18px;
+      padding: 10px 16px;
       background: var(--surface);
       display: flex;
       justify-content: space-between;
       align-items: center;
-      font-size: 13px;
+      font-size: 12px;
       border-top: 1px solid var(--border);
-    }
-    .camera-side-panel {
-      width: 320px;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-      flex-shrink: 0;
     }
 
     /* REMOTE CONTROL D-PAD */
@@ -421,70 +413,119 @@
       flex-direction: column;
       align-items: center;
       gap: 16px;
-      padding: 10px 0;
+      padding: 16px 0;
     }
     .dpad-circle {
-      width: 170px;
-      height: 170px;
-      background: #0b0d14;
+      width: 176px;
+      height: 176px;
+      background: radial-gradient(circle, #1a1e2d 0%, #0d0f17 100%);
       border-radius: 50%;
-      border: 2px solid var(--border);
+      border: 1px solid rgba(255, 255, 255, 0.1);
       position: relative;
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: inset 0 2px 10px rgba(0,0,0,0.6), 0 8px 24px rgba(0,0,0,0.3);
+      box-shadow: inset 0 2px 10px rgba(0,0,0,0.8), 0 10px 25px rgba(0,0,0,0.4);
     }
     .dpad-btn {
       position: absolute;
       background: transparent;
       border: none;
       color: var(--text-bright);
-      font-size: 16px;
+      font-size: 17px;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: color 0.15s ease, filter 0.15s ease;
+      transition: all 0.15s ease;
       user-select: none;
     }
     .dpad-btn:hover {
       color: var(--accent);
-      filter: drop-shadow(0 0 6px rgba(129, 140, 248, 0.8));
+      filter: drop-shadow(0 0 8px rgba(129, 140, 248, 0.9));
     }
     .dpad-btn:active {
-      opacity: 0.7;
+      opacity: 0.6;
     }
-    .dpad-up { top: 12px; left: 50%; transform: translateX(-50%); width: 44px; height: 32px; }
-    .dpad-down { bottom: 12px; left: 50%; transform: translateX(-50%); width: 44px; height: 32px; }
-    .dpad-left { left: 12px; top: 50%; transform: translateY(-50%); width: 32px; height: 44px; }
-    .dpad-right { right: 12px; top: 50%; transform: translateY(-50%); width: 32px; height: 44px; }
+    .dpad-up { top: 10px; left: 50%; transform: translateX(-50%); width: 44px; height: 36px; }
+    .dpad-down { bottom: 10px; left: 50%; transform: translateX(-50%); width: 44px; height: 36px; }
+    .dpad-left { left: 10px; top: 50%; transform: translateY(-50%); width: 36px; height: 44px; }
+    .dpad-right { right: 10px; top: 50%; transform: translateY(-50%); width: 36px; height: 44px; }
     .dpad-center {
-      width: 60px;
-      height: 60px;
-      background: var(--surface);
-      border: 1px solid var(--border);
+      width: 64px;
+      height: 64px;
+      background: linear-gradient(145deg, #1f2537, #131722);
+      border: 1px solid rgba(255, 255, 255, 0.12);
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
       color: var(--text-muted);
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 700;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      letter-spacing: 0.5px;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.5);
+    }
+
+    /* MODERN BUTTONS */
+    .btn-modern {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text-bright);
+      padding: 10px 16px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    }
+    .btn-modern:hover {
+      background: var(--surface-hover);
+      border-color: rgba(99, 102, 241, 0.4);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
+    }
+    .btn-modern:active {
+      transform: translateY(0);
+    }
+    .btn-modern.primary {
+      background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+      border: none;
+      color: #fff;
+      font-weight: 600;
+      box-shadow: 0 4px 14px rgba(79, 70, 229, 0.35);
+    }
+    .btn-modern.primary:hover {
+      background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+      box-shadow: 0 6px 18px rgba(79, 70, 229, 0.45);
+    }
+    .btn-modern.danger {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #f87171;
+    }
+    .btn-modern.danger:hover {
+      background: rgba(239, 68, 68, 0.18);
+      border-color: #ef4444;
+      color: #fff;
     }
 
     .log-terminal {
       background: #06070a;
       border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 8px 12px;
+      border-radius: 10px;
+      padding: 10px 14px;
       font-family: ui-monospace, Menlo, Consolas, monospace;
       font-size: 11px;
       color: #10b981;
-      height: 110px;
+      height: 120px;
       overflow-y: auto;
-      line-height: 1.4;
+      line-height: 1.5;
       white-space: pre-wrap;
     }
 
@@ -663,10 +704,10 @@
       </div>
     </div>
 
-    <!-- 2. CAMERA VIEW -->
+    <!-- 2. CAMERA VIEW - 3 CỘT ĐỘC LẬP HIỆN ĐẠI -->
     <div id="view-camera" class="view-content camera-view">
-      <!-- CỘT TRÁI: CAMERA + LOG BÊN DƯỚI -->
-      <div class="camera-left-col">
+      <!-- CỘT 1: CAMERA STREAM + TERMINAL LOG -->
+      <div class="camera-col">
         <div class="camera-screen">
           <div class="stream-feed">
             <div class="camera-live-badge">
@@ -683,25 +724,23 @@
           </div>
           <div class="camera-meta">
             <span id="camMetaLabel">Camera IP (RTSP TCP)</span>
-            <span style="color: #10b981; font-size: 12px; font-weight:600;" id="feedStatusLabel">Đang truyền trực tiếp</span>
+            <span style="color: #10b981; font-weight:600;" id="feedStatusLabel">Đang truyền trực tiếp</span>
           </div>
         </div>
 
-        <!-- CONSOLE TERMINAL NẰM DƯỚI CAMERA -->
-        <div class="card" style="padding: 12px 16px; gap: 8px;">
+        <div class="card" style="padding: 14px 18px; gap: 8px;">
           <div style="display:flex; justify-content:space-between; align-items:center;">
-            <div class="card-title" style="font-size: 11px;">Terminal Log</div>
-            <span style="font-size:10px; color:var(--text-muted); cursor:pointer;" onclick="document.getElementById('termLog').textContent='[Cleared]';">Xóa log</span>
+            <div class="card-title" style="font-size: 11px;">Terminal Console Log</div>
+            <span style="font-size:11px; color:var(--text-muted); cursor:pointer;" onclick="document.getElementById('termLog').textContent='[Cleared]';">Xóa log</span>
           </div>
           <div class="log-terminal" id="termLog">[Ready] Sentinel Camera Streaming sẵn sàng.</div>
         </div>
       </div>
 
-      <!-- CỘT PHẢI: REMOTE PTZ + PHÁT GIỌNG NÓI TTS -->
-      <div class="camera-side-panel">
-        <!-- REMOTE D-PAD CONTROL -->
-        <div class="card" style="align-items: center; text-align: center;">
-          <div class="card-title" style="align-self: flex-start;">Điều Khiển Xoay Camera (PTZ)</div>
+      <!-- CỘT 2: CAMERA CONTROL (PTZ REMOTE + PRIVACY) -->
+      <div class="camera-col">
+        <div class="card" style="align-items: center; text-align: center; height:100%;">
+          <div class="card-title" style="align-self: flex-start;">Điều Khiển Camera (PTZ)</div>
           
           <div class="remote-container">
             <div class="dpad-circle">
@@ -713,21 +752,38 @@
             </div>
           </div>
 
-          <!-- NÚT PRIVACY TOGGLE DUY NHẤT -->
-          <button class="btn-action" id="btnPrivacyToggle" style="width:100%; margin-top:4px;" onclick="togglePrivacy()">
+          <button class="btn-modern" id="btnPrivacyToggle" style="width:100%; margin-top:auto;" onclick="togglePrivacy()">
             👁️ Chế độ riêng tư: Đang TẮT (Bấm để Bật)
           </button>
         </div>
+      </div>
 
-        <!-- VOICE BROADCAST TO CAMERA -->
-        <div class="card">
-          <div class="card-title">Phát Giọng Nói Đến Loa Camera (TTS)</div>
-          <p style="font-size:12px; color:var(--text-muted); margin:0;">
-            Nhập tin nhắn để camera tự động phát giọng đọc tiếng Việt qua loa tích hợp (Port 8800).
+      <!-- CỘT 3: SEND MESSAGE TO CAMERA SPEAKER (TTS) -->
+      <div class="camera-col">
+        <div class="card" style="height:100%; display:flex; flex-direction:column;">
+          <div class="card-title">Gửi Giọng Nói Đến Camera (TTS)</div>
+          <p style="font-size:12px; color:var(--text-muted); line-height: 1.5; margin:0;">
+            Gõ thông điệp bằng tiếng Việt để phát trực tiếp qua loa tích hợp trên camera thông qua chuẩn âm thanh PCM Alaw (Port 8800).
           </p>
-          <div style="display:flex; gap:8px;">
-            <input type="text" id="camVoiceInput" placeholder="Ví dụ: Xin chào, mời bạn vào nhà..." style="flex:1; background:var(--bg); border:1px solid var(--border); color:var(--text-bright); padding:8px 12px; border-radius:8px; font-size:13px; outline:none;">
-            <button class="btn-action" id="btnCamSpeak" style="background:var(--primary); color:#fff; font-weight:600; padding:8px 14px; flex-shrink:0;" onclick="sendCameraSpeech()">📢 Phát Loa</button>
+
+          <div style="display:flex; flex-direction:column; gap:8px; margin-top:12px;">
+            <label style="font-size:12px; color:var(--text-muted);">Tin nhắn phát thanh:</label>
+            <textarea id="camVoiceInput" rows="4" placeholder="Nhập câu thông báo... (Ví dụ: Xin chào, mời bạn vào nhà ngồi chơi!)" style="background:var(--bg); border:1px solid var(--border); color:var(--text-bright); padding:10px 12px; border-radius:10px; font-size:13px; outline:none; resize:none; font-family:inherit; line-height:1.5;"></textarea>
+          </div>
+
+          <div style="display:flex; flex-direction:column; gap:8px; margin-top:12px;">
+            <label style="font-size:12px; color:var(--text-muted);">Gợi ý nhanh:</label>
+            <div style="display:flex; flex-wrap:wrap; gap:6px;">
+              <span class="chip" style="font-size:11px; padding:4px 10px; cursor:pointer;" onclick="fillVoiceText('Xin chào quý khách!')">👋 Chào khách</span>
+              <span class="chip" style="font-size:11px; padding:4px 10px; cursor:pointer;" onclick="fillVoiceText('Bạn cần tìm ai ạ?')">❓ Hỏi thăm</span>
+              <span class="chip" style="font-size:11px; padding:4px 10px; cursor:pointer;" onclick="fillVoiceText('Cảnh báo: Bạn đang ở trong khu vực có ghi hình!')">⚠️ Cảnh báo</span>
+            </div>
+          </div>
+
+          <div style="margin-top:auto; padding-top:16px;">
+            <button class="btn-modern primary" id="btnCamSpeak" style="width:100%; padding:12px;" onclick="sendCameraSpeech()">
+              📢 Phát Lên Loa Camera
+            </button>
           </div>
         </div>
       </div>
@@ -1051,6 +1107,12 @@
         btn.textContent = '📢 Phát Loa';
         log.scrollTop = log.scrollHeight;
       }
+    }
+
+    function fillVoiceText(t) {
+      const input = document.getElementById('camVoiceInput');
+      input.value = t;
+      input.focus();
     }
 
     // PRIVACY TOGGLE
