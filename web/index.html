@@ -1506,23 +1506,46 @@
       </div>
     </div>
 
-    <!-- 2.5. AUTOMATION VIEW (KỊCH BẢN TỰ ĐỘNG HÓA & THIẾT BỊ THẬT) -->
+    <!-- 2.5. AUTOMATION VIEW (KỊCH BẢN TỰ ĐỘNG HÓA & THIẾT BỊ THẬT - CHIA TAB TỪNG KỊCH BẢN) -->
     <div id="view-automation" class="view-content setting-view">
-      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(460px, 720px)); gap: 24px; align-items: start; width: 100%;">
-        <!-- Card 1: Tắt đèn khi vắng người -->
-        <div class="card" style="padding:18px; gap:14px;">
+      <div class="subtabs-bar" style="justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+        <div style="display:flex; gap:10px; overflow-x:auto;">
+          <button class="subtab-btn auto-tab-btn active" id="btn-autotab-idle" onclick="switchAutoTab('idle', this)">
+            <span class="mi">bedtime</span> Kịch bản 1: Tắt đèn khi vắng người
+          </button>
+          <button class="subtab-btn auto-tab-btn" id="btn-autotab-clap" onclick="switchAutoTab('clap', this)">
+            <span class="mi">front_hand</span> Kịch bản 2: Ngồi Sofa vỗ tay
+          </button>
+          <button class="subtab-btn auto-tab-btn" id="btn-autotab-evening" onclick="switchAutoTab('evening', this)">
+            <span class="mi">wb_twilight</span> Kịch bản 3: Đèn đón buổi tối
+          </button>
+        </div>
+        <div style="display:flex; align-items:center; gap:10px; flex-shrink:0;">
+          <span id="autoSaveStatus" style="font-size:12px; color:var(--text-muted);">Lưu vào configs/automation.json</span>
+          <button class="btn-modern" style="padding:8px 14px; font-size:12.5px;" onclick="loadAutomationConfigAndDevices()">
+            <span class="mi" style="font-size:16px;">refresh</span> Tải lại thiết bị
+          </button>
+          <button class="btn-modern primary" id="btnSaveAutomation" style="padding:8px 18px; font-size:13px;" onclick="saveAutomationConfigUI()">
+            <span class="mi" style="font-size:16px;">save</span> Lưu Kịch Bản
+          </button>
+        </div>
+      </div>
+
+      <!-- TAB 1: Tắt đèn khi vắng người -->
+      <div id="autotab-idle" class="subtab-panel auto-tab-panel active">
+        <div class="card" style="max-width:1020px; padding:22px 24px; gap:16px;">
           <div style="display:flex; justify-content:space-between; align-items:center;">
-            <div class="card-title" style="font-size:14px; display:flex; align-items:center; gap:8px;">
+            <div class="card-title" style="font-size:15px; display:flex; align-items:center; gap:8px;">
               <span class="mi" style="color:var(--accent);">bedtime</span> Kịch bản 1: Tự động tắt đèn khi vắng người
             </div>
-            <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:#10b981; cursor:pointer; font-weight:600;">
-              <input type="checkbox" id="autoIdleEnabled" checked> Bật kịch bản
+            <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#10b981; cursor:pointer; font-weight:600; background:rgba(16,185,129,0.1); padding:6px 12px; border-radius:8px; border:1px solid rgba(16,185,129,0.25);">
+              <input type="checkbox" id="autoIdleEnabled" checked> Bật kịch bản này
             </label>
           </div>
-          <p style="font-size:12px; color:var(--text-muted); line-height:1.5;">
+          <p style="font-size:12.5px; color:var(--text-muted); line-height:1.5;">
             Khi phòng khách không có người và không có âm thanh vượt quá số phút quy định (và TV đang tắt), hệ thống sẽ tự động tắt các đèn được chọn bên dưới.
           </p>
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+          <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px;">
             <div class="form-group">
               <label>Thời gian chờ vắng người (Phút):</label>
               <input type="number" id="autoIdleMinutes" min="1" max="120" value="1">
@@ -1534,102 +1557,92 @@
                 <option value="false">Tắt đèn bất kể TV bật hay tắt</option>
               </select>
             </div>
+            <div class="form-group">
+              <label>Script tắt kèm theo (Tùy chọn):</label>
+              <select id="autoIdleScript">
+                <option value="">-- Không dùng Script --</option>
+              </select>
+            </div>
           </div>
           <div class="form-group">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-              <label>Chọn các đèn cần tắt (Lấy trực tiếp từ Home Assistant):</label>
-              <button class="btn-modern" style="padding:5px 10px; font-size:11.5px;" onclick="loadAutomationConfigAndDevices()">
-                <span class="mi" style="font-size:15px;">refresh</span> Tải lại thiết bị
-              </button>
-            </div>
-            <div id="autoIdleLightsChecklist" style="max-height:260px; overflow-y:auto; background:rgba(0,0,0,0.25); border:1px solid var(--border); border-radius:8px; padding:10px; display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+            <label style="margin-bottom:4px;">Chọn các đèn cần tắt (Lấy trực tiếp từ Home Assistant):</label>
+            <div id="autoIdleLightsChecklist" style="max-height:420px; overflow-y:auto; background:rgba(0,0,0,0.25); border:1px solid var(--border); border-radius:10px; padding:12px; display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:10px;">
               <div style="font-size:12px; color:var(--text-muted);">Đang tải danh sách thiết bị từ Home Assistant...</div>
             </div>
           </div>
+        </div>
+      </div>
+
+      <!-- TAB 2: Ngồi Sofa Vỗ Tay -->
+      <div id="autotab-clap" class="subtab-panel auto-tab-panel">
+        <div class="card" style="max-width:780px; padding:22px 24px; gap:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div class="card-title" style="font-size:15px; display:flex; align-items:center; gap:8px;">
+              <span class="mi" style="color:var(--accent);">front_hand</span> Kịch bản 2: Ngồi Sofa vỗ tay ➔ Mở TV &amp; Quạt
+            </div>
+            <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#10b981; cursor:pointer; font-weight:600; background:rgba(16,185,129,0.1); padding:6px 12px; border-radius:8px; border:1px solid rgba(16,185,129,0.25);">
+              <input type="checkbox" id="autoClapEnabled" checked> Bật kịch bản này
+            </label>
+          </div>
+          <p style="font-size:12.5px; color:var(--text-muted); line-height:1.5;">
+            Khi Camera phát hiện có người ngồi ở vùng Sofa (Preset 1) và thu được tiếng vỗ tay (YAMNet Clapping), tự động bật TV và Quạt.
+          </p>
           <div class="form-group">
-            <label>Script tắt kèm theo (Tùy chọn):</label>
-            <select id="autoIdleScript">
-              <option value="">-- Không dùng Script --</option>
+            <label>Thiết bị Quạt cần bật (Home Assistant):</label>
+            <select id="autoClapFan">
+              <option value="">-- Chọn thiết bị quạt --</option>
             </select>
           </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+            <div class="form-group">
+              <label>Địa chỉ IP Android TV (ADB):</label>
+              <input type="text" id="autoClapTV" value="192.168.1.8" placeholder="192.168.1.8">
+            </div>
+            <div class="form-group">
+              <label>Thời gian chờ/Cooldown (Giây):</label>
+              <input type="number" id="autoClapWindow" value="60" min="10" max="600">
+            </div>
+          </div>
         </div>
+      </div>
 
-        <!-- Card 2: Ngồi Sofa Vỗ Tay & Đi làm về buổi tối -->
-        <div style="display:flex; flex-direction:column; gap:20px;">
-          <!-- Ngồi Sofa Vỗ tay -->
-          <div class="card" style="padding:18px; gap:12px;">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-              <div class="card-title" style="font-size:14px; display:flex; align-items:center; gap:8px;">
-                <span class="mi" style="color:var(--accent);">front_hand</span> Kịch bản 2: Ngồi Sofa vỗ tay ➔ Mở TV & Quạt
-              </div>
-              <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:#10b981; cursor:pointer; font-weight:600;">
-                <input type="checkbox" id="autoClapEnabled" checked> Bật kịch bản
-              </label>
+      <!-- TAB 3: Đi làm về buổi tối -->
+      <div id="autotab-evening" class="subtab-panel auto-tab-panel">
+        <div class="card" style="max-width:780px; padding:22px 24px; gap:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div class="card-title" style="font-size:15px; display:flex; align-items:center; gap:8px;">
+              <span class="mi" style="color:var(--accent);">wb_twilight</span> Kịch bản 3: Phát hiện người buổi tối ➔ Bật đèn đón
             </div>
-            <p style="font-size:12px; color:var(--text-muted); line-height:1.5;">
-              Khi Camera phát hiện có người ngồi ở vùng Sofa (Preset 1) và thu được tiếng vỗ tay (YAMNet Clapping), tự động bật TV và Quạt.
-            </p>
-            <div class="form-group">
-              <label>Thiết bị Quạt cần bật (Home Assistant):</label>
-              <select id="autoClapFan">
-                <option value="">-- Chọn thiết bị quạt --</option>
-              </select>
-            </div>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-              <div class="form-group">
-                <label>Địa chỉ IP Android TV (ADB):</label>
-                <input type="text" id="autoClapTV" value="192.168.1.8" placeholder="192.168.1.8">
-              </div>
-              <div class="form-group">
-                <label>Thời gian chờ/Cooldown (Giây):</label>
-                <input type="number" id="autoClapWindow" value="60" min="10" max="600">
-              </div>
-            </div>
+            <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#10b981; cursor:pointer; font-weight:600; background:rgba(16,185,129,0.1); padding:6px 12px; border-radius:8px; border:1px solid rgba(16,185,129,0.25);">
+              <input type="checkbox" id="autoEveningEnabled" checked> Bật kịch bản này
+            </label>
           </div>
-
-          <!-- Đi làm về buổi tối -->
-          <div class="card" style="padding:18px; gap:12px;">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-              <div class="card-title" style="font-size:14px; display:flex; align-items:center; gap:8px;">
-                <span class="mi" style="color:var(--accent);">wb_twilight</span> Kịch bản 3: Phát hiện người buổi tối ➔ Bật đèn đón
-              </div>
-              <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:#10b981; cursor:pointer; font-weight:600;">
-                <input type="checkbox" id="autoEveningEnabled" checked> Bật kịch bản
-              </label>
+          <p style="font-size:12.5px; color:var(--text-muted); line-height:1.5;">
+            Khi phát hiện có người vào khung giờ buổi tối và khu vực đón đang tối, tự động bật đèn chào đón và xoay Camera về vị trí được chọn.
+          </p>
+          <div class="form-group">
+            <label>Đèn tự động bật khi phát hiện người vào buổi tối:</label>
+            <select id="autoEveningLight">
+              <option value="">-- Chọn đèn bật đón --</option>
+            </select>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px;">
+            <div class="form-group">
+              <label>Từ giờ (0-23):</label>
+              <input type="number" id="autoEveningStart" value="18" min="0" max="23">
             </div>
             <div class="form-group">
-              <label>Đèn tự động bật khi phát hiện người vào buổi tối:</label>
-              <select id="autoEveningLight">
-                <option value="">-- Chọn đèn bật đón --</option>
+              <label>Đến giờ (0-23):</label>
+              <input type="number" id="autoEveningEnd" value="6" min="0" max="23">
+            </div>
+            <div class="form-group">
+              <label>Camera Preset:</label>
+              <select id="autoEveningPreset">
+                <option value="3">Preset 3 (Cửa chính)</option>
+                <option value="1">Preset 1 (Sofa)</option>
+                <option value="2">Preset 2 (Bàn ăn)</option>
               </select>
             </div>
-            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;">
-              <div class="form-group">
-                <label>Từ giờ (0-23):</label>
-                <input type="number" id="autoEveningStart" value="18" min="0" max="23">
-              </div>
-              <div class="form-group">
-                <label>Đến giờ (0-23):</label>
-                <input type="number" id="autoEveningEnd" value="6" min="0" max="23">
-              </div>
-              <div class="form-group">
-                <label>Camera Preset:</label>
-                <select id="autoEveningPreset">
-                  <option value="3">Preset 3 (Cửa chính)</option>
-                  <option value="1">Preset 1 (Sofa)</option>
-                  <option value="2">Preset 2 (Bàn ăn)</option>
-                </select>
-              </div>
-            </div>
-          </div>
-
-          <!-- Nút lưu toàn bộ kịch bản -->
-          <div class="card" style="padding:16px 18px; flex-direction:row; justify-content:space-between; align-items:center;">
-            <div>
-              <div style="font-size:13px; font-weight:600; color:var(--text-bright);">Lưu vào configs/automation.json</div>
-              <div id="autoSaveStatus" style="font-size:12px; color:var(--text-muted); margin-top:2px;">Áp dụng ngay lập tức mà không cần khởi động lại server.</div>
-            </div>
-            <button class="btn-modern primary" id="btnSaveAutomation" onclick="saveAutomationConfigUI()"><span class="mi">save</span> Lưu Kịch Bản</button>
           </div>
         </div>
       </div>
@@ -1893,9 +1906,22 @@
       }
     }
 
+    function switchAutoTab(autotabId, btnEl) {
+      document.querySelectorAll('#view-automation .auto-tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('#view-automation .auto-tab-panel').forEach(p => p.classList.remove('active'));
+
+      if (btnEl) btnEl.classList.add('active');
+      const target = document.getElementById('autotab-' + autotabId);
+      if (target) target.classList.add('active');
+
+      try {
+        localStorage.setItem('sentinel_active_autotab', autotabId);
+      } catch (e) {}
+    }
+
     function switchSubTab(subtabId, btnEl) {
-      document.querySelectorAll('.subtab-btn').forEach(b => b.classList.remove('active'));
-      document.querySelectorAll('.subtab-panel').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('#view-setting .subtab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('#view-setting .subtab-panel').forEach(p => p.classList.remove('active'));
 
       if (btnEl) btnEl.classList.add('active');
       const target = document.getElementById('subtab-' + subtabId);
@@ -3084,6 +3110,11 @@
         if (savedNav) {
           const navEl = document.getElementById('nav-' + savedNav);
           if (navEl) switchNav(savedNav, navEl);
+        }
+        const savedAutoTab = localStorage.getItem('sentinel_active_autotab');
+        if (savedAutoTab) {
+          const autoBtn = document.getElementById('btn-autotab-' + savedAutoTab);
+          if (autoBtn) switchAutoTab(savedAutoTab, autoBtn);
         }
       } catch (e) {}
       initCameraEventStream();
