@@ -29,20 +29,22 @@ type CustomRule struct {
 }
 
 type SofaClapRule struct {
-	Enabled       bool   `json:"enabled"`
-	TargetFan     string `json:"target_fan"`
-	TargetTV      string `json:"target_tv"`
-	WindowSeconds int    `json:"window_seconds"`
+	Enabled        bool     `json:"enabled"`
+	TargetFan      string   `json:"target_fan"`
+	TargetEntities []string `json:"target_entities,omitempty"`
+	TargetTV       string   `json:"target_tv"`
+	WindowSeconds  int      `json:"window_seconds"`
 }
 
 type EveningArrivalRule struct {
-	Enabled       bool     `json:"enabled"`
-	TargetLight   string   `json:"target_light"`
-	TargetPreset  string   `json:"target_preset"`
-	CooldownSec   int      `json:"cooldown_sec"`
-	StartHour     int      `json:"start_hour"`
-	EndHour       int      `json:"end_hour"`
-	SoundKeywords []string `json:"sound_keywords"`
+	Enabled        bool     `json:"enabled"`
+	TargetLight    string   `json:"target_light"`
+	TargetEntities []string `json:"target_entities,omitempty"`
+	TargetPreset   string   `json:"target_preset"`
+	CooldownSec    int      `json:"cooldown_sec"`
+	StartHour      int      `json:"start_hour"`
+	EndHour        int      `json:"end_hour"`
+	SoundKeywords  []string `json:"sound_keywords"`
 }
 
 type IdleLivingRoomRule struct {

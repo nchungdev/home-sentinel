@@ -163,8 +163,30 @@ func (s *Server) handleDuinchGreeting(w http.ResponseWriter, r *http.Request) {
 		msg = strings.TrimSpace(req.Text)
 	}
 	if msg == "" && req.Generate && s.LLMManager != nil {
-		prompt := "Bạn là Duinch - trợ lý robot dễ thương trên màn hình TV phòng khách. " +
-			"Hãy viết 1 câu chào ngắn gọn dưới 15 từ, ấm áp, tự nhiên, lịch sự cho buổi tối, không ngoặc kép."
+		hour := time.Now().Hour()
+		period := "đêm khuya"
+		topic := "khuyên nghỉ ngơi sớm giữ sức khỏe và chúc một giấc ngủ thật ngon"
+		switch {
+		case hour >= 5 && hour <= 10:
+			period = "buổi sáng"
+			topic = "chúc ngày mới tràn đầy năng lượng và khởi đầu thuận lợi"
+		case hour >= 11 && hour <= 13:
+			period = "buổi trưa"
+			topic = "chúc bữa trưa ngon miệng và có thời gian nghỉ ngơi thư thái"
+		case hour >= 14 && hour <= 17:
+			period = "buổi chiều"
+			topic = "gợi ý nghe nhạc nhẹ thư giãn cho buổi chiều dễ chịu"
+		case hour >= 18 && hour <= 21:
+			period = "buổi tối"
+			topic = "chúc buổi tối ấm cúng bên gia đình và thưởng thức một bộ phim hay"
+		}
+		prompt := fmt.Sprintf(
+			"Bạn là Duinch - trợ lý robot thông minh trên màn hình TV phòng khách. "+
+				"Hãy viết 1 hoặc 2 câu chào ngắn gọn (12 đến 22 từ), tự nhiên, ấm áp cho %s, "+
+				"trọng tâm duy nhất: %s. "+
+				"Tuyệt đối không dùng từ 'hoặc' để ghép nhiều ý rời rạc, không dùng ngoặc kép.",
+			period, topic,
+		)
 		var sb strings.Builder
 		s.LLMManager.StreamChat(prompt, func(chunk string) {
 			sb.WriteString(chunk)

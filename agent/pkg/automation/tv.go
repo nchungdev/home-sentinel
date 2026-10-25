@@ -49,13 +49,15 @@ func (m *Manager) HandleClapOnSofa(userOnSofa bool) bool {
 		}()
 	}
 
-	// 2. Bật Quạt qua Home Assistant
-	if m.haClient != nil && m.haClient.BaseURL != "" && rule.TargetFan != "" {
-		go func() {
-			payload := map[string]interface{}{"entity_id": rule.TargetFan}
-			_ = m.haClient.RequestJSON("/api/services/fan/turn_on", payload, nil)
-		}()
+	// 2. Bật các thiết bị được chọn qua Home Assistant
+	targets := rule.TargetEntities
+	if len(targets) == 0 && rule.TargetFan != "" {
+		targets = []string{rule.TargetFan}
 	}
+	if len(targets) > 0 {
+		go m.executeEntitiesAction("Vỗ tay trên Sofa", "turn_on", targets, "", "", false)
+	}
+	go m.EvaluateCustomRules("clap_detected")
 
 	msg := fmt.Sprintf("[%s] 👏📺 [Vỗ tay trên Sofa] Đã mở TV & Bật quạt (%s)!", tNow, rule.TargetFan)
 	if m.broadcast != nil {

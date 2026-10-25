@@ -25,7 +25,19 @@ func (m *Manager) HandleEveningArrival(triggerReason string) {
 		return
 	}
 
-	if m.isEntityOn(rule.TargetLight) {
+	targets := rule.TargetEntities
+	if len(targets) == 0 && rule.TargetLight != "" {
+		targets = []string{rule.TargetLight}
+	}
+
+	allOn := len(targets) > 0
+	for _, eid := range targets {
+		if !m.isEntityOn(eid) {
+			allOn = false
+			break
+		}
+	}
+	if allOn {
 		m.activityMutex.Unlock()
 		return
 	}
@@ -35,16 +47,16 @@ func (m *Manager) HandleEveningArrival(triggerReason string) {
 	m.activityMutex.Unlock()
 
 	tNow := time.Now().Format("15:04:05")
-	if m.haClient != nil && m.haClient.BaseURL != "" && rule.TargetLight != "" {
-		payload := map[string]interface{}{"entity_id": rule.TargetLight}
-		err := m.haClient.RequestJSON("/api/services/light/turn_on", payload, nil)
-		if err == nil {
-			msg := fmt.Sprintf("[%s] 💡 [Buổi tối] Nhận diện %s: Đã bật %s!", tNow, triggerReason, rule.TargetLight)
-			if m.broadcast != nil {
-				m.broadcast(msg)
-			}
-			fmt.Println(msg)
+	if m.haClient != nil && m.haClient.BaseURL != "" && len(targets) > 0 {
+		for _, eid := range targets {
+			payload := map[string]interface{}{"entity_id": eid}
+			_ = m.haClient.RequestJSON("/api/services/light/turn_on", payload, nil)
 		}
+		msg := fmt.Sprintf("[%s] 💡 [Buổi tối] Nhận diện %s: Đã bật %d đèn đón!", tNow, triggerReason, len(targets))
+		if m.broadcast != nil {
+			m.broadcast(msg)
+		}
+		fmt.Println(msg)
 	}
 
 	if rule.TargetPreset != "" {

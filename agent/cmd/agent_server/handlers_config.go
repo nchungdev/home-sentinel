@@ -168,10 +168,19 @@ func (s *Server) handleAutomationConfig(w http.ResponseWriter, r *http.Request) 
 
 	if r.Method == http.MethodPost {
 		var cfg struct {
-			Config json.RawMessage `json:"config"`
+			Config   json.RawMessage `json:"config"`
+			TestRule string          `json:"test_rule"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&cfg); err != nil {
 			http.Error(w, "bad request", http.StatusBadRequest)
+			return
+		}
+		if s.AutomationMgr != nil && cfg.TestRule != "" {
+			affected := s.AutomationMgr.RunRuleNow(cfg.TestRule)
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
+				"ok":       true,
+				"affected": affected,
+			})
 			return
 		}
 		if s.AutomationMgr != nil {
