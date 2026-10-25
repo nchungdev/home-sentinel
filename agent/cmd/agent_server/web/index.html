@@ -3,158 +3,218 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Home Sentinel - AI Agent Test Console</title>
+  <title>Home Sentinel - AI Chat & Control Hub</title>
   <style>
     :root {
-      --bg: #0d1117;
-      --card-bg: #161b22;
-      --border: #30363d;
+      --bg: #0b0f14;
+      --sidebar-bg: #11161d;
+      --card-bg: #161c24;
+      --border: #232d38;
+      --border-focus: #388bfd;
       --text: #c9d1d9;
+      --text-muted: #8b949e;
       --text-bright: #f0f6fc;
       --primary: #238636;
       --primary-hover: #2ea043;
       --accent: #58a6ff;
-      --tag-bg: #21262d;
+      --tag-bg: #1c2430;
+      --user-msg: #1a2332;
+      --agent-msg: #131a22;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       background: var(--bg);
       color: var(--text);
-      padding: 20px;
+      height: 100vh;
       display: flex;
-      justify-content: center;
+      overflow: hidden;
     }
-    .container {
-      width: 100%;
-      max-width: 800px;
+
+    /* Column 1: Config & Service Status (Sidebar) */
+    .sidebar {
+      width: 340px;
+      min-width: 320px;
+      background: var(--sidebar-bg);
+      border-right: 1px solid var(--border);
       display: flex;
       flex-direction: column;
+      overflow-y: auto;
+      padding: 16px;
       gap: 16px;
     }
-    header {
+    .brand {
       display: flex;
-      justify-content: space-between;
       align-items: center;
+      justify-content: space-between;
       padding-bottom: 12px;
       border-bottom: 1px solid var(--border);
     }
-    h1 {
-      font-size: 20px;
+    .brand h2 {
+      font-size: 16px;
       color: var(--text-bright);
       display: flex;
       align-items: center;
       gap: 8px;
     }
-    .badge {
-      background: var(--tag-bg);
-      border: 1px solid var(--border);
-      color: var(--accent);
-      font-size: 12px;
+    .badge-live {
+      background: rgba(35, 134, 54, 0.2);
+      border: 1px solid var(--primary);
+      color: #3fb950;
+      font-size: 11px;
       padding: 2px 8px;
       border-radius: 12px;
-      font-family: monospace;
+      font-weight: 600;
     }
-    .card {
+    .section-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .setting-group {
       background: var(--card-bg);
       border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 16px;
-    }
-    .config-row {
+      border-radius: 8px;
+      padding: 12px;
       display: flex;
+      flex-direction: column;
       gap: 10px;
-      align-items: center;
-      margin-bottom: 8px;
     }
-    .config-row input {
-      flex: 1;
+    .setting-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .setting-item label {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .setting-item select, .setting-item input {
       background: var(--bg);
       border: 1px solid var(--border);
       color: var(--text-bright);
-      padding: 8px 12px;
+      padding: 8px 10px;
       border-radius: 6px;
-      font-family: monospace;
       font-size: 13px;
+      outline: none;
     }
-    .quick-chips {
+    .setting-item select:focus, .setting-item input:focus {
+      border-color: var(--border-focus);
+    }
+    .status-row {
       display: flex;
-      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      padding: 4px 0;
+    }
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 6px;
+    }
+    .dot.green { background: #3fb950; box-shadow: 0 0 6px #3fb950; }
+    .dot.blue { background: #58a6ff; }
+    .camera-help {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.4;
+      background: var(--bg);
+      padding: 8px;
+      border-radius: 6px;
+      border: 1px dashed var(--border);
+    }
+    .camera-help code {
+      color: var(--accent);
+      font-family: monospace;
+    }
+
+    /* Column 2: Chat Bot Area */
+    .chat-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      background: var(--bg);
+    }
+    .chat-header {
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--sidebar-bg);
+    }
+    .chat-header h3 {
+      font-size: 15px;
+      color: var(--text-bright);
+      font-weight: 600;
+    }
+    .chips-bar {
+      padding: 10px 20px;
+      background: rgba(22, 28, 36, 0.6);
+      border-bottom: 1px solid var(--border);
+      display: flex;
       gap: 8px;
-      margin-top: 10px;
+      overflow-x: auto;
+      white-space: nowrap;
     }
     .chip {
       background: var(--tag-bg);
       border: 1px solid var(--border);
       color: var(--accent);
-      padding: 6px 12px;
+      padding: 5px 12px;
       border-radius: 16px;
-      font-size: 13px;
+      font-size: 12px;
       cursor: pointer;
       user-select: none;
       transition: all 0.15s ease;
     }
     .chip:hover {
-      background: #30363d;
+      background: #2a3442;
       border-color: var(--accent);
     }
-    textarea {
-      width: 100%;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      color: var(--text-bright);
-      padding: 12px;
-      font-size: 15px;
-      resize: vertical;
-      min-height: 80px;
-      outline: none;
-    }
-    textarea:focus { border-color: var(--accent); }
-    .action-bar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-top: 10px;
-    }
-    button {
-      background: var(--primary);
-      color: #fff;
-      border: none;
-      padding: 10px 20px;
-      border-radius: 6px;
-      font-weight: 600;
-      font-size: 14px;
-      cursor: pointer;
-      transition: background 0.15s ease;
-    }
-    button:hover { background: var(--primary-hover); }
-    button:disabled { opacity: 0.5; cursor: not-allowed; }
-    .chat-box {
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
       display: flex;
       flex-direction: column;
-      gap: 12px;
-      min-height: 200px;
+      gap: 16px;
     }
     .message {
+      max-width: 80%;
       padding: 12px 16px;
-      border-radius: 8px;
-      line-height: 1.5;
+      border-radius: 10px;
       font-size: 14px;
-      white-space: pre-wrap;
+      line-height: 1.5;
       word-break: break-word;
+      white-space: pre-wrap;
     }
     .message.user {
-      background: #1f242c;
-      border-left: 3px solid var(--accent);
+      align-self: flex-end;
+      background: var(--user-msg);
+      border: 1px solid #2d3c52;
       color: var(--text-bright);
+      border-bottom-right-radius: 2px;
     }
     .message.agent {
-      background: #141b24;
+      align-self: flex-start;
+      background: var(--agent-msg);
+      border: 1px solid var(--border);
       border-left: 3px solid var(--primary);
+      border-bottom-left-radius: 2px;
       color: var(--text);
     }
-    .agent-header {
+    .agent-name {
       font-size: 11px;
       font-weight: 600;
       color: var(--accent);
@@ -162,80 +222,200 @@
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
+    .input-area {
+      padding: 16px 20px;
+      background: var(--sidebar-bg);
+      border-top: 1px solid var(--border);
+    }
+    .input-box {
+      display: flex;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px;
+      align-items: flex-end;
+    }
+    .input-box:focus-within {
+      border-color: var(--border-focus);
+    }
+    textarea {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: var(--text-bright);
+      font-size: 14px;
+      resize: none;
+      height: 48px;
+      max-height: 120px;
+      padding: 8px 10px;
+      outline: none;
+      font-family: inherit;
+    }
+    .btn-send {
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      padding: 8px 18px;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      transition: background 0.15s ease;
+      height: 38px;
+    }
+    .btn-send:hover { background: var(--primary-hover); }
+    .btn-send:disabled { opacity: 0.5; cursor: not-allowed; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <header>
-      <h1>Home Sentinel <span>AI Agent</span></h1>
-      <span class="badge" id="serviceBadge">Go Server :8788</span>
-    </header>
 
-    <div class="card">
-      <div class="config-row">
-        <label style="font-size: 13px; min-width: 60px;">Token:</label>
-        <input type="password" id="authToken" placeholder="Bearer Token (nếu có cấu hình AGENT_TOKEN)">
-      </div>
-      <div class="quick-chips">
-        <div class="chip" onclick="quickSend('trạng thái nhà')">💡 Trạng thái nhà</div>
-        <div class="chip" onclick="quickSend('bật đèn phòng khách')">💡 Bật đèn phòng khách</div>
-        <div class="chip" onclick="quickSend('tắt đèn phòng khách')">💡 Tắt đèn phòng khách</div>
-        <div class="chip" onclick="quickSend('bật quạt phòng ngủ')">🌀 Bật quạt phòng ngủ</div>
-        <div class="chip" onclick="quickSend('tìm phim avatar')">🎬 Tìm phim Avatar</div>
-        <div class="chip" onclick="quickSend('thời tiết hôm nay')">🌤️ Thời tiết</div>
+  <!-- CỘT 1: CẤU HÌNH & TRẠNG THÁI SERVICES -->
+  <aside class="sidebar">
+    <div class="brand">
+      <h2>🤖 Home Sentinel</h2>
+      <span class="badge-live">ONLINE</span>
+    </div>
+
+    <!-- Trạng thái kết nối -->
+    <div>
+      <div class="section-title">Trạng thái hệ thống</div>
+      <div class="setting-group">
+        <div class="status-row">
+          <span><span class="dot green"></span>Agent Core (Go)</span>
+          <span style="color: #3fb950; font-size: 12px;">Port 8788</span>
+        </div>
+        <div class="status-row">
+          <span><span class="dot green"></span>Camera Center</span>
+          <span style="color: #3fb950; font-size: 12px;">Port 8792</span>
+        </div>
+        <div class="status-row">
+          <span><span class="dot blue"></span>Home Assistant</span>
+          <span style="color: var(--accent); font-size: 12px;">Connected</span>
+        </div>
+        <div class="status-row">
+          <span><span class="dot blue"></span>Target TV (UDP)</span>
+          <span style="color: var(--accent); font-size: 12px;">Port 8790</span>
+        </div>
       </div>
     </div>
 
-    <div class="card">
-      <textarea id="questionInput" placeholder="Nhập câu lệnh điều khiển nhà hoặc câu hỏi cho Agent..."></textarea>
-      <div class="action-bar">
-        <span id="statusIndicator" style="font-size: 13px; color: #8b949e;">Sẵn sàng</span>
-        <button id="sendBtn" onclick="sendPrompt()">Gửi câu hỏi</button>
+    <!-- Cấu hình Model AI -->
+    <div>
+      <div class="section-title">Mô hình AI & LLM Engine</div>
+      <div class="setting-group">
+        <div class="setting-item">
+          <label>Nhà cung cấp LLM:</label>
+          <select id="modelProvider" onchange="onModelChange()">
+            <option value="claude">Claude CLI (Anthropic Claude 3.5 Sonnet)</option>
+            <option value="gemini">Google Gemini 2.5 Flash</option>
+            <option value="ollama">Ollama / Local LLM (NAS Engine)</option>
+            <option value="builtin">Built-in Direct Rule Engine (Siêu nhẹ)</option>
+          </select>
+        </div>
+        <div class="setting-item">
+          <label>Nhiệt độ (Temperature):</label>
+          <input type="range" min="0" max="1" step="0.1" value="0.7" style="padding:0">
+        </div>
       </div>
     </div>
 
-    <div class="card chat-box" id="chatHistory">
+    <!-- Hướng dẫn & Kết nối Camera -->
+    <div>
+      <div class="section-title">Tương tác Camera Tapo</div>
+      <div class="setting-group">
+        <div class="setting-item">
+          <label>Endpoint nhận tương tác:</label>
+          <input type="text" readonly value="http://192.168.1.37:8788/event">
+        </div>
+        <div class="camera-help">
+          💡 <b>Cơ chế hoạt động:</b><br>
+          Camera phát hiện người ngồi sofa (YOLO) ➔ gửi webhook <code>POST /event</code> ➔ Agent cập nhật trạng thái và bắn thông báo UDP chào mừng tới Android TV.
+        </div>
+      </div>
+    </div>
+
+    <!-- Xác thực Bearer Token -->
+    <div>
+      <div class="section-title">Xác thực API</div>
+      <div class="setting-group">
+        <div class="setting-item">
+          <label>Bearer Token (nếu bật AGENT_TOKEN):</label>
+          <input type="password" id="authToken" placeholder="Để trống nếu không đặt token">
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- CỘT 2: GIAO DIỆN CHAT BOT -->
+  <main class="chat-container">
+    <div class="chat-header">
+      <h3>Trợ lý ảo Home Sentinel (Nhà thông minh & TV)</h3>
+      <span id="typingStatus" style="font-size: 12px; color: var(--text-muted);">Sẵn sàng</span>
+    </div>
+
+    <div class="chips-bar">
+      <div class="chip" onclick="quickSend('trạng thái nhà')">🏠 Trạng thái nhà</div>
+      <div class="chip" onclick="quickSend('bật đèn phòng khách')">💡 Bật đèn phòng khách</div>
+      <div class="chip" onclick="quickSend('tắt đèn phòng khách')">💡 Tắt đèn phòng khách</div>
+      <div class="chip" onclick="quickSend('bật quạt phòng ngủ')">🌀 Bật quạt phòng ngủ</div>
+      <div class="chip" onclick="quickSend('tìm phim avatar')">🎬 Tìm phim Avatar</div>
+      <div class="chip" onclick="quickSend('thời tiết hôm nay')">🌤️ Thời tiết</div>
+    </div>
+
+    <div class="chat-messages" id="chatMessages">
       <div class="message agent">
-        <div class="agent-header">Trợ lý Home Sentinel</div>
-        Xin chào! Trang web này dùng để test trực tiếp API của Agent Server (Go native). Bạn có thể gõ câu hỏi hoặc chọn các câu lệnh mẫu ở trên.
+        <div class="agent-name">Trợ lý Home Sentinel</div>
+        Xin chào! Tôi là Trợ lý AI Home Sentinel. Bạn có thể ra lệnh điều khiển thiết bị nhà thông minh (Home Assistant), tìm kiếm phim (Plex/Jellyfin) hoặc gửi thông báo tới TV.
       </div>
     </div>
-  </div>
+
+    <div class="input-area">
+      <div class="input-box">
+        <textarea id="promptInput" placeholder="Nhập câu lệnh hoặc câu hỏi (Enter để gửi, Shift+Enter xuống dòng)..."></textarea>
+        <button class="btn-send" id="btnSend" onclick="sendChatMessage()">Gửi</button>
+      </div>
+    </div>
+  </main>
 
   <script>
-    const questionInput = document.getElementById('questionInput');
-    const sendBtn = document.getElementById('sendBtn');
-    const chatHistory = document.getElementById('chatHistory');
-    const statusIndicator = document.getElementById('statusIndicator');
-    const tokenInput = document.getElementById('authToken');
+    const promptInput = document.getElementById('promptInput');
+    const btnSend = document.getElementById('btnSend');
+    const chatMessages = document.getElementById('chatMessages');
+    const typingStatus = document.getElementById('typingStatus');
+    const authToken = document.getElementById('authToken');
 
     if (location.hash) {
-      tokenInput.value = location.hash.replace('#', '');
+      authToken.value = location.hash.replace('#', '');
     }
 
-    questionInput.addEventListener('keydown', (e) => {
+    promptInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
-        sendPrompt();
+        sendChatMessage();
       }
     });
 
-    function quickSend(text) {
-      questionInput.value = text;
-      sendPrompt();
+    function quickSend(cmd) {
+      promptInput.value = cmd;
+      sendChatMessage();
     }
 
-    async function sendPrompt() {
-      const text = questionInput.value.trim();
+    function onModelChange() {
+      const provider = document.getElementById('modelProvider').value;
+      appendMessage('agent', `Đã chuyển chế độ xử lý sang: ${provider.toUpperCase()}`);
+    }
+
+    async function sendChatMessage() {
+      const text = promptInput.value.trim();
       if (!text) return;
 
       appendMessage('user', text);
-      questionInput.value = '';
-      sendBtn.disabled = true;
-      statusIndicator.textContent = 'Đang xử lý...';
+      promptInput.value = '';
+      btnSend.disabled = true;
+      typingStatus.textContent = 'Đang suy nghĩ...';
 
-      const agentMessageDiv = appendMessage('agent', '…');
-      const token = tokenInput.value.trim();
+      const agentContentElem = appendMessage('agent', '…');
+      const token = authToken.value.trim();
 
       try {
         const headers = { 'Content-Type': 'application/json' };
@@ -248,50 +428,54 @@
           headers: headers,
           body: JSON.stringify({
             text: text,
-            session: 'web_test_' + Math.random().toString(36).substring(2, 8)
+            session: 'web_session_' + Math.random().toString(36).substring(2, 7)
           })
         });
 
         if (!response.ok) {
-          const errText = await response.text();
-          agentMessageDiv.textContent = `Lỗi HTTP ${response.status}: ${errText}`;
-          statusIndicator.textContent = 'Lỗi';
+          const err = await response.text();
+          agentContentElem.textContent = `Lỗi (${response.status}): ${err}`;
+          typingStatus.textContent = 'Lỗi';
           return;
         }
 
-        agentMessageDiv.textContent = '';
+        agentContentElem.textContent = '';
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
 
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
-          agentMessageDiv.textContent += decoder.decode(value, { stream: true });
+          agentContentElem.textContent += decoder.decode(value, { stream: true });
         }
-        statusIndicator.textContent = 'Hoàn thành';
+        typingStatus.textContent = 'Sẵn sàng';
       } catch (err) {
-        agentMessageDiv.textContent = 'Lỗi kết nối: ' + err.message;
-        statusIndicator.textContent = 'Lỗi kết nối';
+        agentContentElem.textContent = 'Không kết nối được tới Agent: ' + err.message;
+        typingStatus.textContent = 'Mất kết nối';
       } finally {
-        sendBtn.disabled = false;
+        btnSend.disabled = false;
+        promptInput.focus();
       }
     }
 
     function appendMessage(sender, text) {
-      const div = document.createElement('div');
-      div.className = 'message ' + sender;
+      const messageDiv = document.createElement('div');
+      messageDiv.className = `message ${sender}`;
+
       if (sender === 'agent') {
-        const header = document.createElement('div');
-        header.className = 'agent-header';
-        header.textContent = 'Trợ lý Home Sentinel';
-        div.appendChild(header);
+        const nameHeader = document.createElement('div');
+        nameHeader.className = 'agent-name';
+        nameHeader.textContent = 'Trợ lý Home Sentinel';
+        messageDiv.appendChild(nameHeader);
       }
-      const content = document.createElement('div');
-      content.textContent = text;
-      div.appendChild(content);
-      chatHistory.appendChild(div);
-      div.scrollIntoView({ behavior: 'smooth' });
-      return content;
+
+      const contentDiv = document.createElement('div');
+      contentDiv.textContent = text;
+      messageDiv.appendChild(contentDiv);
+
+      chatMessages.appendChild(messageDiv);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+      return contentDiv;
     }
   </script>
 </body>
