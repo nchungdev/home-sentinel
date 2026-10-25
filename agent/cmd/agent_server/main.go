@@ -789,6 +789,17 @@ func isTVScreenOn(tvHost string) bool {
 	return strings.Contains(string(out), "mWakefulness=Awake")
 }
 
+func (s *Server) broadcastTerminal(msg string) {
+	s.eventSubMutex.Lock()
+	defer s.eventSubMutex.Unlock()
+	for ch := range s.eventSubscribers {
+		select {
+		case ch <- msg:
+		default:
+		}
+	}
+}
+
 // matchesWakeWord kiểm tra xem văn bản STT có chứa từ khóa đánh thức Duinch hay không
 // Bao gồm cả tiếng Anh lẫn các biến thể phát âm / ghi nhận tiếng Việt (đu in, đu inh, đuyn,...)
 func matchesWakeWord(text string) (bool, string) {
@@ -910,20 +921,25 @@ func startCameraWakeWordListener(server *Server) {
 								if terr != nil || text == "" {
 									return
 								}
+								tNow := time.Now().Format("15:04:05")
 								fmt.Printf("[Mic Camera Heard]: \"%s\"\n", text)
+								server.broadcastTerminal(fmt.Sprintf("[%s] 🎤 Camera Mic thu được: \"%s\"", tNow, text))
 
 								matched, query := matchesWakeWord(text)
 								if matched {
 									fmt.Printf("🎯 [WakeWord Triggered] Duinch! Query: \"%s\"\n", query)
+									server.broadcastTerminal(fmt.Sprintf("[%s] 🎯 Duinch đã nhận diện từ khóa đánh thức! Lệnh: \"%s\"", tNow, query))
 
 									// Nếu chỉ gọi "Duinch ơi" mà chưa có lệnh
 									if query == "" {
+										server.broadcastTerminal(fmt.Sprintf("[%s] 🗣️ Duinch Camera phản hồi: \"Dạ, em nghe đây ạ!\"", tNow))
 										_ = server.speakOnCamera("Dạ, em nghe đây ạ!", "female")
 										// Thu âm câu lệnh tiếp theo trong 4 giây
 										time.Sleep(2 * time.Second)
 										followUp, ferr := recordAndTranscribe(cfg, 4)
 										if ferr == nil && followUp != "" {
 											query = followUp
+											server.broadcastTerminal(fmt.Sprintf("[%s] 🎤 User nói tiếp: \"%s\"", time.Now().Format("15:04:05"), query))
 										}
 									}
 
@@ -931,14 +947,17 @@ func startCameraWakeWordListener(server *Server) {
 									if query != "" {
 										lowerQuery := strings.ToLower(query)
 										if strings.Contains(lowerQuery, "mở tv") || strings.Contains(lowerQuery, "bật tv") {
+											server.broadcastTerminal(fmt.Sprintf("[%s] 📺 Duinch Camera: \"Dạ, em mở TV ngay đây ạ!\"", time.Now().Format("15:04:05")))
 											_ = server.speakOnCamera("Dạ, em mở TV ngay đây ạ!", "female")
 											_ = turnOnTV("192.168.1.8")
 										} else if strings.Contains(lowerQuery, "tắt tv") {
+											server.broadcastTerminal(fmt.Sprintf("[%s] 📺 Duinch Camera: \"Dạ, em tắt TV đây ạ!\"", time.Now().Format("15:04:05")))
 											_ = server.speakOnCamera("Dạ, em tắt TV đây ạ!", "female")
 											adbBin := "/home/chungnh/bin/adb"
 											_ = exec.Command(adbBin, "-s", "192.168.1.8:5555", "shell", "input keyevent 26").Run()
 										} else {
 											reply := askAgentQuery(server, query)
+											server.broadcastTerminal(fmt.Sprintf("[%s] 🤖 Duinch Camera trả lời: \"%s\"", time.Now().Format("15:04:05"), reply))
 											_ = server.speakOnCamera(reply, "female")
 										}
 									}
@@ -1286,6 +1305,7 @@ func main() {
 
 					// 3. Loa camera Tapo cất giọng hỏi thăm
 					promptText := "Anh có muốn xem TV không? Em mở giúp anh nhé"
+					server.broadcastTerminal(fmt.Sprintf("[%s] 🗣️ Duinch Camera chủ động hỏi: \"%s\"", time.Now().Format("15:04:05"), promptText))
 					_ = server.speakOnCamera(promptText, "female")
 
 					// 4. LẮNG NGHE PHẢN HỒI QUA MIC CAMERA TAPO (3-4 giây)
@@ -1293,7 +1313,9 @@ func main() {
 					reply, err := recordAndTranscribe(cfg, 3)
 					if err == nil && reply != "" {
 						lowerReply := strings.ToLower(reply)
+						tReply := time.Now().Format("15:04:05")
 						fmt.Printf("[Camera Conversation] Nhận diện câu trả lời: \"%s\"\n", reply)
+						server.broadcastTerminal(fmt.Sprintf("[%s] 🎤 User trả lời camera: \"%s\"", tReply, reply))
 
 						// 5. Phân tích ý định người dùng (OK / Mở đi / Có / Bật / Xem / Ừ / Yes)
 						positiveIntent := strings.Contains(lowerReply, "ok") ||
@@ -1307,6 +1329,7 @@ func main() {
 
 						if positiveIntent {
 							// Phản hồi xác nhận qua loa Camera
+							server.broadcastTerminal(fmt.Sprintf("[%s] 📺 Duinch Camera: \"Dạ, em mở TV ngay đây ạ!\"", time.Now().Format("15:04:05")))
 							_ = server.speakOnCamera("Dạ, em mở TV ngay đây ạ!", "female")
 							// Gửi lệnh bật TV qua ADB
 							_ = turnOnTV(tvHost)
