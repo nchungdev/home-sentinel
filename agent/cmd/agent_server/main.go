@@ -42,6 +42,8 @@ type Server struct {
 	RequestLimiter chan struct{}
 	ClientLogs     []ClientLogEntry
 	LogsMutex      sync.RWMutex
+	eventSubscribers map[chan string]struct{}
+	eventSubMutex    sync.Mutex
 }
 
 type ClientLogEntry struct {
@@ -85,16 +87,17 @@ func NewServer() *Server {
 	token := os.Getenv("AGENT_TOKEN")
 
 	server := &Server{
-		Token:          token,
-		Port:           port,
-		NotifyPort:     notifyPort,
-		DiscoveryPort:  8789,
-		BroadcastIP:    broadcastIP,
-		Arbitrator:     arbitration.NewAudioArbitrator(0.15),
-		HAClient:       haclient.NewClient("", ""),
-		MediaBridge:    mediabridge.NewBridge(""),
-		LLMManager:     llm.NewManager("sentinel_llm_config.json"),
-		RequestLimiter: make(chan struct{}, 4),
+		Token:            token,
+		Port:             port,
+		NotifyPort:       notifyPort,
+		DiscoveryPort:    8789,
+		BroadcastIP:      broadcastIP,
+		Arbitrator:       arbitration.NewAudioArbitrator(0.15),
+		HAClient:         haclient.NewClient("", ""),
+		MediaBridge:      mediabridge.NewBridge(""),
+		LLMManager:       llm.NewManager("sentinel_llm_config.json"),
+		RequestLimiter:   make(chan struct{}, 4),
+		eventSubscribers: make(map[chan string]struct{}),
 	}
 
 	if data, err := os.ReadFile("sentinel_ha_config.json"); err == nil {
@@ -915,13 +918,19 @@ func main() {
 			clientIP = strings.Split(fwd, ",")[0]
 		}
 		summary := "Nhận sự kiện notification"
+		terminalLogMsg := ""
 		if src, ok := payload["source"].(string); ok && src == "home_assistant" {
 			fn, _ := payload["friendly_name"].(string)
 			et, _ := payload["event_type"].(string)
 			st, _ := payload["state"].(string)
 			summary = fmt.Sprintf("📡 HA Event [%s]: %s (trạng thái: %s)", et, fn, st)
+			if fn == "" {
+				fn = "Camera Phòng Khách"
+			}
+			terminalLogMsg = fmt.Sprintf("[%s] 🚨 CẢNH BÁO: %s - Phát hiện người/chuyển động! (trạng thái: %s)", nowStr, fn, st)
 		} else if ev, ok := payload["event"].(string); ok {
 			summary = fmt.Sprintf("📡 Event: %s", ev)
+			terminalLogMsg = fmt.Sprintf("[%s] 🔔 Event: %s", nowStr, ev)
 		}
 		server.AddClientLog(ClientLogEntry{
 			Timestamp: nowStr,
@@ -932,8 +941,61 @@ func main() {
 			Response:  "Đã tiếp nhận và broadcast qua UDP :8790",
 		})
 
+		if terminalLogMsg != "" {
+			server.eventSubMutex.Lock()
+			for ch := range server.eventSubscribers {
+				select {
+				case ch <- terminalLogMsg:
+				default:
+				}
+			}
+			server.eventSubMutex.Unlock()
+		}
+
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+	})
+
+	mux.HandleFunc("/api/camera/events", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.Header().Set("Cache-Control", "no-cache")
+		w.Header().Set("Connection", "keep-alive")
+
+		flusher, ok := w.(http.Flusher)
+		if !ok {
+			http.Error(w, "Streaming unsupported", http.StatusInternalServerError)
+			return
+		}
+
+		ch := make(chan string, 16)
+		server.eventSubMutex.Lock()
+		server.eventSubscribers[ch] = struct{}{}
+		server.eventSubMutex.Unlock()
+
+		defer func() {
+			server.eventSubMutex.Lock()
+			delete(server.eventSubscribers, ch)
+			close(ch)
+			server.eventSubMutex.Unlock()
+		}()
+
+		// Gửi ping chào đầu
+		fmt.Fprintf(w, "data: %s\n\n", "CONNECTED")
+		flusher.Flush()
+
+		ctx := r.Context()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case msg, ok := <-ch:
+				if !ok {
+					return
+				}
+				fmt.Fprintf(w, "data: %s\n\n", msg)
+				flusher.Flush()
+			}
+		}
 	})
 
 	mux.HandleFunc("/event", func(w http.ResponseWriter, r *http.Request) {

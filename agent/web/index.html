@@ -1674,6 +1674,10 @@
         localStorage.setItem('sentinel_active_nav', name);
       } catch (e) {}
 
+      if (name === 'camera') {
+        initCameraEventStream();
+      }
+
       if (name === 'setting') {
         const savedSubtab = localStorage.getItem('sentinel_active_subtab') || 'agent-cfg';
         const subtabBtn = document.getElementById('btn-subtab-' + savedSubtab);
@@ -1864,7 +1868,30 @@
         .replace(/'/g, '&#039;');
     }
 
-    // CAMERA LOGS
+    // CAMERA LOGS & REAL-TIME EVENT STREAM
+    function initCameraEventStream() {
+      const log = document.getElementById('termLog');
+      if (!log || window.camEventSource) return;
+
+      try {
+        const es = new EventSource('/api/camera/events');
+        window.camEventSource = es;
+
+        es.onmessage = function(e) {
+          if (!e.data || e.data === 'CONNECTED') return;
+          const time = new Date().toLocaleTimeString();
+          log.textContent += `\n${e.data}`;
+          log.scrollTop = log.scrollHeight;
+        };
+
+        es.onerror = function() {
+          // Tự động reconnect bởi trình duyệt
+        };
+      } catch (err) {
+        console.error('Không thể kết nối EventSource camera:', err);
+      }
+    }
+
     async function callCamera(type, data) {
       const log = document.getElementById('termLog');
       const time = new Date().toLocaleTimeString();
@@ -2628,6 +2655,7 @@
           if (navEl) switchNav(savedNav, navEl);
         }
       } catch (e) {}
+      initCameraEventStream();
     })();
   </script>
 </body>
