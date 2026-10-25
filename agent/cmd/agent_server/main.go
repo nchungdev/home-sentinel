@@ -245,6 +245,9 @@ func main() {
 	mux.HandleFunc("/api/camera/speak", server.handleCameraSpeak)
 	mux.HandleFunc("/api/camera/events", server.handleCameraEvents)
 
+	mux.HandleFunc("/ws/duinch", server.handleDuinchWS)
+	mux.HandleFunc("/api/duinch/greeting", server.handleDuinchGreeting)
+
 	mux.HandleFunc("/api/ha/config", server.handleHAConfig)
 	mux.HandleFunc("/api/ha/entities", server.handleHAEntities)
 	mux.HandleFunc("/api/groq/config", server.handleGroqConfig)
