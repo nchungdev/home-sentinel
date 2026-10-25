@@ -42,6 +42,7 @@ var globalTapoSession = &TapoControlSession{
 	httpClient: &http.Client{
 		Timeout: 5 * time.Second,
 		Transport: &http.Transport{
+			DisableKeepAlives: true,
 			TLSClientConfig: &tls.Config{
 				InsecureSkipVerify: true,
 			},
@@ -139,7 +140,10 @@ func decryptAesCbc(ciphertext []byte, key []byte, iv []byte) ([]byte, error) {
 func (session *TapoControlSession) Authenticate() error {
 	session.mutex.Lock()
 	defer session.mutex.Unlock()
+	return session.authenticateLocked()
+}
 
+func (session *TapoControlSession) authenticateLocked() error {
 	clientNonce, nonceErr := generateRandomHex(8)
 	if nonceErr != nil {
 		return nonceErr
@@ -284,8 +288,11 @@ func (session *TapoControlSession) Authenticate() error {
 func (session *TapoControlSession) SendSecure(
 	innerPayload map[string]interface{},
 ) (map[string]interface{}, error) {
+	session.mutex.Lock()
+	defer session.mutex.Unlock()
+
 	if !session.authenticated || session.stok == "" {
-		if authErr := session.Authenticate(); authErr != nil {
+		if authErr := session.authenticateLocked(); authErr != nil {
 			return nil, authErr
 		}
 	}
@@ -504,6 +511,95 @@ func (session *TapoControlSession) SetDetectionFeature(feature string, enabled b
 
 	_, sendErr := session.SendSecure(payload)
 	return sendErr
+}
+
+func (session *TapoControlSession) GetDetectionStates() (map[string]bool, error) {
+	session.mutex.Lock()
+	defer session.mutex.Unlock()
+
+	if !session.authenticated || session.stok == "" {
+		if authErr := session.authenticateLocked(); authErr != nil {
+			return nil, authErr
+		}
+	}
+
+	payload := map[string]interface{}{
+		"method": "get",
+		"motion_detection": map[string]interface{}{
+			"name": []string{"motion_det"},
+		},
+		"people_detection": map[string]interface{}{
+			"name": []string{"detection"},
+		},
+		"target_track": map[string]interface{}{
+			"name": []string{"target_track_info"},
+		},
+		"sound_detection": map[string]interface{}{
+			"name": []string{"bcd"},
+		},
+		"lens_mask": map[string]interface{}{
+			"name": []string{"lens_mask_info"},
+		},
+	}
+
+	encoded, _ := json.Marshal(payload)
+	reqURL := fmt.Sprintf("https://%s/stok=%s/ds", session.host, session.stok)
+	req, err := http.NewRequest("POST", reqURL, bytes.NewReader(encoded))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json; charset=UTF-8")
+
+	resp, err := session.httpClient.Do(req)
+	if err != nil {
+		session.authenticated = false
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	bodyBytes, _ := io.ReadAll(resp.Body)
+	var result struct {
+		ErrorCode       int `json:"error_code"`
+		MotionDetection struct {
+			MotionDet struct {
+				Enabled string `json:"enabled"`
+			} `json:"motion_det"`
+		} `json:"motion_detection"`
+		PeopleDetection struct {
+			Detection struct {
+				Enabled string `json:"enabled"`
+			} `json:"detection"`
+		} `json:"people_detection"`
+		TargetTrack struct {
+			TargetTrackInfo struct {
+				Enabled string `json:"enabled"`
+			} `json:"target_track_info"`
+		} `json:"target_track"`
+		SoundDetection struct {
+			BCD struct {
+				Enabled string `json:"enabled"`
+			} `json:"bcd"`
+		} `json:"sound_detection"`
+		LensMask struct {
+			LensMaskInfo struct {
+				Enabled string `json:"enabled"`
+			} `json:"lens_mask_info"`
+		} `json:"lens_mask"`
+	}
+
+	if err := json.Unmarshal(bodyBytes, &result); err != nil {
+		return nil, err
+	}
+
+	states := map[string]bool{
+		"motion":   result.MotionDetection.MotionDet.Enabled == "on",
+		"person":   result.PeopleDetection.Detection.Enabled == "on",
+		"tracking": result.TargetTrack.TargetTrackInfo.Enabled == "on",
+		"baby_cry": result.SoundDetection.BCD.Enabled == "on",
+		"privacy":  result.LensMask.LensMaskInfo.Enabled == "on",
+	}
+
+	return states, nil
 }
 
 func (session *TapoControlSession) GetPrivacyMode() bool {

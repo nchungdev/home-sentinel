@@ -699,24 +699,11 @@ func (s *Server) handleCameraPrivacy(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleCameraDetection(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	if r.Method != http.MethodPost {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
 
 	configPath := "sentinel_camera_config.json"
 	var cfg CameraConfigData
 	if data, err := os.ReadFile(configPath); err == nil {
 		_ = json.Unmarshal(data, &cfg)
-	}
-
-	var req struct {
-		Feature string `json:"feature"`
-		Enabled bool   `json:"enabled"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "bad request", http.StatusBadRequest)
-		return
 	}
 
 	effectivePass := cfg.CloudPassword
@@ -733,9 +720,41 @@ func (s *Server) handleCameraDetection(w http.ResponseWriter, r *http.Request) {
 	}
 
 	session := camstream.GetTapoSession(cfg.IP, cfg.Username, effectivePass)
+
+	if r.Method == http.MethodGet {
+		states, err := session.GetDetectionStates()
+		if err != nil {
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{"ok": false, "error": err.Error()})
+			return
+		}
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"ok":     true,
+			"states": states,
+		})
+		return
+	}
+
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req struct {
+		Feature string `json:"feature"`
+		Enabled bool   `json:"enabled"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
+
 	err := session.SetDetectionFeature(req.Feature, req.Enabled)
 	if err != nil {
-		_ = json.NewEncoder(w).Encode(map[string]interface{}{"ok": false, "error": err.Error()})
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"ok":      false,
+			"error":   "Camera Tapo C200 chạy firmware mới yêu cầu điều khiển nhận diện thông qua App Tapo",
+			"details": err.Error(),
+		})
 		return
 	}
 	_ = json.NewEncoder(w).Encode(map[string]interface{}{

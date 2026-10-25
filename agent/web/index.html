@@ -287,8 +287,8 @@
 
     /* 2. CAMERA VIEW - 2 CỘT CÂN ĐỐI TẬN DỤNG TOÀN BỘ MÀN HÌNH */
     .camera-view {
-      padding: 20px 28px;
-      gap: 20px;
+      padding: 16px 24px;
+      gap: 16px;
       width: 100%;
       height: calc(100vh - 61px);
       box-sizing: border-box;
@@ -302,9 +302,11 @@
     .camera-col {
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      gap: 12px;
       height: 100%;
-      overflow: hidden;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding-right: 2px;
     }
     .camera-screen {
       width: 100%;
@@ -358,7 +360,13 @@
       box-shadow: 0 0 8px #ef4444;
       animation: pulse 1.5s infinite;
     }
-    @keyframes pulse {
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .spin {
+      animation: spin 1s linear infinite;
+    }
       0%, 100% { opacity: 1; transform: scale(1); }
       50% { opacity: 0.4; transform: scale(0.85); }
     }
@@ -428,8 +436,8 @@
       width: 100%;
     }
     .dpad-circle {
-      width: 180px;
-      height: 180px;
+      width: 140px;
+      height: 140px;
       background: radial-gradient(circle, #1a1e2d 0%, #0d0f17 100%);
       border-radius: 50%;
       border: 1px solid rgba(255, 255, 255, 0.1);
@@ -601,13 +609,12 @@
       background: linear-gradient(180deg, rgba(26, 31, 46, 0.8) 0%, rgba(18, 22, 34, 0.95) 100%);
       border: 1px solid rgba(255, 255, 255, 0.08);
       border-radius: 16px;
-      padding: 16px 18px;
+      padding: 12px 14px;
       display: flex;
       flex-direction: column;
-      gap: 14px;
+      gap: 10px;
       box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08);
-      flex: 1;
-      justify-content: space-between;
+      flex-shrink: 0;
     }
     .cam-chat-header {
       display: flex;
@@ -1274,7 +1281,7 @@
       <!-- CỘT 2: CONTROL (PTZ REMOTE & PRIVACY) + VOICE BROADCAST (TTS) -->
       <div class="camera-col">
         <!-- PHẦN TRÊN: ĐIỀU KHIỂN CAMERA & PRIVACY -->
-        <div class="card" style="align-items: center; text-align: center; padding: 22px 24px; gap: 20px; flex-shrink: 0;">
+        <div class="card" style="align-items: center; text-align: center; padding: 14px 18px; gap: 12px; flex-shrink: 0;">
           <div class="card-title" style="align-self: flex-start; margin-bottom: 2px;">Điều Khiển Camera (PTZ)</div>
           
           <div class="remote-container">
@@ -1676,6 +1683,7 @@
 
       if (name === 'camera') {
         initCameraEventStream();
+        loadDetectionStates();
       }
 
       if (name === 'setting') {
@@ -1941,6 +1949,16 @@
       const btn = document.getElementById('btnCamSpeak');
       const time = new Date().toLocaleTimeString();
 
+      // Cập nhật ngay tin nhắn lên giao diện đàm thoại
+      const idleView = document.getElementById('intercomIdle');
+      const waveView = document.getElementById('intercomActiveWave');
+      const transcriptEl = document.getElementById('liveTranscriptText');
+      const timerText = document.getElementById('liveCallTimerText');
+      if (idleView) idleView.style.display = 'none';
+      if (waveView) waveView.classList.add('visible');
+      if (transcriptEl) transcriptEl.textContent = `"${text}"`;
+      if (timerText) timerText.textContent = 'Đang phát qua loa...';
+
       if (btn) {
         btn.disabled = true;
         btn.innerHTML = SVG_ICONS.loading;
@@ -1957,11 +1975,20 @@
         if (json.ok) {
           log.textContent += `\n ➔ Thành công: ${json.message}`;
           if (input && !customText) input.value = '';
+          if (timerText) timerText.textContent = '✅ Đã phát xong';
+          setTimeout(() => {
+            if (!isCalling && !isRecordingVoice) {
+              if (idleView) idleView.style.display = 'flex';
+              if (waveView) waveView.classList.remove('visible');
+            }
+          }, 3500);
         } else {
           log.textContent += `\n ➔ Thất bại: ${json.error}`;
+          if (timerText) timerText.textContent = '❌ Lỗi phát loa';
         }
       } catch (e) {
         log.textContent += `\n ➔ Lỗi phát âm: ${e.message}`;
+        if (timerText) timerText.textContent = '❌ Lỗi kết nối';
       } finally {
         if (btn) {
           btn.disabled = false;
@@ -2208,6 +2235,51 @@
       person: false,
       baby_cry: false
     };
+
+    let isPrivacyOn = false;
+
+    async function loadDetectionStates() {
+      try {
+        const res = await fetch('/api/camera/detection');
+        const data = await res.json();
+        if (data.ok && data.states) {
+          const btnMap = {
+            motion: 'btnToggleMotion',
+            tracking: 'btnToggleTracking',
+            person: 'btnTogglePerson',
+            baby_cry: 'btnToggleBabyCry'
+          };
+          for (const [k, v] of Object.entries(data.states)) {
+            if (k in detectionStates) {
+              detectionStates[k] = v;
+              const btn = document.getElementById(btnMap[k]);
+              if (btn) {
+                if (v) btn.classList.add('active');
+                else btn.classList.remove('active');
+              }
+            } else if (k === 'privacy') {
+              isPrivacyOn = v;
+              const pBtn = document.getElementById('btnPrivacyToggle');
+              const pIcon = document.getElementById('privacyIcon');
+              const pTitle = document.getElementById('privacyTitle');
+              if (pBtn) {
+                if (v) {
+                  pBtn.classList.add('active');
+                  if (pIcon) pIcon.textContent = '🔒';
+                  if (pTitle) pTitle.innerHTML = 'Chế độ riêng tư <span style="color:#ef4444; font-size:12px; margin-left:4px;">(BẬT)</span>';
+                } else {
+                  pBtn.classList.remove('active');
+                  if (pIcon) pIcon.textContent = '👁️';
+                  if (pTitle) pTitle.innerHTML = 'Chế độ riêng tư <span style="color:var(--text-muted); font-size:12px; margin-left:4px;">(TẮT)</span>';
+                }
+              }
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('Load detection states error:', e);
+      }
+    }
 
     async function toggleDetection(feature) {
       const btnMap = {
