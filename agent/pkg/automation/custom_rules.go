@@ -7,40 +7,62 @@ import (
 )
 
 func (m *Manager) EvaluateCustomRules(triggerType string) {
-	rules := m.store.Get().CustomRules
-	if len(rules) == 0 {
-		return
-	}
-
+	cfg := m.store.Get()
 	m.activityMutex.Lock()
 	idleTime := time.Since(m.lastActivityTime)
 	m.activityMutex.Unlock()
 
-	for _, rule := range rules {
-		if !rule.Enabled || rule.TriggerType != triggerType {
+	for _, rule := range cfg.Rules {
+		if !rule.Enabled {
 			continue
 		}
-		if !isWithinRuleHours(rule.StartHour, rule.EndHour) {
+		if rule.TriggerType != triggerType && !(triggerType == "clap_detected" && rule.TriggerType == "clap_sound") {
 			continue
 		}
-		if rule.CheckTVOff && m.isTVScreenOn() {
+		if rule.TimeCondition == "range" && !isWithinRuleHours(rule.StartHour, rule.EndHour) {
+			continue
+		}
+		if rule.TVCondition == "off" && m.isTVScreenOn() {
+			continue
+		}
+		if rule.TVCondition == "on" && !m.isTVScreenOn() {
 			continue
 		}
 		if triggerType == "idle_room" {
 			minWait := rule.IdleMinutes
 			if minWait <= 0 {
-				minWait = 5
+				minWait = 1
 			}
 			if idleTime < time.Duration(minWait)*time.Minute {
 				continue
 			}
 		}
-		m.executeCustomRule(rule, false)
+		m.executeRule(rule, false)
 	}
+}
+
+func (m *Manager) executeRule(rule Rule, force bool) int {
+	if rule.TargetTV != "" && rule.ActionType == "turn_on" {
+		go func(host string) { _ = TurnOnTV(host) }(rule.TargetTV)
+	}
+	return m.executeEntitiesAction(
+		rule.Name,
+		rule.ActionType,
+		rule.TargetEntities,
+		rule.ScriptID,
+		rule.CameraPreset,
+		force,
+	)
 }
 
 func (m *Manager) RunRuleNow(ruleID string) int {
 	cfg := m.store.Get()
+	cleanID := strings.TrimPrefix(ruleID, "custom-")
+	for _, r := range cfg.Rules {
+		if r.ID == ruleID || r.ID == cleanID {
+			return m.executeRule(r, true)
+		}
+	}
 	switch ruleID {
 	case "idle":
 		return m.executeEntitiesAction(
@@ -74,7 +96,6 @@ func (m *Manager) RunRuleNow(ruleID string) int {
 			true,
 		)
 	default:
-		cleanID := strings.TrimPrefix(ruleID, "custom-")
 		for _, r := range cfg.CustomRules {
 			if r.ID == cleanID {
 				return m.executeCustomRule(r, true)

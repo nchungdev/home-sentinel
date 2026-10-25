@@ -8,10 +8,32 @@ import (
 )
 
 type Config struct {
+	Rules          []Rule             `json:"rules,omitempty"`
 	EveningArrival EveningArrivalRule `json:"evening_arrival"`
 	IdleLivingRoom IdleLivingRoomRule `json:"idle_living_room"`
 	SofaClapAction SofaClapRule       `json:"sofa_clap_action"`
 	CustomRules    []CustomRule       `json:"custom_rules"`
+}
+
+type Rule struct {
+	ID             string   `json:"id"`
+	Name           string   `json:"name"`
+	Description    string   `json:"description,omitempty"`
+	Icon           string   `json:"icon,omitempty"`
+	Enabled        bool     `json:"enabled"`
+	TriggerType    string   `json:"trigger_type"` // "idle_room", "clap_sound", "person_detected", "time_schedule"
+	TriggerPreset  string   `json:"trigger_preset,omitempty"`
+	IdleMinutes    int      `json:"idle_minutes,omitempty"`
+	TimeCondition  string   `json:"time_condition,omitempty"` // "all_day", "range"
+	StartHour      int      `json:"start_hour,omitempty"`
+	EndHour        int      `json:"end_hour,omitempty"`
+	TVCondition    string   `json:"tv_condition,omitempty"` // "any", "off", "on"
+	CooldownSec    int      `json:"cooldown_sec,omitempty"`
+	ActionType     string   `json:"action_type"` // "turn_off", "turn_on"
+	TargetEntities []string `json:"target_entities"`
+	TargetTV       string   `json:"target_tv,omitempty"`
+	CameraPreset   string   `json:"camera_preset,omitempty"`
+	ScriptID       string   `json:"script_id,omitempty"`
 }
 
 type CustomRule struct {
@@ -119,11 +141,13 @@ func DefaultConfig() Config {
 func (s *ConfigStore) load() {
 	data, err := os.ReadFile(s.path)
 	if err != nil {
+		s.config.NormalizeRules()
 		s.save()
 		return
 	}
 	var cfg Config
 	if err := json.Unmarshal(data, &cfg); err == nil {
+		cfg.NormalizeRules()
 		s.config = cfg
 	}
 }
@@ -147,6 +171,110 @@ func (s *ConfigStore) Get() Config {
 func (s *ConfigStore) Update(cfg Config) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	cfg.NormalizeRules()
+	cfg.SyncLegacy()
 	s.config = cfg
 	s.save()
+}
+
+func (c *Config) NormalizeRules() {
+	if len(c.Rules) > 0 {
+		return
+	}
+	var rules []Rule
+	idleTV := "off"
+	if !c.IdleLivingRoom.CheckTVPlayback {
+		idleTV = "any"
+	}
+	rules = append(rules, Rule{
+		ID: "idle", Name: "Tắt đèn khi vắng người", Icon: "bedtime",
+		Description: "Tự động tắt các thiết bị khi phòng khách không có người và TV tắt.",
+		Enabled: c.IdleLivingRoom.Enabled, TriggerType: "idle_room",
+		IdleMinutes: c.IdleLivingRoom.IdleMinutes, TVCondition: idleTV,
+		ActionType: "turn_off", TargetEntities: c.IdleLivingRoom.TargetLights,
+		ScriptID: c.IdleLivingRoom.TurnOffScript,
+	})
+
+	clapTargets := c.SofaClapAction.TargetEntities
+	if len(clapTargets) == 0 && c.SofaClapAction.TargetFan != "" {
+		clapTargets = []string{c.SofaClapAction.TargetFan}
+	}
+	rules = append(rules, Rule{
+		ID: "clap", Name: "Ngồi Sofa vỗ tay", Icon: "front_hand",
+		Description: "Camera phát hiện người ở Sofa kết hợp tiếng vỗ tay sẽ bật thiết bị và mở TV.",
+		Enabled: c.SofaClapAction.Enabled, TriggerType: "clap_sound",
+		TriggerPreset: "1", CooldownSec: c.SofaClapAction.WindowSeconds,
+		ActionType: "turn_on", TargetEntities: clapTargets,
+		TargetTV: c.SofaClapAction.TargetTV, CameraPreset: "1",
+	})
+
+	eveTargets := c.EveningArrival.TargetEntities
+	if len(eveTargets) == 0 && c.EveningArrival.TargetLight != "" {
+		eveTargets = []string{c.EveningArrival.TargetLight}
+	}
+	rules = append(rules, Rule{
+		ID: "evening", Name: "Phát hiện người buổi tối", Icon: "wb_twilight",
+		Description: "Phát hiện có người vào khung giờ buổi tối sẽ tự động bật đèn đón và quay camera.",
+		Enabled: c.EveningArrival.Enabled, TriggerType: "person_detected",
+		TriggerPreset: c.EveningArrival.TargetPreset, TimeCondition: "range",
+		StartHour: c.EveningArrival.StartHour, EndHour: c.EveningArrival.EndHour,
+		ActionType: "turn_on", TargetEntities: eveTargets, CameraPreset: c.EveningArrival.TargetPreset,
+	})
+
+	for _, cr := range c.CustomRules {
+		timeCond := "all_day"
+		if cr.StartHour != cr.EndHour {
+			timeCond = "range"
+		}
+		tvCond := "any"
+		if cr.CheckTVOff {
+			tvCond = "off"
+		}
+		rules = append(rules, Rule{
+			ID:             cr.ID,
+			Name:           cr.Name,
+			Enabled:        cr.Enabled,
+			TriggerType:    cr.TriggerType,
+			IdleMinutes:    cr.IdleMinutes,
+			TimeCondition:  timeCond,
+			StartHour:      cr.StartHour,
+			EndHour:        cr.EndHour,
+			TVCondition:    tvCond,
+			ActionType:     cr.ActionType,
+			TargetEntities: cr.TargetEntities,
+			CameraPreset:   cr.CameraPreset,
+			Icon:           "auto_awesome",
+		})
+	}
+	c.Rules = rules
+}
+
+func (c *Config) SyncLegacy() {
+	for _, r := range c.Rules {
+		switch r.ID {
+		case "idle":
+			c.IdleLivingRoom.Enabled = r.Enabled
+			c.IdleLivingRoom.IdleMinutes = r.IdleMinutes
+			c.IdleLivingRoom.TargetLights = r.TargetEntities
+			c.IdleLivingRoom.TurnOffScript = r.ScriptID
+			c.IdleLivingRoom.CheckTVPlayback = r.TVCondition == "off"
+		case "clap":
+			c.SofaClapAction.Enabled = r.Enabled
+			c.SofaClapAction.TargetEntities = r.TargetEntities
+			if len(r.TargetEntities) > 0 {
+				c.SofaClapAction.TargetFan = r.TargetEntities[0]
+			}
+			c.SofaClapAction.TargetTV = r.TargetTV
+			c.SofaClapAction.WindowSeconds = r.CooldownSec
+		case "evening":
+			c.EveningArrival.Enabled = r.Enabled
+			c.EveningArrival.TargetEntities = r.TargetEntities
+			if len(r.TargetEntities) > 0 {
+				c.EveningArrival.TargetLight = r.TargetEntities[0]
+			}
+			c.EveningArrival.TargetPreset = r.CameraPreset
+			c.EveningArrival.StartHour = r.StartHour
+			c.EveningArrival.EndHour = r.EndHour
+		}
+	}
 }
