@@ -600,48 +600,8 @@ func (s *Server) handleStreamMjpeg(w http.ResponseWriter, r *http.Request) {
 
 	rtspURL := fmt.Sprintf("rtsp://%s:%s@%s:554%s", user, pass, host, path)
 
-	cmd := exec.Command("ffmpeg",
-		"-rtsp_transport", "tcp",
-		"-i", rtspURL,
-		"-f", "mpjpeg",
-		"-q:v", "5",
-		"-r", "12",
-		"pipe:1",
-	)
-
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	if err := cmd.Start(); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	defer func() {
-		_ = cmd.Process.Kill()
-		_ = cmd.Wait()
-	}()
-
-	w.Header().Set("Content-Type", "multipart/x-mixed-replace; boundary=--ffmpeg")
-	w.WriteHeader(http.StatusOK)
-
-	buf := make([]byte, 4096)
-	for {
-		n, err := stdout.Read(buf)
-		if n > 0 {
-			if _, err := w.Write(buf[:n]); err != nil {
-				break
-			}
-			if flusher, ok := w.(http.Flusher); ok {
-				flusher.Flush()
-			}
-		}
-		if err != nil {
-			break
-		}
-	}
+	broadcaster := camstream.GetBroadcaster()
+	broadcaster.ServeHTTP(w, r, rtspURL)
 }
 
 func (s *Server) handleCameraPTZ(w http.ResponseWriter, r *http.Request) {
