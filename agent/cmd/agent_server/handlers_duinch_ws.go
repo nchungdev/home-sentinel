@@ -11,23 +11,47 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-type DuinchPushPayload struct {
-	Type      string `json:"type"`
-	Text      string `json:"text"`
-	Mood      string `json:"mood,omitempty"`
-	Timestamp int64  `json:"timestamp"`
+type DuinchActionPayload struct {
+	StepID       string         `json:"step_id,omitempty"`
+	ActionType   string         `json:"action_type"`
+	TargetID     string         `json:"target_id,omitempty"`
+	Parameters   map[string]any `json:"parameters,omitempty"`
+	FeedbackText string         `json:"feedback_text,omitempty"`
+}
+
+type DuinchNotificationPayload struct {
+	ID        string               `json:"id"`
+	Source    string               `json:"source"`
+	Title     string               `json:"title"`
+	Message   string               `json:"message"`
+	Severity  string               `json:"severity,omitempty"`
+	Action    *DuinchActionPayload `json:"action,omitempty"`
+	Timestamp int64                `json:"timestamp"`
+}
+
+type DuinchWsEvent struct {
+	Type         string                     `json:"type"`
+	Text         string                     `json:"text,omitempty"`
+	Mood         string                     `json:"mood,omitempty"`
+	StepID       string                     `json:"step_id,omitempty"`
+	ActionType   string                     `json:"action_type,omitempty"`
+	TargetID     string                     `json:"target_id,omitempty"`
+	Parameters   map[string]any             `json:"parameters,omitempty"`
+	FeedbackText string                     `json:"feedback_text,omitempty"`
+	Notification *DuinchNotificationPayload `json:"notification,omitempty"`
+	Timestamp    int64                      `json:"timestamp"`
 }
 
 var (
 	duinchWsUpgrader = websocket.Upgrader{
-		ReadBufferSize:  512,
-		WriteBufferSize: 512,
+		ReadBufferSize:  2048,
+		WriteBufferSize: 2048,
 		CheckOrigin:     func(r *http.Request) bool { return true },
 	}
-	duinchClientsMu    sync.Mutex
-	duinchClients      = make(map[*websocket.Conn]struct{})
-	lastDuinchGreeting *DuinchPushPayload
-	duinchPingOnce     sync.Once
+	duinchClientsMu sync.Mutex
+	duinchClients   = make(map[*websocket.Conn]struct{})
+	lastDuinchEvent *DuinchWsEvent
+	duinchPingOnce  sync.Once
 )
 
 func startDuinchPingLoop() {
@@ -58,9 +82,9 @@ func (s *Server) handleDuinchWS(w http.ResponseWriter, r *http.Request) {
 
 	duinchClientsMu.Lock()
 	duinchClients[conn] = struct{}{}
-	current := lastDuinchGreeting
+	current := lastDuinchEvent
 	clientCount := len(duinchClients)
-	if current != nil && current.Text != "" {
+	if current != nil {
 		_ = conn.SetWriteDeadline(time.Now().Add(4 * time.Second))
 		_ = conn.WriteJSON(current)
 	}
@@ -78,7 +102,7 @@ func (s *Server) handleDuinchWS(w http.ResponseWriter, r *http.Request) {
 		_ = conn.Close()
 	}()
 
-	conn.SetReadLimit(512)
+	conn.SetReadLimit(4096)
 	_ = conn.SetReadDeadline(time.Now().Add(90 * time.Second))
 	conn.SetPongHandler(func(string) error {
 		_ = conn.SetReadDeadline(time.Now().Add(90 * time.Second))
@@ -93,6 +117,23 @@ func (s *Server) handleDuinchWS(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (s *Server) broadcastDuinchPayload(event *DuinchWsEvent) int {
+	duinchClientsMu.Lock()
+	lastDuinchEvent = event
+	sent := 0
+	for conn := range duinchClients {
+		_ = conn.SetWriteDeadline(time.Now().Add(4 * time.Second))
+		if err := conn.WriteJSON(event); err != nil {
+			_ = conn.Close()
+			delete(duinchClients, conn)
+		} else {
+			sent++
+		}
+	}
+	duinchClientsMu.Unlock()
+	return sent
+}
+
 func (s *Server) BroadcastDuinchGreeting(text, mood string) int {
 	text = strings.TrimSpace(text)
 	if text == "" {
@@ -101,30 +142,58 @@ func (s *Server) BroadcastDuinchGreeting(text, mood string) int {
 	if mood == "" {
 		mood = "happy"
 	}
-	payload := &DuinchPushPayload{
+	payload := &DuinchWsEvent{
 		Type:      "greeting",
 		Text:      text,
 		Mood:      mood,
 		Timestamp: time.Now().UnixMilli(),
 	}
-
-	duinchClientsMu.Lock()
-	lastDuinchGreeting = payload
-	sent := 0
-	for conn := range duinchClients {
-		_ = conn.SetWriteDeadline(time.Now().Add(4 * time.Second))
-		if err := conn.WriteJSON(payload); err != nil {
-			_ = conn.Close()
-			delete(duinchClients, conn)
-		} else {
-			sent++
-		}
-	}
-	duinchClientsMu.Unlock()
-
+	sent := s.broadcastDuinchPayload(payload)
 	s.broadcastTerminal(fmt.Sprintf(
 		"[%s] 💬 Push Duinch Greeting (%d TV): %q (mood=%s)",
 		time.Now().Format("15:04:05"), sent, text, mood,
+	))
+	return sent
+}
+
+func (s *Server) BroadcastDuinchAction(
+	stepID, actionType, targetID, feedbackText string,
+	parameters map[string]any,
+) int {
+	payload := &DuinchWsEvent{
+		Type:         "action",
+		StepID:       stepID,
+		ActionType:   actionType,
+		TargetID:     targetID,
+		Parameters:   parameters,
+		FeedbackText: feedbackText,
+		Timestamp:    time.Now().UnixMilli(),
+	}
+	sent := s.broadcastDuinchPayload(payload)
+	s.broadcastTerminal(fmt.Sprintf(
+		"[%s] ⚡ Push Duinch Action (%d TV): %s (%s)",
+		time.Now().Format("15:04:05"), sent, actionType, feedbackText,
+	))
+	return sent
+}
+
+func (s *Server) BroadcastDuinchNotification(notif *DuinchNotificationPayload) int {
+	if notif.ID == "" {
+		notif.ID = fmt.Sprintf("notif-%d", time.Now().UnixNano())
+	}
+	if notif.Timestamp <= 0 {
+		notif.Timestamp = time.Now().UnixMilli()
+	}
+	payload := &DuinchWsEvent{
+		Type:         "notification",
+		Text:         notif.Message,
+		Notification: notif,
+		Timestamp:    notif.Timestamp,
+	}
+	sent := s.broadcastDuinchPayload(payload)
+	s.broadcastTerminal(fmt.Sprintf(
+		"[%s] 🔔 Push Duinch Notification (%d TV): [%s] %s",
+		time.Now().Format("15:04:05"), sent, notif.Source, notif.Title,
 	))
 	return sent
 }
@@ -134,11 +203,11 @@ func (s *Server) handleDuinchGreeting(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
 		duinchClientsMu.Lock()
 		count := len(duinchClients)
-		current := lastDuinchGreeting
+		current := lastDuinchEvent
 		duinchClientsMu.Unlock()
 		_ = json.NewEncoder(w).Encode(map[string]interface{}{
 			"connected_clients": count,
-			"last_greeting":     current,
+			"last_event":        current,
 		})
 		return
 	}
@@ -206,3 +275,4 @@ func (s *Server) handleDuinchGreeting(w http.ResponseWriter, r *http.Request) {
 		"clients_sent": sent,
 	})
 }
+

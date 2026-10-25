@@ -247,6 +247,9 @@ func main() {
 
 	mux.HandleFunc("/ws/duinch", server.handleDuinchWS)
 	mux.HandleFunc("/api/duinch/greeting", server.handleDuinchGreeting)
+	mux.HandleFunc("/api/notify", server.handleApiNotify)
+	mux.HandleFunc("/api/webhook/radarr", server.handleRadarrWebhook)
+	mux.HandleFunc("/api/webhook/sonarr", server.handleSonarrWebhook)
 
 	mux.HandleFunc("/api/ha/config", server.handleHAConfig)
 	mux.HandleFunc("/api/ha/entities", server.handleHAEntities)

@@ -13,7 +13,9 @@ import (
 	"github.com/nchungdev/home-sentinel/agent/pkg/understanding"
 )
 
-type serverPresentationComposer struct{}
+type serverPresentationComposer struct {
+	server *Server
+}
 
 func (c *serverPresentationComposer) Compose(
 	ctx context.Context,
@@ -81,6 +83,16 @@ func (c *serverPresentationComposer) Compose(
 		}
 	}
 
+	if len(clientActions) > 0 && c.server != nil {
+		for _, action := range clientActions {
+			actionType, _ := action["action_type"].(string)
+			stepID, _ := action["step_id"].(string)
+			targetID, _ := action["target_id"].(string)
+			params, _ := action["parameters"].(map[string]any)
+			c.server.BroadcastDuinchAction(stepID, actionType, targetID, speech, params)
+		}
+	}
+
 	return &contracts.PresentationResponse{
 		SpeechText:    speech,
 		ClientActions: clientActions,
@@ -105,7 +117,7 @@ func buildServerOrchestrator(server *Server) *orchestrator.Orchestrator {
 		haClient:      server.HAClient,
 	}
 
-	composer := &serverPresentationComposer{}
+	composer := &serverPresentationComposer{server: server}
 
 	return orchestrator.NewOrchestrator(
 		understandingEngine,

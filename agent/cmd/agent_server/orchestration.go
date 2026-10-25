@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strings"
 
 	camAdapter "github.com/nchungdev/home-sentinel/agent/pkg/adapters/camera"
@@ -158,15 +159,41 @@ func (e *serverExecutionEngine) Execute(
 		text, _ := step.Parameters["text"].(string)
 		lower := strings.ToLower(text)
 
-		if e.server != nil && (strings.Contains(lower, "câu chào") || strings.Contains(lower, "lời chào")) && (strings.Contains(lower, "tv") || strings.Contains(lower, "tivi")) {
-			greeting := "Chúc cả nhà một buổi tối ấm áp và thư giãn bên nhau!"
+		tvPattern := regexp.MustCompile(
+			`(?i)(?:nói\s+gì\s+đó|gửi\s+(?:tin\s+nhắn|lời\s+chào|thông\s+báo)|chào|nhắn|bảo)\s+.*(?:với|lên|qua|cho|tới)\s+(?:tv|tivi|màn\s+hình)|` +
+				`(?i)(?:gửi\s+tin\s+nhắn\s+qua\s+socket|nhắn\s+lên\s+tv|chào\s+tv|nói\s+với\s+tv|lời\s+chào.*tv|câu\s+chào.*tv)`,
+		)
+
+		if e.server != nil && tvPattern.MatchString(lower) {
+			msg := ""
 			if idx := strings.Index(text, ":"); idx > 0 && idx < len(text)-2 {
-				greeting = strings.TrimSpace(text[idx+1:])
-			} else if e.llmManager != nil {
-				var sb strings.Builder
-				e.llmManager.StreamChat("Viết 1 câu chào dưới 15 từ gửi đến gia đình hiển thị trên màn hình TV, ấm áp, lịch sự, không để trong ngoặc kép.", func(chunk string) {
-					sb.WriteString(chunk)
+				msg = strings.TrimSpace(text[idx+1:])
+			}
+
+			if msg != "" {
+				sent := e.server.BroadcastDuinchGreeting(msg, "happy")
+				e.server.BroadcastDuinchNotification(&DuinchNotificationPayload{
+					Source:   "user",
+					Title:    "Tin nhắn",
+					Message:  msg,
+					Severity: "info",
 				})
+				reply := fmt.Sprintf("Đã gửi tin nhắn lên TV (%d thiết bị): %q", sent, msg)
+				return &contracts.ExecutionResult{
+					StepID:   step.StepID,
+					Status:   contracts.ActionStatusSucceeded,
+					Detail:   &reply,
+					CanRetry: false,
+				}, nil
+			}
+
+			greeting := "Chúc cả nhà một buổi tối ấm áp và xem phim vui vẻ!"
+			if e.llmManager != nil {
+				var sb strings.Builder
+				e.llmManager.StreamChat(
+					"Viết 1 câu chào ngắn dưới 18 từ gửi đến gia đình hiển thị trên màn hình TV phòng khách, ấm áp, thân thiện, không để trong ngoặc kép.",
+					func(chunk string) { sb.WriteString(chunk) },
+				)
 				if g := strings.Trim(strings.TrimSpace(sb.String()), "\"'“”"); g != "" {
 					greeting = g
 				}
