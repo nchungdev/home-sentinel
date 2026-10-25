@@ -29,6 +29,7 @@ import (
 	"github.com/nchungdev/home-sentinel/agent/pkg/onvifscan"
 	"github.com/nchungdev/home-sentinel/agent/pkg/automation"
 	"github.com/nchungdev/home-sentinel/agent/pkg/proactive"
+	"github.com/nchungdev/home-sentinel/agent/pkg/speech"
 	"github.com/nchungdev/home-sentinel/agent/pkg/transport"
 	"github.com/nchungdev/home-sentinel/web"
 )
@@ -52,6 +53,7 @@ type Server struct {
 	eventSubMutex    sync.Mutex
 
 	AutomationMgr *automation.Manager
+	Transcriber   *speech.Transcriber
 
 	isTranscribing bool
 	transcribeLock sync.Mutex
@@ -142,6 +144,16 @@ func NewServer() *Server {
 		"192.168.1.8",
 		15*time.Minute,
 	)
+
+	server.Transcriber = speech.NewTranscriber(os.Getenv("GROQ_API_KEY"))
+	if data, err := os.ReadFile("sentinel_groq_config.json"); err == nil {
+		var groqCfg struct {
+			APIKey string `json:"api_key"`
+		}
+		if json.Unmarshal(data, &groqCfg) == nil && groqCfg.APIKey != "" {
+			server.Transcriber.UpdateGroqKey(groqCfg.APIKey)
+		}
+	}
 
 	return server
 }
@@ -500,6 +512,48 @@ func (s *Server) handleHAConfig(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode(map[string]interface{}{
 			"ok":      ok,
 			"message": msg,
+		})
+		return
+	}
+
+	http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+}
+
+func (s *Server) handleGroqConfig(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	configPath := "sentinel_groq_config.json"
+
+	if r.Method == http.MethodGet {
+		var cfg struct {
+			APIKey string `json:"api_key"`
+		}
+		if data, err := os.ReadFile(configPath); err == nil {
+			_ = json.Unmarshal(data, &cfg)
+		}
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"ok":     true,
+			"config": cfg,
+		})
+		return
+	}
+
+	if r.Method == http.MethodPost {
+		var cfg struct {
+			APIKey string `json:"api_key"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&cfg); err != nil {
+			http.Error(w, "bad request", http.StatusBadRequest)
+			return
+		}
+		if s.Transcriber != nil {
+			s.Transcriber.UpdateGroqKey(cfg.APIKey)
+		}
+		data, _ := json.MarshalIndent(cfg, "", "  ")
+		_ = os.WriteFile(configPath, data, 0644)
+
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"ok":      true,
+			"message": "Đã lưu cấu hình Groq Whisper API thành công",
 		})
 		return
 	}
@@ -1016,16 +1070,23 @@ func startCameraWakeWordListener(server *Server) {
 									server.transcribeLock.Unlock()
 								}()
 
-								text, terr := transcribePCM(rawPCM)
+								var text, engine string
+								var terr error
+								if server.Transcriber != nil {
+									text, engine, terr = server.Transcriber.Transcribe(rawPCM)
+								} else {
+									text, terr = transcribePCM(rawPCM)
+									engine = "local_whisper"
+								}
 								if terr != nil {
-									logMic("Whisper lỗi: %v", terr)
+									logMic("STT [%s] lỗi: %v", engine, terr)
 									return
 								}
 								if text == "" {
-									logMic("Whisper trả về văn bản rỗng.")
+									logMic("STT [%s] trả về văn bản rỗng.", engine)
 									return
 								}
-								logMic("Whisper nghe được (trước bộ lọc/từ đánh thức): %q", text)
+								logMic("STT [%s] nghe được: %q", engine, text)
 								// Lọc bỏ các câu ảo giác (hallucination) kinh điển của Whisper khi gặp khoảng lặng
 								lowerT := strings.ToLower(text)
 								if strings.Contains(lowerT, "subscribe") ||
@@ -1385,6 +1446,7 @@ func main() {
 	mux.HandleFunc("/api/camera/detection", server.handleCameraDetection)
 	mux.HandleFunc("/api/camera/speak", server.handleCameraSpeak)
 	mux.HandleFunc("/api/ha/config", server.handleHAConfig)
+	mux.HandleFunc("/api/groq/config", server.handleGroqConfig)
 
 	mux.HandleFunc("/notify", func(w http.ResponseWriter, r *http.Request) {
 		var payload map[string]interface{}
