@@ -134,7 +134,7 @@ def camera_command(text):
             'user': os.environ.get('AGENT_CAMERA_USER', 'admin'), 'password': password}
     move = re.fullmatch(r'(?:quay|xoay) camera (trai|phai|len|xuong)', clean)
     privacy = re.fullmatch(r'(bat|tat) (?:che do )?rieng tu camera', clean)
-    speak = re.fullmatch(r'(?:noi|phat loa) qua camera\s*:?\s*(.+)', text, re.I)
+    speak = re.fullmatch(r'(?:noi|nói|phat loa|phát loa) qua camera\s*:?\s*(.+)', text, re.I)
     if move:
         body.update(direction={'trai': 'left', 'phai': 'right', 'len': 'up',
                                'xuong': 'down'}[move.group(1)], step=10)

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"strconv"
@@ -773,7 +774,7 @@ func (s *Server) handleCameraSpeak(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 1. Dùng edge-tts tạo âm thanh MP3
+	// 1. Tạo âm thanh MP3 (Ưu tiên edge-tts chất lượng cao, tự động thử lại hoặc fallback Google TTS nếu Microsoft ngắt kết nối)
 	voice := "vi-VN-HoaiMyNeural"
 	if req.Voice == "male" {
 		voice = "vi-VN-NamMinhNeural"
@@ -784,11 +785,39 @@ func (s *Server) handleCameraSpeak(w http.ResponseWriter, r *http.Request) {
 	defer os.Remove(tmpMp3)
 	defer os.Remove(tmpWav)
 
-	ttsCmd := exec.Command("edge-tts", "--voice", voice, "--text", text, "--write-media", tmpMp3)
-	if err := ttsCmd.Run(); err != nil {
+	ttsSuccess := false
+	var lastTTSErr error
+
+	// Thử edge-tts tối đa 2 lần
+	for attempt := 0; attempt < 2; attempt++ {
+		ttsCmd := exec.Command("edge-tts", "--voice", voice, "--text", text, "--write-media", tmpMp3)
+		out, err := ttsCmd.CombinedOutput()
+		if err == nil {
+			if stat, serr := os.Stat(tmpMp3); serr == nil && stat.Size() > 0 {
+				ttsSuccess = true
+				break
+			}
+		}
+		lastTTSErr = fmt.Errorf("%v (%s)", err, strings.TrimSpace(string(out)))
+		time.Sleep(150 * time.Millisecond)
+	}
+
+	// Nếu edge-tts không trả về audio (Microsoft rate limit / NoAudioReceived), fallback sang Google Translate TTS
+	if !ttsSuccess {
+		encodedText := url.QueryEscape(text)
+		googleURL := fmt.Sprintf("https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=vi&q=%s", encodedText)
+		curlCmd := exec.Command("curl", "-sL", "-A", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)", googleURL, "-o", tmpMp3)
+		if err := curlCmd.Run(); err == nil {
+			if stat, serr := os.Stat(tmpMp3); serr == nil && stat.Size() > 0 {
+				ttsSuccess = true
+			}
+		}
+	}
+
+	if !ttsSuccess {
 		_ = json.NewEncoder(w).Encode(map[string]interface{}{
 			"ok":    false,
-			"error": fmt.Sprintf("Lỗi tạo giọng nói (edge-tts): %v", err),
+			"error": fmt.Sprintf("Lỗi tạo giọng nói TTS: %v", lastTTSErr),
 		})
 		return
 	}
