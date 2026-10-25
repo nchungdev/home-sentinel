@@ -22,6 +22,7 @@ type HAEntityMatch struct {
 
 type PlexSearcher interface {
 	SearchFirst(ctx context.Context, query string) (*PlexMediaItem, error)
+	GetRecent(ctx context.Context, limit int) ([]*PlexMediaItem, error)
 }
 
 type HAEntityResolver interface {

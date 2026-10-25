@@ -2,11 +2,61 @@ package resolution
 
 import (
 	"context"
+	"regexp"
 	"strings"
 
 	"github.com/nchungdev/home-sentinel/agent/pkg/contracts"
 	"github.com/nchungdev/home-sentinel/agent/pkg/understanding"
 )
+
+var catalogPatterns = []*regexp.Regexp{
+	regexp.MustCompile(`(?i)^(có\s+)?phim\s+gì`),
+	regexp.MustCompile(`(?i)^(có\s+)?phim\s+nào`),
+	regexp.MustCompile(`(?i)^gợi\s+ý\s+phim`),
+	regexp.MustCompile(`(?i)^danh\s+sách\s+phim`),
+	regexp.MustCompile(`(?i)^xem\s+phim\s+gì`),
+	regexp.MustCompile(`(?i)^có\s+(gì|phim\s+gì)\s+xem`),
+	regexp.MustCompile(`(?i)^phim\s+mới`),
+	regexp.MustCompile(`(?i)^(có\s+thể\s+xem\s+(gì|k|không))`),
+}
+
+func isCatalogQuery(query string) bool {
+	q := strings.TrimSpace(strings.ToLower(query))
+	if q == "" {
+		return true
+	}
+	for _, p := range catalogPatterns {
+		if p.MatchString(q) {
+			return true
+		}
+	}
+	return false
+}
+
+func (r *Resolver) createPlexCatalogPlan(
+	intent *contracts.Intent,
+	items []*PlexMediaItem,
+) *contracts.ActionPlan {
+	titles := make([]string, 0, len(items))
+	for _, it := range items {
+		titles = append(titles, it.Title)
+	}
+
+	evidence := map[string]any{
+		"found_in_plex":   true,
+		"is_catalog":      true,
+		"titles":          titles,
+		"explicit_source": understanding.SourcePlex,
+	}
+
+	return &contracts.ActionPlan{
+		PlanID:               r.nextPlanID("media-plex-catalog"),
+		IntentName:           intent.Name,
+		Steps:                []contracts.ActionStep{},
+		ConfirmationRequired: false,
+		Evidence:             evidence,
+	}
+}
 
 func isYouTubeKind(kind string) bool {
 	switch kind {
@@ -139,6 +189,29 @@ func (r *Resolver) resolveMedia(
 			return nil, err
 		}
 
+		if isCatalogQuery(query) {
+			items, recErr := r.plexSearcher.GetRecent(ctx, 5)
+			if recErr != nil {
+				if ctxErr := ctx.Err(); ctxErr != nil {
+					return nil, ctxErr
+				}
+				return r.createEmptyMediaPlan(intent, query, map[string]any{
+					"found_in_plex":   false,
+					"explicit_source": understanding.SourcePlex,
+					"is_catalog":      true,
+					"error":           recErr.Error(),
+				}), nil
+			}
+			if len(items) > 0 {
+				return r.createPlexCatalogPlan(intent, items), nil
+			}
+			return r.createEmptyMediaPlan(intent, query, map[string]any{
+				"found_in_plex":   false,
+				"explicit_source": understanding.SourcePlex,
+				"is_catalog":      true,
+			}), nil
+		}
+
 		item, searchErr := r.plexSearcher.SearchFirst(ctx, query)
 		if searchErr != nil {
 			if ctxErr := ctx.Err(); ctxErr != nil {
@@ -158,6 +231,7 @@ func (r *Resolver) resolveMedia(
 		return r.createEmptyMediaPlan(intent, query, map[string]any{
 			"found_in_plex":   false,
 			"explicit_source": understanding.SourcePlex,
+			"not_found":       true,
 		}), nil
 	}
 

@@ -48,7 +48,10 @@ func (a *Adapter) prepareServiceCall(
 		return "set_temperature", serviceData, nil
 	}
 
-	verb, _ := step.Parameters["command"].(string)
+	verb, _ := step.Parameters["service"].(string)
+	if verb == "" {
+		verb, _ = step.Parameters["command"].(string)
+	}
 	if verb == "" {
 		verb = step.ActionType
 	}
@@ -56,11 +59,11 @@ func (a *Adapter) prepareServiceCall(
 
 	if domain == "cover" {
 		switch normVerb {
-		case "open", "mo", "bat", "cover.open":
+		case "open", "mo", "bat", "cover.open", "open_cover":
 			return "open_cover", serviceData, nil
-		case "close", "dong", "tat", "cover.close":
+		case "close", "dong", "tat", "cover.close", "close_cover":
 			return "close_cover", serviceData, nil
-		case "stop", "dung", "cover.stop":
+		case "stop", "dung", "cover.stop", "stop_cover":
 			return "stop_cover", serviceData, nil
 		default:
 			return "", nil, fmt.Errorf("Lệnh rèm không được hỗ trợ: %s", verb)

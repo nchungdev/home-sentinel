@@ -43,6 +43,32 @@ func (s *serverPlexSearcher) SearchFirst(
 	}, nil
 }
 
+func (s *serverPlexSearcher) GetRecent(
+	ctx context.Context,
+	limit int,
+) ([]*resolution.PlexMediaItem, error) {
+	if s.bridge == nil {
+		return nil, nil
+	}
+	results, err := s.bridge.PlexRecent("", limit)
+	if err != nil {
+		return nil, err
+	}
+	var items []*resolution.PlexMediaItem
+	for _, res := range results {
+		items = append(items, &resolution.PlexMediaItem{
+			Title:     res.Title,
+			Year:      res.Year,
+			RatingKey: res.RatingKey,
+			Type:      res.Type,
+			Summary:   res.Summary,
+			Thumb:     res.Thumb,
+			DeepLink:  res.DeepLink,
+		})
+	}
+	return items, nil
+}
+
 type serverHAResolver struct {
 	haClient *haclient.Client
 }
@@ -163,7 +189,7 @@ func (e *serverExecutionEngine) Execute(
 		})
 		reply := sb.String()
 		if reply == "" {
-			reply = "Tôi đã ghi nhận yêu cầu của bạn."
+			reply = "Hiện tại trợ lý AI chưa phản hồi được. Bạn vui lòng thử lại sau giây lát nhé."
 		}
 		return &contracts.ExecutionResult{
 			StepID:   step.StepID,
@@ -230,6 +256,26 @@ func (c *serverPresentationComposer) Compose(
 		}
 	}
 
+	if speech == "" && plan != nil && plan.Evidence != nil {
+		if isCat, _ := plan.Evidence["is_catalog"].(bool); isCat {
+			if titles, ok := plan.Evidence["titles"].([]string); ok && len(titles) > 0 {
+				speech = fmt.Sprintf(
+					"Trên NAS hiện có các phim: %s. Bạn muốn mở phim nào?",
+					strings.Join(titles, ", "),
+				)
+			} else {
+				speech = "Hiện tại không tìm thấy phim nào trong thư viện Plex trên NAS."
+			}
+		} else if notFound, _ := plan.Evidence["not_found"].(bool); notFound {
+			q, _ := plan.Evidence["query"].(string)
+			if q != "" {
+				speech = fmt.Sprintf("Không tìm thấy phim %q trên Plex/NAS.", q)
+			} else {
+				speech = "Không tìm thấy phim yêu cầu trên Plex/NAS."
+			}
+		}
+	}
+
 	if speech == "" {
 		if intent != nil && intent.Name == "system.status" {
 			speech = "Hệ thống Home Sentinel đang hoạt động bình thường."
@@ -238,7 +284,7 @@ func (c *serverPresentationComposer) Compose(
 		} else if len(clientActions) > 0 {
 			speech = "Đang mở trên màn hình TV..."
 		} else {
-			speech = "Tôi đã xử lý yêu cầu của bạn."
+			speech = "Tôi chưa hiểu rõ yêu cầu hoặc chưa xử lý được lệnh này. Bạn vui lòng thử lại nhé."
 		}
 	}
 

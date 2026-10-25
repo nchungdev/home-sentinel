@@ -41,6 +41,23 @@ func (m *mockPlexSearcher) SearchFirst(
 	return m.items[query], nil
 }
 
+func (m *mockPlexSearcher) GetRecent(
+	ctx context.Context,
+	limit int,
+) ([]*PlexMediaItem, error) {
+	if m.searchErr != nil {
+		return nil, m.searchErr
+	}
+	var res []*PlexMediaItem
+	for _, it := range m.items {
+		res = append(res, it)
+		if limit > 0 && len(res) >= limit {
+			break
+		}
+	}
+	return res, nil
+}
+
 type mockHAEntityResolver struct {
 	entities   map[string]*HAEntityMatch
 	resolveErr error
@@ -602,5 +619,44 @@ func TestResolve_InvalidIntent(t *testing.T) {
 	_, errEmpty := engine.Resolve(context.Background(), emptyIntent, nil)
 	if !errors.Is(errEmpty, contracts.ErrInvalidIntent) {
 		t.Errorf("expected ErrInvalidIntent, got %v", errEmpty)
+	}
+}
+
+func TestResolve_PlexCatalog(t *testing.T) {
+	plexMock := &mockPlexSearcher{
+		items: map[string]*PlexMediaItem{
+			"doraemon": {
+				Title:     "Doraemon Tây Du Kí",
+				Year:      1988,
+				RatingKey: "123",
+				Type:      "movie",
+			},
+		},
+	}
+	engine := NewResolver(plexMock, nil)
+
+	intent := &contracts.Intent{
+		Name:           understanding.IntentMediaSearch,
+		Domain:         understanding.DomainMedia,
+		Confidence:     0.9,
+		ExplicitSource: understanding.SourcePlex,
+		Slots: map[string]any{
+			understanding.SlotQuery: "có phim gì",
+		},
+	}
+
+	plan, err := engine.Resolve(context.Background(), intent, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if plan.Evidence["is_catalog"] != true {
+		t.Errorf("expected is_catalog true, got %v", plan.Evidence["is_catalog"])
+	}
+	titles, ok := plan.Evidence["titles"].([]string)
+	if !ok || len(titles) == 0 {
+		t.Fatalf("expected non-empty titles list")
+	}
+	if titles[0] != "Doraemon Tây Du Kí" {
+		t.Errorf("expected Doraemon Tây Du Kí, got %s", titles[0])
 	}
 }

@@ -11,6 +11,25 @@ import (
 	"time"
 )
 
+const defaultPlexPrefPath = "/appdata/plex/database/Library/Application Support/" +
+	"Plex Media Server/Preferences.xml"
+
+func ReadPlexToken() string {
+	if tok := os.Getenv("PLEX_TOKEN"); tok != "" {
+		return tok
+	}
+	data, err := os.ReadFile(defaultPlexPrefPath)
+	if err != nil {
+		return ""
+	}
+	re := regexp.MustCompile(`PlexOnlineToken="([^"]+)"`)
+	m := re.FindSubmatch(data)
+	if len(m) > 1 {
+		return string(m[1])
+	}
+	return ""
+}
+
 type PlexResult struct {
 	Title     string `json:"title"`
 	Year      int    `json:"year"`
@@ -60,6 +79,9 @@ func CleanQuery(query string) string {
 }
 
 func (b *Bridge) PlexSearch(query string, token string) ([]PlexResult, error) {
+	if token == "" {
+		token = ReadPlexToken()
+	}
 	if token == "" {
 		return nil, nil
 	}
@@ -114,7 +136,8 @@ func (b *Bridge) PlexSearch(query string, token string) ([]PlexResult, error) {
 			}
 			thumbURL := ""
 			if item.Thumb != "" {
-				thumbURL = fmt.Sprintf("http://%s:32400%s?X-Plex-Token=%s", b.NASHost, item.Thumb, token)
+				thumbURL = fmt.Sprintf("http://%s:32400%s?X-Plex-Token=%s",
+					b.NASHost, item.Thumb, token)
 			}
 			results = append(results, PlexResult{
 				Title:     item.Title,
@@ -127,5 +150,101 @@ func (b *Bridge) PlexSearch(query string, token string) ([]PlexResult, error) {
 			})
 		}
 	}
+	return results, nil
+}
+
+func (b *Bridge) PlexRecent(token string, limit int) ([]PlexResult, error) {
+	if token == "" {
+		token = ReadPlexToken()
+	}
+	if token == "" {
+		return nil, nil
+	}
+	if limit <= 0 {
+		limit = 5
+	}
+
+	recentURL := fmt.Sprintf("http://127.0.0.1:32400/library/recentlyAdded?X-Plex-Token=%s",
+		url.QueryEscape(token))
+
+	req, err := http.NewRequest(http.MethodGet, recentURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := b.HTTPClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("plex status %d", resp.StatusCode)
+	}
+
+	var data struct {
+		MediaContainer struct {
+			Metadata []struct {
+				Type        string `json:"type"`
+				Title       string `json:"title"`
+				ParentTitle string `json:"parentTitle"`
+				RatingKey   string `json:"ratingKey"`
+				Year        int    `json:"year"`
+				ParentYear  int    `json:"parentYear"`
+				Summary     string `json:"summary"`
+				Thumb       string `json:"thumb"`
+			} `json:"Metadata"`
+		} `json:"MediaContainer"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+		return nil, err
+	}
+
+	seen := make(map[string]bool)
+	var results []PlexResult
+
+	for _, item := range data.MediaContainer.Metadata {
+		title := item.Title
+		year := item.Year
+		if item.Type == "season" || item.Type == "episode" {
+			if item.ParentTitle != "" {
+				title = item.ParentTitle
+			}
+			if item.ParentYear > 0 {
+				year = item.ParentYear
+			}
+		} else if item.Type != "movie" && item.Type != "show" {
+			continue
+		}
+
+		titleLower := strings.ToLower(title)
+		if seen[titleLower] {
+			continue
+		}
+		seen[titleLower] = true
+
+		thumbURL := ""
+		if item.Thumb != "" {
+			thumbURL = fmt.Sprintf("http://%s:32400%s?X-Plex-Token=%s",
+				b.NASHost, item.Thumb, token)
+		}
+
+		results = append(results, PlexResult{
+			Title:     title,
+			Year:      year,
+			RatingKey: item.RatingKey,
+			Type:      item.Type,
+			Summary:   item.Summary,
+			Thumb:     thumbURL,
+			DeepLink:  fmt.Sprintf("plex://server/play?key=%s", item.RatingKey),
+		})
+
+		if len(results) >= limit {
+			break
+		}
+	}
+
 	return results, nil
 }
