@@ -142,15 +142,7 @@ func startCameraWakeWordListener(server *Server) {
 								continue
 							}
 
-							if audioFeatures.Category == speech.CategoryNoise {
-								logMic("🔊 [Phát hiện Tiếng Động Cơ Học] RMS=%.0f, Peak=%d, ZCR=%.3f, Dur=%.1fs (Không gửi Whisper)",
-									audioFeatures.RMS, audioFeatures.Peak, audioFeatures.ZeroCrossing, audioFeatures.DurationSec)
-								server.broadcastTerminal(fmt.Sprintf("[%s] 🔊 Camera ghi nhận tiếng động/va quẹt (RMS: %.0f, Peak: %d)",
-									tNow, audioFeatures.RMS, audioFeatures.Peak))
-								if server.AutomationMgr != nil {
-									server.AutomationMgr.RecordActivity("tiếng động cơ học / va quẹt cửa")
-									go server.AutomationMgr.HandleEveningArrival("tiếng động cạch cửa / bước chân")
-								}
+							if audioFeatures.Category != speech.CategorySpeech {
 								continue
 							}
 
