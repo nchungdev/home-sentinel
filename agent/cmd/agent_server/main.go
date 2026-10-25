@@ -1,6 +1,7 @@
 package main
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -14,6 +15,9 @@ import (
 	"github.com/nchungdev/home-sentinel/agent/pkg/haclient"
 	"github.com/nchungdev/home-sentinel/agent/pkg/mediabridge"
 )
+
+//go:embed web/index.html
+var testWebPage []byte
 
 type Server struct {
 	Token          string
@@ -246,6 +250,14 @@ func main() {
 	server.StartDiscoveryResponder()
 
 	mux := http.NewServeMux()
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/" && r.URL.Path != "/index.html" {
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write(testWebPage)
+	})
 	mux.HandleFunc("/notify", server.handleNotify)
 	mux.HandleFunc("/api/arbitration/decide", server.handleArbitration)
 	mux.HandleFunc("/event", server.handleEvent)
