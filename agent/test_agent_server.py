@@ -133,10 +133,6 @@ class AgentFailureTest(unittest.TestCase):
         success, message = server.verify_camera_connection("127.0.0.1", 59999)
         self.assertFalse(success)
 
-    def test_verify_smarthome_failure(self):
-        success, message = server.verify_smarthome_connection("http://127.0.0.1:59999", "tok")
-        self.assertFalse(success)
-
     def test_arbitration_remote_mic_override(self):
         result = server.ARBITRATOR.arbitrate({"remote_mic_active": True, "tv_screen_on": False})
         self.assertEqual("tv", result["listening_device"])

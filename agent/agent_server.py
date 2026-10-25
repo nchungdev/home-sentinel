@@ -12,6 +12,7 @@ import urllib.request
 from collections import OrderedDict
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import home_tools
 try:
     from arbitration import AudioArbitrator
 except ImportError:
@@ -22,7 +23,8 @@ PORT = int(os.environ.get("AGENT_PORT", "8788"))
 WORKDIR = os.environ.get("AGENT_WORKDIR", os.path.expanduser("~"))
 COMMAND = os.environ.get("AGENT_CMD", "claude")
 DISPLAY_STYLE = (
-    "Bạn là trợ lý thông minh trên TV. "
+    "Bạn là trợ lý thông minh trên TV. Không có quyền xóa dữ liệu. "
+    "Không khẳng định đã thao tác thiết bị nếu không có kết quả công cụ. "
     "Trả lời bằng tiếng Việt, súc tích, định dạng Markdown dễ đọc trên TV. "
     "Khi người dùng yêu cầu 'tìm' phim, nhạc, video hoặc nội dung, "
     "không được từ chối. Hãy chủ động gợi ý (suggest) 2-4 nội dung hay nhất, "
@@ -39,7 +41,11 @@ MAX_SESSIONS = 50
 MAX_CONCURRENT_REQUESTS = 2
 PLAIN_TEXT = "text/plain; charset=utf-8"
 HTML = "text/html; charset=utf-8"
-CLI_FLAGS = ["-p", "--output-format", "stream-json", "--verbose", "--include-partial-messages"]
+CLI_FLAGS = [
+    "-p", "--output-format", "stream-json", "--verbose", "--include-partial-messages",
+    "--tools", "", "--strict-mcp-config", "--mcp-config", '{"mcpServers":{}}',
+    "--setting-sources", "", "--settings", '{"disableAllHooks":true}',
+]
 DISCOVERY_PORT = int(os.environ.get("AGENT_DISCOVERY_PORT", "8789"))
 DISCOVERY_PROBE = b"TV_AGENT_DISCOVER"
 NOTIFY_PORT = int(os.environ.get("AGENT_NOTIFY_PORT", "8790"))
@@ -329,38 +335,6 @@ def try_tv_command(text):
     return None
 
 
-def try_smarthome_command(text):
-    cleaned = text.strip().lower()
-    keywords = [
-        "đèn", "quạt", "máy lạnh", "điều hòa", "rèm",
-        "đi ngủ", "xem phim", "tiếp khách",
-        "tắt hết", "bật hết", "trạng thái nhà", "ngôi nhà"
-    ]
-    if not any(k in cleaned for k in keywords):
-        return None
-
-    hub_url = os.environ.get("AGENT_HUB_URL", "http://127.0.0.1:8888")
-    target = hub_url.rstrip("/") + "/api/hub/agent/chat"
-    req_body = json.dumps({"text": text}).encode("utf-8")
-    req = urllib.request.Request(
-        target,
-        data=req_body,
-        headers={"Content-Type": "application/json"}
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=3.0) as resp:
-            if resp.status == 200:
-                data = json.loads(resp.read().decode("utf-8"))
-                if data.get("ok") and "reply" in data:
-                    reply_obj = data["reply"]
-                    content = reply_obj.get("content", "")
-                    if content and not content.startswith("Tôi đã ghi nhận:"):
-                        return content
-    except Exception:
-        pass
-    return None
-
-
 def run_cli(text, session, send_piece, user_pref=None):
     text = normalize_voice_input(text)
     handled_tv = try_tv_command(text)
@@ -368,14 +342,28 @@ def run_cli(text, session, send_piece, user_pref=None):
         send_piece(handled_tv)
         return
 
-    handled_smarthome = try_smarthome_command(text)
-    if handled_smarthome:
-        send_piece(handled_smarthome)
+
+    tool_reply = home_tools.handle(text)
+    if tool_reply is not None:
+        send_piece(tool_reply)
         return
 
     if media_bridge:
+        series_match = re.search(
+            r"^(tải|download|down|nạp|thêm)\s+(series|bộ|phim\s+bộ)\s+(.*?)$",
+            text.strip(),
+            re.I,
+        )
+        if series_match:
+            series_name = series_match.group(3).strip()
+            if series_name:
+                send_piece(media_bridge.add_to_sonarr(series_name))
+                return
+
         download_match = re.search(
-            r"^(tải|download|down)\s+(phim\s+)?(.*?)$", text.strip(), re.I
+            r"^(tải|download|down|nạp|thêm)\s+(phim|phim\s+lẻ)?\s*(.*?)$",
+            text.strip(),
+            re.I,
         )
         if download_match:
             movie_name = download_match.group(3).strip()
@@ -649,26 +637,6 @@ class Handler(BaseHTTPRequestHandler):
         response = {"status": "ok", "message": "Xác thực và lưu camera thành công"}
         self.reply(200, JSON_TYPE, json.dumps(response))
 
-    def handle_config_smarthome(self):
-        body = self.read_json_payload()
-        if body is None:
-            return
-        server_url = str(body.get("server_url", "")).strip()
-        token = str(body.get("token", "")).strip()
-        auto_wake = bool(body.get("auto_wake", True))
-        auto_sleep = bool(body.get("auto_sleep", True))
-        greeting = bool(body.get("greeting", True))
-        if not server_url:
-            msg = "URL máy chủ không được để trống"
-            return self.reply(400, JSON_TYPE, json.dumps({"status": "error", "message": msg}))
-        success, message = verify_smarthome_connection(server_url, token)
-        if not success:
-            response = {"status": "error", "message": message}
-            return self.reply(400, JSON_TYPE, json.dumps(response))
-        save_smarthome_configuration(server_url, token, auto_wake, auto_sleep, greeting)
-        response = {"status": "ok", "message": "Xác thực Home Assistant thành công"}
-        self.reply(200, JSON_TYPE, json.dumps(response))
-
     def handle_arbitration(self):
         body = self.read_json_payload()
         if body is None:
@@ -688,9 +656,6 @@ class Handler(BaseHTTPRequestHandler):
 
         if self.path == "/api/config/camera":
             return self.handle_config_camera()
-
-        if self.path == "/api/config/smarthome":
-            return self.handle_config_smarthome()
 
         if self.path == "/api/arbitration/decide":
             return self.handle_arbitration()
@@ -731,26 +696,6 @@ def verify_camera_connection(host, port):
         sock.close()
 
 
-def verify_smarthome_connection(server_url, token):
-    headers = {"Content-Type": "application/json"}
-    if token:
-        headers["Authorization"] = f"Bearer {token}"
-    candidates = ["/api/", "/health", "/api/devices", "/api/hub/overview"]
-    for path in candidates:
-        target = server_url.rstrip("/") + path
-        request = urllib.request.Request(target, headers=headers)
-        try:
-            with urllib.request.urlopen(request, timeout=3.0) as response:
-                if response.status == 200:
-                    return True, "Kết nối Smarthome / Home Assistant thành công"
-        except urllib.error.HTTPError as error:
-            if error.code == 401:
-                return False, "Token không chính xác (401)"
-        except Exception:
-            pass
-    return False, f"Không thể kết nối tới {server_url}"
-
-
 def save_camera_configuration(stream_url):
     base_dir = os.path.dirname(os.path.abspath(__file__))
     config_path = os.path.join(base_dir, "..", "camera", "camera_config.json")
@@ -767,33 +712,6 @@ def save_camera_configuration(stream_url):
             json.dump(config, f, indent=2)
     except Exception as error:
         sys.stderr.write("failed to save camera config: %s\n" % error)
-
-
-def save_smarthome_configuration(server_url, token, auto_wake, auto_sleep, greeting):
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    config_path = os.path.join(base_dir, "..", "smarthome", "smarthome_config.json")
-    config = {}
-    if os.path.exists(config_path):
-        try:
-            with open(config_path, "r", encoding="utf-8") as f:
-                config = json.load(f)
-        except Exception:
-            config = {}
-    config["home_assistant"] = {"url": server_url, "token": token}
-    rules = config.get("rules", {})
-    rules["on_sofa_enter"] = {
-        "tv_action": "wake" if auto_wake else "none",
-        "greeting": "Xin chào! Chúc bạn xem phim vui vẻ." if greeting else ""
-    }
-    rules["on_sofa_leave"] = {
-        "tv_action": "sleep" if auto_sleep else "none"
-    }
-    config["rules"] = rules
-    try:
-        with open(config_path, "w", encoding="utf-8") as f:
-            json.dump(config, f, indent=2)
-    except Exception as error:
-        sys.stderr.write("failed to save smarthome config: %s\n" % error)
 
 
 def start_discovery_responder():

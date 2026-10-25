@@ -223,7 +223,7 @@ def render_media_results(query):
         key = (item["title"].lower(), str(item.get("year", "")))
         if key not in seen:
             seen.add(key)
-            status = "downloading" if item.get("inLibrary") else "missing"
+            status = "downloading" if item.get("inLibrary") or item.get("raw", {}).get("id", 0) > 0 else "missing"
             items.append({
                 "title": item["title"],
                 "year": item.get("year", ""),
@@ -288,73 +288,77 @@ def render_media_results(query):
     return f'<div class="grid">{"".join(cards_html)}</div>'
 
 
-def add_to_radarr(query):
-    api_key = read_api_key(RADARR_CONF)
-    if not api_key:
-        return "Không tìm thấy cấu hình Radarr trên máy chủ."
-    movies = radarr_lookup(query)
-    if not movies:
-        return f"Không tìm thấy phim '{query}' trên cơ sở dữ liệu."
-    chosen = movies[0]
-    if chosen.get("inLibrary"):
-        return f"Phim '{chosen['title']}' đã có sẵn trong danh sách tải của Radarr."
-    payload = {
-        **chosen["raw"],
-        "qualityProfileId": 1,
-        "rootFolderPath": "/movies",
-        "monitored": True,
-        "addOptions": {"searchForMovie": True},
-    }
-    url = f"http://127.0.0.1:7878/api/v3/movie?apiKey={api_key}"
+def arr_request(service, path, body=None):
+    config = RADARR_CONF if service == 'RADARR' else SONARR_CONF
+    key = os.environ.get(service + '_API_KEY') or read_api_key(config)
+    if not key:
+        raise ValueError('Chưa có API key ' + service)
+    default = 'http://127.0.0.1:7878' if service == 'RADARR' else 'http://127.0.0.1:8989'
+    base = os.environ.get(service + '_URL', default)
     request = urllib.request.Request(
-        url,
-        data=json.dumps(payload).encode("utf-8"),
-        headers={"Content-Type": "application/json"},
-    )
+        base.rstrip('/') + '/api/v3/' + path,
+        data=None if body is None else json.dumps(body).encode(),
+        headers={'X-Api-Key': key, 'Content-Type': 'application/json'})
+    with urllib.request.urlopen(request, timeout=10) as response:
+        return json.load(response)
+
+
+def select_arr_item(items, query, identity):
+    explicit = re.fullmatch(r'(?:tmdb|tvdb):(\d+)', query.strip(), re.I)
+    if explicit:
+        return next((item for item in items if item.get(identity) == int(explicit.group(1))), None)
+    match = re.fullmatch(r'(.*?)\s*\(?((?:19|20)\d{2})\)?', query.strip())
+    name, year = (match.group(1).strip(), int(match.group(2))) if match else (query.strip(), None)
+    exact = [item for item in items if
+             name.casefold() in (item.get('title', '').casefold(),
+                                 item.get('originalTitle', '').casefold())
+             and (year is None or item.get('year') == year)]
+    return exact[0] if len(exact) == 1 else None
+
+
+def add_arr(query, service):
+    kind, identity = ('movie', 'tmdbId') if service == 'RADARR' else ('series', 'tvdbId')
     try:
-        with urllib.request.urlopen(request, timeout=5) as response:
-            if response.status in (200, 201):
-                return (
-                    f"Đã nạp '{chosen['title']} ({chosen['year']})' vào Radarr. "
-                    "Hệ thống đang tự động tìm nguồn và tải về NAS."
-                )
-    except Exception as error:
-        return f"Lỗi khi nạp vào Radarr: {error}"
-    return "Không thể nạp phim vào lúc này."
+        query = re.sub(r'\s+(?:vào|vao|to)\s+(?:radarr|sonarr)\s*$', '', query, flags=re.I)
+        items = arr_request(service, kind + '/lookup?term=' + urllib.parse.quote(query))
+        chosen = select_arr_item(items, query, identity)
+        if chosen is None:
+            options = '; '.join(f'{i.get("title")} ({i.get("year")}), '
+                                f'{"tmdb" if kind == "movie" else "tvdb"}:{i.get(identity)}'
+                                for i in items[:5])
+            return 'Chưa xác định duy nhất phim. Hãy nêu tên và năm hoặc mã ID: ' + options
+        existing = arr_request(service, kind)
+        if any(item.get(identity) == chosen[identity] for item in existing):
+            return f'{chosen["title"]} đã có trong {service}; không thêm trùng.'
+        roots = arr_request(service, 'rootfolder')
+        profiles = arr_request(service, 'qualityprofile')
+        root = os.environ.get(service + '_ROOT_FOLDER')
+        profile = os.environ.get(service + '_QUALITY_PROFILE_ID')
+        if not root and len(roots) == 1:
+            root = roots[0]['path']
+        if not profile and len(profiles) == 1:
+            profile = profiles[0]['id']
+        if root not in [item['path'] for item in roots] or not profile or \
+                int(profile) not in [item['id'] for item in profiles]:
+            return 'Cần cấu hình root folder và quality profile ' + service + ' trước khi thêm.'
+        payload = dict(chosen, rootFolderPath=root, qualityProfileId=int(profile), monitored=True)
+        if kind == 'series':
+            payload['seasonFolder'] = True
+        payload['addOptions'] = ({'searchForMovie': True} if kind == 'movie' else
+                                 {'searchForMissingEpisodes': True})
+        added = arr_request(service, kind, payload)
+        verified = arr_request(service, kind + '/' + str(added['id']))
+        if verified.get(identity) != chosen[identity]:
+            return 'API nhận lệnh nhưng chưa xác minh được bản ghi vừa thêm.'
+        return (f'Đã thêm {verified["title"]} ({verified.get("year")}) vào {service} '
+                'và yêu cầu tìm nguồn. Chưa xác nhận đã tải được phim.')
+    except (OSError, ValueError, KeyError, TypeError):
+        return 'Không thêm được phim. Kiểm tra kết nối và cấu hình ' + service + '.'
+
+
+def add_to_radarr(query):
+    return add_arr(query, 'RADARR')
 
 
 def add_to_sonarr(query):
-    api_key = read_api_key(SONARR_CONF)
-    if not api_key:
-        return "Không tìm thấy cấu hình Sonarr trên máy chủ."
-    series = sonarr_lookup(query)
-    if not series:
-        return f"Không tìm thấy series '{query}' trên cơ sở dữ liệu."
-    chosen = series[0]
-    if chosen.get("inLibrary"):
-        return f"Series '{chosen['title']}' đã có sẵn trong Sonarr."
-    payload = {
-        **chosen["raw"],
-        "qualityProfileId": 1,
-        "rootFolderPath": "/tv",
-        "monitored": True,
-        "addOptions": {
-            "searchForMissingEpisodes": True,
-        },
-    }
-    url = f"http://127.0.0.1:8989/api/v3/series?apiKey={api_key}"
-    request = urllib.request.Request(
-        url,
-        data=json.dumps(payload).encode("utf-8"),
-        headers={"Content-Type": "application/json"},
-    )
-    try:
-        with urllib.request.urlopen(request, timeout=5) as response:
-            if response.status in (200, 201):
-                return (
-                    f"Đã nạp '{chosen['title']} ({chosen['year']})' vào Sonarr. "
-                    "Hệ thống đang tự động tìm kiếm các tập phim."
-                )
-    except Exception as error:
-        return f"Lỗi khi nạp vào Sonarr: {error}"
-    return "Không thể nạp series vào lúc này."
+    return add_arr(query, 'SONARR')

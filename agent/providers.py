@@ -47,7 +47,12 @@ class CliProvider(BaseProvider):
         self.workdir = config.get("workdir", os.path.expanduser("~"))
 
     def stream(self, prompt, session, style_prompt, timeout_seconds, send_piece):
-        cmd = [self.command] + list(self.flags)
+        if os.path.basename(self.command) != "claude":
+            raise RuntimeError("CLI provider chưa hỗ trợ giới hạn công cụ an toàn")
+        cmd = [self.command] + list(self.flags) + [
+            "--tools", "", "--strict-mcp-config", "--mcp-config", '{"mcpServers":{}}',
+            "--setting-sources", "", "--settings", '{"disableAllHooks":true}',
+        ]
         if self.command in ("agy", "antigravity"):
             if style_prompt:
                 cmd.extend(["--append-system-prompt", style_prompt])

@@ -134,7 +134,6 @@ func (server *CameraServer) handleIndex(writer http.ResponseWriter, request *htt
 	server.writeJSON(writer, map[string]interface{}{
 		"service": "camera-service",
 		"status":  "online",
-		"hub_url": "http://localhost:8888",
 	}, http.StatusOK)
 }
 

@@ -1,21 +1,18 @@
 # Services
 
-Backend services, AI servers, and background workers for the TV ecosystem:
+Only two optional TV Launcher backends remain:
 
-| Service      | Description                           | Tech Stack          | Status | Docs        |
-|--------------|---------------------------------------|---------------------|--------|-------------|
-| `agent/`     | Voice assistant & media hub           | Python 3 (HTTP/SSE) | Active | `README.md` |
-| `camera/`    | AI camera & zone presence             | Go / Python / Tapo  | Active | `AGENTS.md` |
-| `smarthome/` | Device coordinator & rules            | Go / Python / HA    | Active | `AGENTS.md` |
-| `hub/`       | Legacy hub, replaced by `gateway/`    | Go / Web / Embedded | Legacy | |
-| `gateway/`   | TV pairing & generic device API over Home Assistant | Go | Active | `README.md` |
+| Service | Responsibility | Default port |
+|---|---|---|
+| `agent/` | AI conversations, media queries and TV tools | 8788 |
+| `camera/` | Camera streams, vision, PTZ, privacy and speaker tools | 8792 |
 
-## Architecture
+Launcher Smart Home connects directly to Home Assistant. Home Assistant connects to
+DQHome through Remote Home-Assistant using a DQHome token. Neither connection needs
+a TV Launcher Hub, Gateway or Smart Home backend.
 
-- **Independent deployment:** Each service runs on a home server (NAS, Mini PC, Pi) or host.
-- **Event-driven presence:** `camera/` publishes presence events (e.g. sofa enter/leave) to
-  trigger automation rules in `smarthome/`.
-- **Agent orchestration:** `agent/` uses CLI tools in `services/*/` to query status and control
-  appliances upon voice commands.
-- **Lightweight communication:** TV connects via HTTP/SSE or WebSocket with token-based
-  authentication.
+The former `gateway/`, `hub/` and `smarthome/` services were removed on 2026-10-25.
+Agent no longer forwards smart home requests to Hub. A direct Home Assistant tool
+for Agent must be configured separately; the launcher's HA token stays on the TV.
+
+See [direct HA setup](../docs/home-assistant-direct.md) and each service's README.
