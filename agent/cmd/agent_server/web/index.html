@@ -3,13 +3,13 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Home Sentinel - AI Chat & Control Hub</title>
+  <title>Home Sentinel - Management Hub & AI Chatbot</title>
   <style>
     :root {
-      --bg: #0b0f14;
-      --sidebar-bg: #11161d;
-      --card-bg: #161c24;
-      --border: #232d38;
+      --bg: #090d12;
+      --sidebar-bg: #0f151e;
+      --card-bg: #151d28;
+      --border: #202b37;
       --border-focus: #388bfd;
       --text: #c9d1d9;
       --text-muted: #8b949e;
@@ -17,9 +17,9 @@
       --primary: #238636;
       --primary-hover: #2ea043;
       --accent: #58a6ff;
-      --tag-bg: #1c2430;
-      --user-msg: #1a2332;
-      --agent-msg: #131a22;
+      --tag-bg: #1b2432;
+      --user-msg: #1a2434;
+      --agent-msg: #121922;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -31,23 +31,21 @@
       overflow: hidden;
     }
 
-    /* Column 1: Config & Service Status (Sidebar) */
+    /* Left Sidebar: 3 Menu Tabs (Agent, Camera, Setting) */
     .sidebar {
-      width: 340px;
-      min-width: 320px;
+      width: 360px;
+      min-width: 340px;
       background: var(--sidebar-bg);
       border-right: 1px solid var(--border);
       display: flex;
       flex-direction: column;
-      overflow-y: auto;
-      padding: 16px;
-      gap: 16px;
+      height: 100vh;
     }
     .brand {
+      padding: 16px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding-bottom: 12px;
       border-bottom: 1px solid var(--border);
     }
     .brand h2 {
@@ -66,18 +64,66 @@
       border-radius: 12px;
       font-weight: 600;
     }
-    .section-title {
-      font-size: 12px;
+
+    /* Navigation Tabs */
+    .sidebar-tabs {
+      display: flex;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      padding: 4px;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 10px 4px;
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 13px;
       font-weight: 600;
+      cursor: pointer;
+      border-radius: 6px;
+      transition: all 0.15s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .tab-btn:hover {
+      color: var(--text-bright);
+      background: rgba(255,255,255,0.04);
+    }
+    .tab-btn.active {
+      color: var(--accent);
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+    }
+
+    .tab-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .tab-pane {
+      display: none;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .tab-pane.active {
+      display: flex;
+    }
+
+    .section-title {
+      font-size: 11px;
+      font-weight: 700;
       color: var(--text-muted);
       text-transform: uppercase;
       letter-spacing: 0.5px;
-      margin-bottom: 8px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+      margin-bottom: 6px;
     }
-    .setting-group {
+    .card {
       background: var(--card-bg);
       border: 1px solid var(--border);
       border-radius: 8px;
@@ -85,27 +131,6 @@
       display: flex;
       flex-direction: column;
       gap: 10px;
-    }
-    .setting-item {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-    .setting-item label {
-      font-size: 12px;
-      color: var(--text-muted);
-    }
-    .setting-item select, .setting-item input {
-      background: var(--bg);
-      border: 1px solid var(--border);
-      color: var(--text-bright);
-      padding: 8px 10px;
-      border-radius: 6px;
-      font-size: 13px;
-      outline: none;
-    }
-    .setting-item select:focus, .setting-item input:focus {
-      border-color: var(--border-focus);
     }
     .status-row {
       display: flex;
@@ -123,21 +148,65 @@
     }
     .dot.green { background: #3fb950; box-shadow: 0 0 6px #3fb950; }
     .dot.blue { background: #58a6ff; }
-    .camera-help {
+    .dot.orange { background: #d29922; }
+
+    .control-row {
+      display: flex;
+      gap: 8px;
+    }
+    .control-btn {
+      flex: 1;
+      padding: 8px 10px;
+      background: var(--tag-bg);
+      border: 1px solid var(--border);
+      color: var(--text-bright);
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.15s ease;
+    }
+    .control-btn:hover {
+      border-color: var(--accent);
+      background: #253344;
+    }
+
+    .input-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .input-item label {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .input-item input, .input-item select {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text-bright);
+      padding: 8px 10px;
+      border-radius: 6px;
+      font-size: 13px;
+      outline: none;
+    }
+    .input-item input:focus, .input-item select:focus {
+      border-color: var(--border-focus);
+    }
+    .help-box {
       font-size: 12px;
       color: var(--text-muted);
       line-height: 1.4;
       background: var(--bg);
-      padding: 8px;
+      padding: 10px;
       border-radius: 6px;
       border: 1px dashed var(--border);
     }
-    .camera-help code {
+    .help-box code {
       color: var(--accent);
       font-family: monospace;
     }
 
-    /* Column 2: Chat Bot Area */
+    /* Right Column: Chat Bot Area */
     .chat-container {
       flex: 1;
       display: flex;
@@ -157,10 +226,13 @@
       font-size: 15px;
       color: var(--text-bright);
       font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
     .chips-bar {
       padding: 10px 20px;
-      background: rgba(22, 28, 36, 0.6);
+      background: rgba(21, 29, 40, 0.4);
       border-bottom: 1px solid var(--border);
       display: flex;
       gap: 8px;
@@ -179,7 +251,7 @@
       transition: all 0.15s ease;
     }
     .chip:hover {
-      background: #2a3442;
+      background: #28374a;
       border-color: var(--accent);
     }
     .chat-messages {
@@ -202,7 +274,7 @@
     .message.user {
       align-self: flex-end;
       background: var(--user-msg);
-      border: 1px solid #2d3c52;
+      border: 1px solid #283952;
       color: var(--text-bright);
       border-bottom-right-radius: 2px;
     }
@@ -269,88 +341,143 @@
 </head>
 <body>
 
-  <!-- CỘT 1: CẤU HÌNH & TRẠNG THÁI SERVICES -->
+  <!-- CỘT 1: SIDEBAR QUẢN LÝ (AGENT, CAMERA, SETTING) -->
   <aside class="sidebar">
     <div class="brand">
-      <h2>🤖 Home Sentinel</h2>
-      <span class="badge-live">ONLINE</span>
+      <h2>🛡️ Home Sentinel</h2>
+      <span class="badge-live">GO NATIVE</span>
     </div>
 
-    <!-- Trạng thái kết nối -->
-    <div>
-      <div class="section-title">Trạng thái hệ thống</div>
-      <div class="setting-group">
-        <div class="status-row">
-          <span><span class="dot green"></span>Agent Core (Go)</span>
-          <span style="color: #3fb950; font-size: 12px;">Port 8788</span>
+    <!-- 3 Tabs chuyển đổi mục -->
+    <div class="sidebar-tabs">
+      <button class="tab-btn active" onclick="switchTab('agent')">🤖 Agent</button>
+      <button class="tab-btn" onclick="switchTab('camera')">📹 Camera</button>
+      <button class="tab-btn" onclick="switchTab('setting')">⚙️ Setting</button>
+    </div>
+
+    <div class="tab-content">
+      <!-- MỤC 1: AGENT SERVICE -->
+      <div id="tab-agent" class="tab-pane active">
+        <div class="section-title">Agent Daemon Status</div>
+        <div class="card">
+          <div class="status-row">
+            <span><span class="dot green"></span>Agent Engine</span>
+            <span style="color: #3fb950; font-size: 12px;">Port 8788 (Active)</span>
+          </div>
+          <div class="status-row">
+            <span><span class="dot green"></span>Audio Arbitration</span>
+            <span style="color: var(--accent); font-size: 12px;">TV vs Camera Ready</span>
+          </div>
+          <div class="status-row">
+            <span><span class="dot blue"></span>UDP Broadcast</span>
+            <span style="color: var(--accent); font-size: 12px;">Port 8790</span>
+          </div>
         </div>
-        <div class="status-row">
-          <span><span class="dot green"></span>Camera Center</span>
-          <span style="color: #3fb950; font-size: 12px;">Port 8792</span>
+
+        <div class="section-title">Test Quick Actions</div>
+        <div class="card">
+          <div class="control-row">
+            <button class="control-btn" onclick="quickSend('trạng thái nhà')">Kiểm tra nhà</button>
+            <button class="control-btn" onclick="quickSend('bật đèn phòng khách')">Bật đèn PK</button>
+          </div>
+          <div class="control-row">
+            <button class="control-btn" onclick="quickSend('tìm phim avatar')">Tìm phim Plex</button>
+            <button class="control-btn" onclick="simulateSofaEnter()">Giả lập Sofa</button>
+          </div>
         </div>
-        <div class="status-row">
-          <span><span class="dot blue"></span>Home Assistant</span>
-          <span style="color: var(--accent); font-size: 12px;">Connected</span>
-        </div>
-        <div class="status-row">
-          <span><span class="dot blue"></span>Target TV (UDP)</span>
-          <span style="color: var(--accent); font-size: 12px;">Port 8790</span>
+
+        <div class="help-box">
+          🤖 <b>AI Agent Core:</b> Kết nối trực tiếp vào Local LLM Qwen2.5 trên NAS (port 9931), xử lý lệnh Home Assistant và điều phối mic/loa với Camera.
         </div>
       </div>
-    </div>
 
-    <!-- Cấu hình Model AI -->
-    <div>
-      <div class="section-title">Mô hình AI & LLM Engine</div>
-      <div class="setting-group">
-        <div class="setting-item">
-          <label>Nhà cung cấp LLM:</label>
-          <select id="modelProvider" onchange="onModelChange()">
-            <option value="claude">Claude CLI (Anthropic Claude 3.5 Sonnet)</option>
-            <option value="gemini">Google Gemini 2.5 Flash</option>
-            <option value="ollama">Ollama / Local LLM (NAS Engine)</option>
-            <option value="builtin">Built-in Direct Rule Engine (Siêu nhẹ)</option>
-          </select>
+      <!-- MỤC 2: CAMERA SERVICE -->
+      <div id="tab-camera" class="tab-pane">
+        <div class="section-title">Camera Center & Sentinel</div>
+        <div class="card">
+          <div class="status-row">
+            <span><span class="dot green"></span>Command Center</span>
+            <span style="color: #3fb950; font-size: 12px;">Port 8792</span>
+          </div>
+          <div class="status-row">
+            <span><span class="dot blue"></span>Tapo IP</span>
+            <span style="color: var(--accent); font-size: 12px;" id="cameraIpLabel">192.168.1.6</span>
+          </div>
+          <div class="status-row">
+            <span><span class="dot orange"></span>Vision Worker</span>
+            <span style="color: #d29922; font-size: 12px;">Python YOLOv8</span>
+          </div>
         </div>
-        <div class="setting-item">
-          <label>Nhiệt độ (Temperature):</label>
-          <input type="range" min="0" max="1" step="0.1" value="0.7" style="padding:0">
+
+        <div class="section-title">Điều khiển PTZ Camera Tapo</div>
+        <div class="card">
+          <div class="control-row">
+            <button class="control-btn" onclick="callCameraPTZ('up')">⬆️ Lên</button>
+          </div>
+          <div class="control-row">
+            <button class="control-btn" onclick="callCameraPTZ('left')">⬅️ Trái</button>
+            <button class="control-btn" onclick="callCameraPTZ('right')">➡️ Phải</button>
+          </div>
+          <div class="control-row">
+            <button class="control-btn" onclick="callCameraPTZ('down')">⬇️ Xuống</button>
+          </div>
+        </div>
+
+        <div class="section-title">Chế độ riêng tư (Privacy Mode)</div>
+        <div class="card">
+          <div class="control-row">
+            <button class="control-btn" onclick="setCameraPrivacy(true)">🔒 Bật Riêng Tư</button>
+            <button class="control-btn" onclick="setCameraPrivacy(false)">👁️ Tắt Riêng Tư</button>
+          </div>
+        </div>
+
+        <div class="help-box">
+          📹 <b>Luồng tương tác:</b> Camera Vision phát hiện có người ngồi sofa sẽ gọi webhook <code>POST /event</code> về Sentinel Server để tự động bật TV hoặc gửi lời chào.
         </div>
       </div>
-    </div>
 
-    <!-- Hướng dẫn & Kết nối Camera -->
-    <div>
-      <div class="section-title">Tương tác Camera Tapo</div>
-      <div class="setting-group">
-        <div class="setting-item">
-          <label>Endpoint nhận tương tác:</label>
-          <input type="text" readonly value="http://192.168.1.37:8788/event">
+      <!-- MỤC 3: SETTING -->
+      <div id="tab-setting" class="tab-pane">
+        <div class="section-title">Cấu hình Mô hình AI (LLM)</div>
+        <div class="card">
+          <div class="input-item">
+            <label>Model Engine:</label>
+            <select id="modelSelect" onchange="onModelChange()">
+              <option value="qwen2.5-local">Qwen2.5-1.5B (Local LLM NAS :9931)</option>
+              <option value="claude-cli">Claude CLI (Claude 3.5 Sonnet)</option>
+              <option value="gemini-api">Google Gemini 2.5 Flash</option>
+            </select>
+          </div>
+          <div class="input-item">
+            <label>Nhiệt độ (Temperature):</label>
+            <input type="range" min="0" max="1" step="0.1" value="0.7">
+          </div>
         </div>
-        <div class="camera-help">
-          💡 <b>Cơ chế hoạt động:</b><br>
-          Camera phát hiện người ngồi sofa (YOLO) ➔ gửi webhook <code>POST /event</code> ➔ Agent cập nhật trạng thái và bắn thông báo UDP chào mừng tới Android TV.
-        </div>
-      </div>
-    </div>
 
-    <!-- Xác thực Bearer Token -->
-    <div>
-      <div class="section-title">Xác thực API</div>
-      <div class="setting-group">
-        <div class="setting-item">
-          <label>Bearer Token (nếu bật AGENT_TOKEN):</label>
-          <input type="password" id="authToken" placeholder="Để trống nếu không đặt token">
+        <div class="section-title">Cấu hình Kết nối & Mạng</div>
+        <div class="card">
+          <div class="input-item">
+            <label>Home Assistant URL:</label>
+            <input type="text" id="haUrlInput" value="http://192.168.1.37:8123">
+          </div>
+          <div class="input-item">
+            <label>Target TV IP (Android TV):</label>
+            <input type="text" id="tvIpInput" value="192.168.1.8">
+          </div>
+          <div class="input-item">
+            <label>Bearer Token (Xác thực):</label>
+            <input type="password" id="tokenInput" placeholder="Để trống nếu không đặt">
+          </div>
         </div>
       </div>
     </div>
   </aside>
 
-  <!-- CỘT 2: GIAO DIỆN CHAT BOT -->
+  <!-- CỘT 2: KHUNG CHAT BOT CHÍNH -->
   <main class="chat-container">
     <div class="chat-header">
-      <h3>Trợ lý ảo Home Sentinel (Nhà thông minh & TV)</h3>
-      <span id="typingStatus" style="font-size: 12px; color: var(--text-muted);">Sẵn sàng</span>
+      <h3>💬 Home Sentinel Assistant</h3>
+      <span id="chatStatus" style="font-size: 12px; color: var(--text-muted);">Sẵn sàng</span>
     </div>
 
     <div class="chips-bar">
@@ -364,15 +491,15 @@
 
     <div class="chat-messages" id="chatMessages">
       <div class="message agent">
-        <div class="agent-name">Trợ lý Home Sentinel</div>
-        Xin chào! Tôi là Trợ lý AI Home Sentinel. Bạn có thể ra lệnh điều khiển thiết bị nhà thông minh (Home Assistant), tìm kiếm phim (Plex/Jellyfin) hoặc gửi thông báo tới TV.
+        <div class="agent-name">Home Sentinel</div>
+        Xin chào! Tôi là Trợ lý Home Sentinel. Tôi có thể giúp bạn điều khiển thiết bị nhà thông minh, quản lý camera an ninh và tìm phim xem trên TV.
       </div>
     </div>
 
     <div class="input-area">
       <div class="input-box">
         <textarea id="promptInput" placeholder="Nhập câu lệnh hoặc câu hỏi (Enter để gửi, Shift+Enter xuống dòng)..."></textarea>
-        <button class="btn-send" id="btnSend" onclick="sendChatMessage()">Gửi</button>
+        <button class="btn-send" id="btnSend" onclick="sendMessage()">Gửi</button>
       </div>
     </div>
   </main>
@@ -381,77 +508,122 @@
     const promptInput = document.getElementById('promptInput');
     const btnSend = document.getElementById('btnSend');
     const chatMessages = document.getElementById('chatMessages');
-    const typingStatus = document.getElementById('typingStatus');
-    const authToken = document.getElementById('authToken');
+    const chatStatus = document.getElementById('chatStatus');
+    const tokenInput = document.getElementById('tokenInput');
 
-    if (location.hash) {
-      authToken.value = location.hash.replace('#', '');
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
+
+      event.currentTarget.classList.add('active');
+      document.getElementById('tab-' + tabName).classList.add('active');
     }
 
     promptInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
-        sendChatMessage();
+        sendMessage();
       }
     });
 
     function quickSend(cmd) {
       promptInput.value = cmd;
-      sendChatMessage();
+      sendMessage();
     }
 
     function onModelChange() {
-      const provider = document.getElementById('modelProvider').value;
-      appendMessage('agent', `Đã chuyển chế độ xử lý sang: ${provider.toUpperCase()}`);
+      const model = document.getElementById('modelSelect').value;
+      appendMessage('agent', `Đã chuyển cấu hình mô hình sang: ${model}`);
     }
 
-    async function sendChatMessage() {
+    async function callCameraPTZ(direction) {
+      appendMessage('user', `Xoay camera sang: ${direction.toUpperCase()}`);
+      try {
+        const res = await fetch('http://192.168.1.37:8792/api/camera/ptz', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ direction: direction, step: 10 })
+        });
+        appendMessage('agent', `Đã gửi lệnh xoay camera: ${direction}`);
+      } catch (e) {
+        appendMessage('agent', `Lỗi kết nối Camera Center: ${e.message}`);
+      }
+    }
+
+    async function setCameraPrivacy(enabled) {
+      const action = enabled ? 'bật riêng tư' : 'tắt riêng tư';
+      appendMessage('user', `Yêu cầu ${action} camera`);
+      try {
+        const res = await fetch('http://192.168.1.37:8792/api/camera/privacy', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ enabled: enabled })
+        });
+        appendMessage('agent', `Camera đã nhận lệnh ${action}`);
+      } catch (e) {
+        appendMessage('agent', `Lỗi kết nối Camera Center: ${e.message}`);
+      }
+    }
+
+    async function simulateSofaEnter() {
+      appendMessage('user', 'Giả lập sự kiện: Có người ngồi Sofa');
+      try {
+        await fetch('/event', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ zone_id: 'sofa', event_type: 'enter', timestamp: Math.floor(Date.now() / 1000) })
+        });
+        appendMessage('agent', 'Đã ghi nhận sự kiện Sofa Enter ➔ Gửi UDP alert tới Android TV!');
+      } catch (e) {
+        appendMessage('agent', `Lỗi gửi sự kiện: ${e.message}`);
+      }
+    }
+
+    async function sendMessage() {
       const text = promptInput.value.trim();
       if (!text) return;
 
       appendMessage('user', text);
       promptInput.value = '';
       btnSend.disabled = true;
-      typingStatus.textContent = 'Đang suy nghĩ...';
+      chatStatus.textContent = 'Đang suy nghĩ...';
 
-      const agentContentElem = appendMessage('agent', '…');
-      const token = authToken.value.trim();
+      const agentContent = appendMessage('agent', '…');
+      const token = tokenInput.value.trim();
 
       try {
         const headers = { 'Content-Type': 'application/json' };
-        if (token) {
-          headers['Authorization'] = 'Bearer ' + token;
-        }
+        if (token) headers['Authorization'] = 'Bearer ' + token;
 
         const response = await fetch('/ask', {
           method: 'POST',
           headers: headers,
           body: JSON.stringify({
             text: text,
-            session: 'web_session_' + Math.random().toString(36).substring(2, 7)
+            session: 'sentinel_web_' + Math.random().toString(36).substring(2, 7)
           })
         });
 
         if (!response.ok) {
           const err = await response.text();
-          agentContentElem.textContent = `Lỗi (${response.status}): ${err}`;
-          typingStatus.textContent = 'Lỗi';
+          agentContent.textContent = `Lỗi (${response.status}): ${err}`;
+          chatStatus.textContent = 'Lỗi';
           return;
         }
 
-        agentContentElem.textContent = '';
+        agentContent.textContent = '';
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
 
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
-          agentContentElem.textContent += decoder.decode(value, { stream: true });
+          agentContent.textContent += decoder.decode(value, { stream: true });
         }
-        typingStatus.textContent = 'Sẵn sàng';
+        chatStatus.textContent = 'Sẵn sàng';
       } catch (err) {
-        agentContentElem.textContent = 'Không kết nối được tới Agent: ' + err.message;
-        typingStatus.textContent = 'Mất kết nối';
+        agentContent.textContent = 'Không kết nối được tới Sentinel: ' + err.message;
+        chatStatus.textContent = 'Mất kết nối';
       } finally {
         btnSend.disabled = false;
         promptInput.focus();
@@ -459,23 +631,21 @@
     }
 
     function appendMessage(sender, text) {
-      const messageDiv = document.createElement('div');
-      messageDiv.className = `message ${sender}`;
-
+      const div = document.createElement('div');
+      div.className = `message ${sender}`;
       if (sender === 'agent') {
-        const nameHeader = document.createElement('div');
-        nameHeader.className = 'agent-name';
-        nameHeader.textContent = 'Trợ lý Home Sentinel';
-        messageDiv.appendChild(nameHeader);
+        const name = document.createElement('div');
+        name.className = 'agent-name';
+        name.textContent = 'Home Sentinel';
+        div.appendChild(name);
       }
+      const content = document.createElement('div');
+      content.textContent = text;
+      div.appendChild(content);
 
-      const contentDiv = document.createElement('div');
-      contentDiv.textContent = text;
-      messageDiv.appendChild(contentDiv);
-
-      chatMessages.appendChild(messageDiv);
+      chatMessages.appendChild(div);
       chatMessages.scrollTop = chatMessages.scrollHeight;
-      return contentDiv;
+      return content;
     }
   </script>
 </body>
