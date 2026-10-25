@@ -15,5 +15,5 @@
       "leave_debounce_seconds": 60
     }
   ],
-  "webhook_url": "http://127.0.0.1:8791/event"
+  "webhook_url": "http://127.0.0.1:8792/api/events"
 }

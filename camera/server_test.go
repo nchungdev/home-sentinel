@@ -201,3 +201,36 @@ func TestHandleCameraPrivacyValidation(t *testing.T) {
 		t.Fatalf("expected 400 for missing enabled, got %d", postRec.Code)
 	}
 }
+
+func TestHandleCameraEvent(t *testing.T) {
+	server := NewCameraServer(0, 1984)
+
+	invalidReq := httptest.NewRequest(http.MethodGet, "/api/events", nil)
+	invalidRec := httptest.NewRecorder()
+	server.handleCameraEvent(invalidRec, invalidReq)
+	if invalidRec.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("expected 405 for GET, got %d", invalidRec.Code)
+	}
+
+	badPayload := bytes.NewReader([]byte(`{"zone_id": ""}`))
+	badReq := httptest.NewRequest(http.MethodPost, "/api/events", badPayload)
+	badRec := httptest.NewRecorder()
+	server.handleCameraEvent(badRec, badReq)
+	if badRec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 for missing fields, got %d", badRec.Code)
+	}
+
+	validEvent := CameraEventRequest{
+		ZoneID:    "sofa",
+		EventType: "enter",
+		Headcount: 1,
+		Timestamp: 1729824000,
+	}
+	body, _ := json.Marshal(validEvent)
+	validReq := httptest.NewRequest(http.MethodPost, "/api/events", bytes.NewReader(body))
+	validRec := httptest.NewRecorder()
+	server.handleCameraEvent(validRec, validReq)
+	if validRec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", validRec.Code)
+	}
+}

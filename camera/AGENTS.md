@@ -1,17 +1,24 @@
 # camera service
 
-Python 3 vision worker for RTMP/RTSP streams, person presence, and zone detection.
+Go backend API service (`camera_center`) and Python 3 vision worker (`vision/`).
 
-| Module | Responsibility |
+## Architecture
+
+- **Go Camera Center (`cmd/camera_center`)**: REST server on port 8792. Handles PTZ, privacy,
+  Tapo speaker TTS, go2rtc stream registration, and receives interaction events (`POST /api/events`).
+  Forwards alerts and triggers directly to the TV over UDP port 8790.
+- **Python Vision Worker (`vision/`)**: Reads RTMP/RTSP streams, filters room motion,
+  detects person presence in zones (e.g. sofa), and dispatches webhook events to Camera Center.
+
+| Path | Responsibility |
 |---|---|
-| `stream` | Video capture over RTMP/RTSP with low-delay flags and reconnect loop |
-| `motion` | Background subtraction pre-filter to bypass inference when room is static |
-| `detector` | Object detection (YOLOv8 nano) filtered by class `person` |
-| `posture` | Classifies posture (standing, sitting, lying) via bounding box ratio |
-| `zone` | Point-in-polygon test for configured zones (e.g. sofa, desk, entry) |
-| `presence` | State machine with debounce timers, headcount, and event dispatch |
-| `snapshot` | Stores JPEG snapshots on presence events with optional privacy blur |
-| `dispatcher` | Event dispatching to local agent, smarthome gateway, or MQTT |
+| `cmd/camera_center` | Main Go daemon binary entrypoint |
+| `cmd/tapo_speaker` | CLI tool to speak directly through Tapo camera |
+| `server.go` | REST HTTP API routes and request handlers |
+| `sentinel.go` | Intrusion detection over go2rtc streams and TV UDP notifier |
+| `tapo_ptz.go` | Tapo KLAP / ONVIF protocol for PTZ movements |
+| `tts.go` | Vietnamese TTS engine and audio encoder |
+| `vision/` | Ultra-low CPU Python computer vision pipeline (YOLOv8 + motion pre-filter) |
 
 ## Invariants
 

@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -61,9 +62,14 @@ func NewCameraSentinel(go2rtcPort int) *CameraSentinel {
 		"192.168.1.13": true,
 	}
 
+	tvHost := os.Getenv("TARGET_TV_HOST")
+	if tvHost == "" {
+		tvHost = "192.168.1.8"
+	}
+
 	return &CameraSentinel{
 		go2rtcPort:          go2rtcPort,
-		targetTvHost:        "192.168.1.8",
+		targetTvHost:        tvHost,
 		targetTvPort:        8790,
 		alarmSpeakerEnabled: true,
 		alarmTvEnabled:      true,

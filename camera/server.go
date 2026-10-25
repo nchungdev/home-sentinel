@@ -80,6 +80,15 @@ type CameraPrivacyRequest struct {
 	CloudPassword string `json:"cloudPassword"`
 }
 
+type CameraEventRequest struct {
+	ZoneID       string   `json:"zone_id"`
+	EventType    string   `json:"event_type"`
+	Timestamp    int64    `json:"timestamp"`
+	Headcount    int      `json:"headcount,omitempty"`
+	Postures     []string `json:"postures,omitempty"`
+	SnapshotPath string   `json:"snapshot_path,omitempty"`
+}
+
 func NewCameraServer(webPort int, go2rtcPort int) *CameraServer {
 	defaultIP := os.Getenv("CAMERA_IP")
 	if defaultIP == "" {
@@ -116,6 +125,7 @@ func (server *CameraServer) Start() error {
 	mux.HandleFunc("/api/security/test-alarm", server.handleSecurityTestAlarm)
 	mux.HandleFunc("/api/monitor/realtime", server.handleMonitorRealtime)
 	mux.HandleFunc("/api/camera/stream.mjpeg", server.handleStreamMjpeg)
+	mux.HandleFunc("/api/events", server.handleCameraEvent)
 
 	server.httpServer = &http.Server{
 		Addr:    fmt.Sprintf(":%d", server.webPort),
@@ -624,6 +634,56 @@ func (server *CameraServer) handleSecurityTestAlarm(
 		map[string]interface{}{
 			"ok":      true,
 			"message": "Đã kích hoạt thử nghiệm báo động Sentinel (Loa + TV)",
+		},
+		200,
+	)
+}
+
+func (server *CameraServer) handleCameraEvent(
+	writer http.ResponseWriter,
+	request *http.Request,
+) {
+	if request.Method != http.MethodPost {
+		server.writeJSON(
+			writer,
+			map[string]interface{}{"ok": false, "error": "Chỉ hỗ trợ POST"},
+			http.StatusMethodNotAllowed,
+		)
+		return
+	}
+
+	var payload CameraEventRequest
+	if err := json.NewDecoder(request.Body).Decode(&payload); err != nil {
+		server.writeJSON(
+			writer,
+			map[string]interface{}{"ok": false, "error": "Dữ liệu JSON không hợp lệ"},
+			http.StatusBadRequest,
+		)
+		return
+	}
+
+	if payload.ZoneID == "" || payload.EventType == "" {
+		server.writeJSON(
+			writer,
+			map[string]interface{}{"ok": false, "error": "Thiếu zone_id hoặc event_type"},
+			http.StatusBadRequest,
+		)
+		return
+	}
+
+	if payload.EventType == "enter" && server.sentinel.alarmTvEnabled {
+		alertMsg := fmt.Sprintf("Phát hiện người tại khu vực %s", payload.ZoneID)
+		if payload.ZoneID == "sofa" {
+			alertMsg = "Chào mừng bạn! Đã phát hiện người ngồi sofa."
+		}
+		server.sentinel.sendTvUdpNotification("Tương tác Camera", alertMsg)
+	}
+
+	server.writeJSON(
+		writer,
+		map[string]interface{}{
+			"ok":      true,
+			"message": "Đã ghi nhận sự kiện tương tác camera thành công",
 		},
 		200,
 	)
