@@ -191,6 +191,15 @@ func (c *Config) buildDefaultRulesFromLegacy() {
 		StartHour: c.EveningArrival.StartHour, EndHour: c.EveningArrival.EndHour,
 		ActionType: "turn_on", TargetEntities: eveTargets, CameraPreset: c.EveningArrival.TargetPreset,
 	})
+
+	c.Rules = append(c.Rules, Rule{
+		ID: "turn_off_tv_idle", Name: "Tự động tắt TV khi vắng người", Icon: "tv_off",
+		Description: "Tự động đưa Android TV vào chế độ ngủ khi không có người sau thời gian chờ.",
+		Enabled: true,
+		Triggers: []TriggerItem{{Type: "idle_room", IdleMinutes: 5}},
+		Conditions: []ConditionItem{{Type: "tv_state", TVState: "on"}},
+		Actions: []ActionItem{{Type: "tv", Service: "turn_off", TargetTV: "192.168.1.8"}},
+	})
 }
 
 func (c *Config) SyncLegacy() {

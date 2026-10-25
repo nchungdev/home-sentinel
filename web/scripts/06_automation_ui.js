@@ -43,6 +43,12 @@
             description: 'Phát hiện có người vào khung giờ buổi tối sẽ tự động bật đèn đón và quay camera.',
             triggers: [{ type: 'person_detected', preset: '3' }], conditions: [{ type: 'time_range', start_hour: 18, end_hour: 6 }],
             actions: [{ type: 'entities', service: 'turn_on', target_entities: [] }, { type: 'camera', camera_preset: '3' }]
+          },
+          {
+            id: 'turn_off_tv_idle', name: 'Tự động tắt TV khi vắng người', icon: 'tv_off', enabled: true,
+            description: 'Tự động đưa Android TV vào chế độ ngủ (Sleep) khi phòng khách không có người sau thời gian chờ.',
+            triggers: [{ type: 'idle_room', idle_minutes: 5 }], conditions: [{ type: 'tv_state', tv_state: 'on' }],
+            actions: [{ type: 'tv', service: 'turn_off', target_tv: '192.168.1.8' }]
           }
         ];
       }
@@ -86,6 +92,8 @@
         if (typeSel) act.type = typeSel.value;
         const srvSel = document.getElementById(`act-srv-${id}-${idx}`);
         if (srvSel) act.service = srvSel.value;
+        const tvCmdSel = document.getElementById(`act-tv-cmd-${id}-${idx}`);
+        if (tvCmdSel) act.service = tvCmdSel.value;
         const tvInput = document.getElementById(`act-tv-${id}-${idx}`);
         if (tvInput) act.target_tv = tvInput.value.trim();
         const camSel = document.getElementById(`act-cam-${id}-${idx}`);
@@ -164,10 +172,7 @@
 
     function toggleRuleEnabled(ruleId, isChecked) {
       const rule = (currentAutoCfg.rules || []).find(r => r.id === ruleId);
-      if (rule) {
-        rule.enabled = isChecked;
-        saveAllAutomationRulesUI();
-      }
+      if (rule) { rule.enabled = isChecked; saveAllAutomationRulesUI(); }
     }
 
     function deleteAutomationRule(ruleId) {
@@ -175,18 +180,14 @@
       currentAutoCfg.rules = (currentAutoCfg.rules || []).filter(r => r.id !== ruleId);
       editingRulesSet.delete(ruleId);
       saveAllAutomationRulesUI();
-      const firstTab = currentAutoCfg.rules[0] ? currentAutoCfg.rules[0].id : '';
-      renderAllAutomationUI(firstTab);
+      renderAllAutomationUI(currentAutoCfg.rules[0] ? currentAutoCfg.rules[0].id : '');
     }
 
     function addNewAutomationRule() {
       const newId = 'rule-' + Date.now();
       const count = (currentAutoCfg.rules || []).length + 1;
       const newRule = {
-        id: newId,
-        name: `Kịch bản ${count}: Tự động hóa mới`,
-        icon: 'auto_awesome',
-        enabled: true,
+        id: newId, name: `Kịch bản ${count}: Tự động hóa mới`, icon: 'auto_awesome', enabled: true,
         description: 'Tùy chỉnh sự kiện kích hoạt, điều kiện lọc và chuỗi hành động thực thi.',
         triggers: [{ type: 'person_detected', preset: '3' }],
         conditions: [{ type: 'time_range', start_hour: 18, end_hour: 6 }],

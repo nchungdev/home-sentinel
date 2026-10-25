@@ -201,7 +201,7 @@
               <select id="act-type-${escapeHtml(rule.id)}-${idx}" onchange="onActionTypeChange('${escapeHtml(rule.id)}', ${idx}, this.value)">
                 <option value="entities" ${act.type === 'entities' ? 'selected' : ''}>💡 Thao tác thiết bị (Home Assistant)</option>
                 <option value="script" ${act.type === 'script' ? 'selected' : ''}>📜 Kích hoạt Script Home Assistant</option>
-                <option value="tv" ${act.type === 'tv' ? 'selected' : ''}>📺 Đánh thức Android TV (ADB)</option>
+                <option value="tv" ${act.type === 'tv' ? 'selected' : ''}>📺 Điều khiển Android TV (ADB)</option>
                 <option value="camera" ${act.type === 'camera' ? 'selected' : ''}>📷 Xoay Camera PTZ về Preset</option>
               </select>
             </div>
@@ -215,6 +215,13 @@
               </div>
             ` : ''}
             ${act.type === 'tv' ? `
+              <div class="form-group">
+                <label>Lệnh TV:</label>
+                <select id="act-tv-cmd-${escapeHtml(rule.id)}-${idx}">
+                  <option value="turn_off" ${act.service === 'turn_off' ? 'selected' : ''}>🔴 Tắt TV (Sleep / Tắt màn hình)</option>
+                  <option value="turn_on" ${act.service !== 'turn_off' ? 'selected' : ''}>🟢 Bật TV (Wake up / Bật màn hình)</option>
+                </select>
+              </div>
               <div class="form-group"><label>IP Android TV:</label><input type="text" id="act-tv-${escapeHtml(rule.id)}-${idx}" value="${escapeHtml(act.target_tv || '192.168.1.8')}"></div>
             ` : ''}
             ${act.type === 'camera' ? `

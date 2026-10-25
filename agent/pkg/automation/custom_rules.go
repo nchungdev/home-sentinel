@@ -52,7 +52,11 @@ func (m *Manager) executeRule(rule Rule, force bool) int {
 				)
 			case "tv":
 				if action.TargetTV != "" {
-					go func(host string) { _ = TurnOnTV(host) }(action.TargetTV)
+					if action.Service == "turn_off" {
+						go func(host string) { _ = TurnOffTV(host) }(action.TargetTV)
+					} else {
+						go func(host string) { _ = TurnOnTV(host) }(action.TargetTV)
+					}
 				}
 			case "camera":
 				if action.CameraPreset != "" {
@@ -68,8 +72,12 @@ func (m *Manager) executeRule(rule Rule, force bool) int {
 		}
 		return totalAffected
 	}
-	if rule.TargetTV != "" && rule.ActionType == "turn_on" {
-		go func(host string) { _ = TurnOnTV(host) }(rule.TargetTV)
+	if rule.TargetTV != "" {
+		if rule.ActionType == "turn_off" {
+			go func(host string) { _ = TurnOffTV(host) }(rule.TargetTV)
+		} else {
+			go func(host string) { _ = TurnOnTV(host) }(rule.TargetTV)
+		}
 	}
 	return m.executeEntitiesAction(
 		rule.Name,

@@ -84,3 +84,20 @@ func TurnOnTV(tvHost string) error {
 	_ = exec.Command(adbBin, "-s", target, "shell", "input keyevent 3").Run()
 	return nil
 }
+
+func TurnOffTV(tvHost string) error {
+	if tvHost == "" {
+		return nil
+	}
+	adbBin := "/home/chungnh/bin/adb"
+	if _, err := os.Stat(adbBin); err != nil {
+		adbBin = "adb"
+	}
+	target := tvHost
+	if !strings.Contains(target, ":") {
+		target = target + ":5555"
+	}
+	_ = exec.Command(adbBin, "connect", target).Run()
+	_ = exec.Command(adbBin, "-s", target, "shell", "input keyevent 223").Run()
+	return nil
+}
