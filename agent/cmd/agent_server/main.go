@@ -9,12 +9,14 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/nchungdev/home-sentinel/agent/pkg/arbitration"
+	"github.com/nchungdev/home-sentinel/agent/pkg/camstream"
 	"github.com/nchungdev/home-sentinel/agent/pkg/haclient"
 	"github.com/nchungdev/home-sentinel/agent/pkg/llm"
 	"github.com/nchungdev/home-sentinel/agent/pkg/mediabridge"
@@ -489,6 +491,178 @@ func (s *Server) handleLLMTest(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (s *Server) handleStreamMjpeg(w http.ResponseWriter, r *http.Request) {
+	configPath := "sentinel_camera_config.json"
+	var cfg CameraConfigData
+	if data, err := os.ReadFile(configPath); err == nil {
+		_ = json.Unmarshal(data, &cfg)
+	}
+
+	q := r.URL.Query()
+	host := q.Get("ip")
+	if host == "" {
+		host = cfg.IP
+	}
+	if host == "" {
+		http.Error(w, "camera ip not configured", http.StatusBadRequest)
+		return
+	}
+
+	user := q.Get("user")
+	if user == "" {
+		user = cfg.Username
+	}
+	pass := q.Get("password")
+	if pass == "" {
+		pass = cfg.Password
+	}
+	path := q.Get("path")
+	if path == "" {
+		path = cfg.StreamPath
+	}
+	if path == "" {
+		path = "/stream1"
+	}
+	if !strings.HasPrefix(path, "/") {
+		path = "/" + path
+	}
+
+	rtspURL := fmt.Sprintf("rtsp://%s:%s@%s:554%s", user, pass, host, path)
+
+	cmd := exec.Command("ffmpeg",
+		"-rtsp_transport", "tcp",
+		"-i", rtspURL,
+		"-f", "mpjpeg",
+		"-q:v", "5",
+		"-r", "12",
+		"pipe:1",
+	)
+
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if err := cmd.Start(); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer func() {
+		_ = cmd.Process.Kill()
+		_ = cmd.Wait()
+	}()
+
+	w.Header().Set("Content-Type", "multipart/x-mixed-replace; boundary=--ffmpeg")
+	w.WriteHeader(http.StatusOK)
+
+	buf := make([]byte, 4096)
+	for {
+		n, err := stdout.Read(buf)
+		if n > 0 {
+			if _, err := w.Write(buf[:n]); err != nil {
+				break
+			}
+			if flusher, ok := w.(http.Flusher); ok {
+				flusher.Flush()
+			}
+		}
+		if err != nil {
+			break
+		}
+	}
+}
+
+func (s *Server) handleCameraPTZ(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	configPath := "sentinel_camera_config.json"
+	var cfg CameraConfigData
+	if data, err := os.ReadFile(configPath); err == nil {
+		_ = json.Unmarshal(data, &cfg)
+	}
+
+	var req struct {
+		Direction string `json:"direction"`
+		Step      int    `json:"step"`
+	}
+	_ = json.NewDecoder(r.Body).Decode(&req)
+
+	effectivePass := cfg.CloudPassword
+	if effectivePass == "" {
+		effectivePass = cfg.Password
+	}
+
+	if cfg.IP == "" || effectivePass == "" {
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"ok":    false,
+			"error": "Chưa cấu hình IP hoặc mật khẩu Camera",
+		})
+		return
+	}
+
+	session := camstream.GetTapoSession(cfg.IP, cfg.Username, effectivePass)
+	var err error
+	if req.Direction != "" {
+		err = session.MoveDirection(req.Direction, req.Step)
+	} else {
+		err = fmt.Errorf("thiếu hướng xoay")
+	}
+
+	if err != nil {
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{"ok": false, "error": err.Error()})
+		return
+	}
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{"ok": true, "message": "Đã thực thi lệnh xoay PTZ"})
+}
+
+func (s *Server) handleCameraPrivacy(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	configPath := "sentinel_camera_config.json"
+	var cfg CameraConfigData
+	if data, err := os.ReadFile(configPath); err == nil {
+		_ = json.Unmarshal(data, &cfg)
+	}
+
+	var req struct {
+		Enabled bool `json:"enabled"`
+	}
+	_ = json.NewDecoder(r.Body).Decode(&req)
+
+	effectivePass := cfg.CloudPassword
+	if effectivePass == "" {
+		effectivePass = cfg.Password
+	}
+
+	if cfg.IP == "" || effectivePass == "" {
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"ok":    false,
+			"error": "Chưa cấu hình IP hoặc mật khẩu Camera",
+		})
+		return
+	}
+
+	session := camstream.GetTapoSession(cfg.IP, cfg.Username, effectivePass)
+	err := session.SetPrivacyMode(req.Enabled)
+	if err != nil {
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{"ok": false, "error": err.Error()})
+		return
+	}
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"ok":      true,
+		"message": fmt.Sprintf("Đã đặt Privacy Mode = %v", req.Enabled),
+	})
+}
+
 func main() {
 	server := NewServer()
 	server.StartDiscoveryResponder()
@@ -510,6 +684,9 @@ func main() {
 	mux.HandleFunc("/api/camera/scan", server.handleScanCameras)
 	mux.HandleFunc("/api/camera/config", server.handleCameraConfig)
 	mux.HandleFunc("/api/camera/test-rtsp", server.handleTestCameraRTSP)
+	mux.HandleFunc("/api/camera/stream.mjpeg", server.handleStreamMjpeg)
+	mux.HandleFunc("/api/camera/ptz", server.handleCameraPTZ)
+	mux.HandleFunc("/api/camera/privacy", server.handleCameraPrivacy)
 	mux.HandleFunc("/api/ha/config", server.handleHAConfig)
 
 	mux.HandleFunc("/notify", func(w http.ResponseWriter, r *http.Request) {
