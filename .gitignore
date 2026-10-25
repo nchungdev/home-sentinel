@@ -1,2 +1,5 @@
 .idea/
 bin/
+__pycache__/
+agent/__pycache__/
+agent_server

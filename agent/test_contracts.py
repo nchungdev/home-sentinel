@@ -1,0 +1,140 @@
+import unittest
+
+from contracts import (
+    ActionPlan,
+    ActionStatus,
+    ActionStep,
+    ExecutionResult,
+    InputEvent,
+    Intent,
+    PresentationResponse,
+    RequestContext,
+)
+
+
+class ContractsInitializationTest(unittest.TestCase):
+    def test_action_status_members(self):
+        self.assertEqual(ActionStatus.ACCEPTED.value, "accepted")
+        self.assertEqual(ActionStatus.RUNNING.value, "running")
+        self.assertEqual(ActionStatus.NEEDS_INPUT.value, "needs_input")
+        self.assertEqual(ActionStatus.SUCCEEDED.value, "succeeded")
+        self.assertEqual(ActionStatus.FAILED.value, "failed")
+        self.assertEqual(ActionStatus.CANCELLED.value, "cancelled")
+        self.assertEqual(ActionStatus.UNKNOWN.value, "unknown")
+        self.assertEqual(ActionStatus.from_value("running"), ActionStatus.RUNNING)
+        self.assertEqual(ActionStatus.from_value("invalid_status"), ActionStatus.UNKNOWN)
+
+    def test_input_event_defaults_and_serialization(self):
+        event = InputEvent()
+        self.assertEqual(event.request_id, "")
+        self.assertEqual(event.locale, "vi-VN")
+        self.assertEqual(event.input_type, "voice")
+
+        custom_event = InputEvent(
+            request_id="req-123",
+            session_id="sess-456",
+            utterance_id="utt-789",
+            text="bật đèn",
+            alternatives=["mở đèn"],
+            locale="vi-VN",
+            input_type="voice",
+        )
+        serialized = custom_event.to_dict()
+        self.assertEqual(serialized["request_id"], "req-123")
+        restored = InputEvent.from_dict(serialized)
+        self.assertEqual(restored.request_id, "req-123")
+        self.assertEqual(restored.alternatives, ["mở đèn"])
+
+    def test_request_context_defaults_and_serialization(self):
+        context = RequestContext()
+        self.assertFalse(context.is_authenticated)
+        self.assertIsNone(context.viewer_profile)
+
+        custom_context = RequestContext(
+            client_id="launcher-living-room",
+            is_authenticated=True,
+            deadline_epoch_ms=1729849200000,
+            client_capabilities=["voice", "cards", "quick_chips"],
+            viewer_profile="husband",
+        )
+        serialized = custom_context.to_dict()
+        restored = RequestContext.from_dict(serialized)
+        self.assertTrue(restored.is_authenticated)
+        self.assertEqual(restored.viewer_profile, "husband")
+        self.assertEqual(len(restored.client_capabilities), 3)
+
+    def test_intent_defaults_and_serialization(self):
+        intent = Intent()
+        self.assertEqual(intent.confidence, 0.0)
+
+        custom_intent = Intent(
+            name="turn_on_device",
+            domain="home_assistant",
+            confidence=0.98,
+            slots={"entity_id": "light.living_room"},
+            explicit_source="rule_engine",
+            missing_slots=[],
+        )
+        serialized = custom_intent.to_dict()
+        restored = Intent.from_dict(serialized)
+        self.assertEqual(restored.name, "turn_on_device")
+        self.assertEqual(restored.slots["entity_id"], "light.living_room")
+
+    def test_action_step_and_plan_roundtrip(self):
+        step = ActionStep(
+            step_id="step-1",
+            action_type="service_call",
+            target_id="light.turn_on",
+            parameters={"entity_id": "light.living_room"},
+            runs_on="backend",
+            timeout_ms=3000,
+            is_idempotent=True,
+        )
+        plan = ActionPlan(
+            plan_id="plan-1",
+            intent_name="turn_on_device",
+            steps=[step],
+            confirmation_required=False,
+            evidence={"matched_alias": "đèn phòng khách"},
+        )
+        serialized = plan.to_dict()
+        self.assertEqual(len(serialized["steps"]), 1)
+        restored = ActionPlan.from_dict(serialized)
+        self.assertEqual(restored.plan_id, "plan-1")
+        self.assertEqual(len(restored.steps), 1)
+        self.assertEqual(restored.steps[0].step_id, "step-1")
+        self.assertTrue(restored.steps[0].is_idempotent)
+
+    def test_execution_result_serialization(self):
+        result = ExecutionResult(
+            step_id="step-1",
+            status=ActionStatus.SUCCEEDED,
+            error_code=None,
+            detail="Bật đèn thành công",
+            actual_state={"state": "on"},
+            can_retry=False,
+        )
+        serialized = result.to_dict()
+        self.assertEqual(serialized["status"], "succeeded")
+        restored = ExecutionResult.from_dict(serialized)
+        self.assertEqual(restored.status, ActionStatus.SUCCEEDED)
+        self.assertEqual(restored.actual_state["state"], "on")
+
+    def test_presentation_response_serialization(self):
+        response = PresentationResponse(
+            speech_text="Đã bật đèn phòng khách",
+            cards=[{"type": "device_card", "title": "Đèn phòng khách"}],
+            quick_chips=["Tắt đèn", "Chỉnh 50%"],
+            client_actions=[],
+            mood="happy",
+        )
+        serialized = response.to_dict()
+        restored = PresentationResponse.from_dict(serialized)
+        self.assertEqual(restored.speech_text, "Đã bật đèn phòng khách")
+        self.assertEqual(len(restored.cards), 1)
+        self.assertEqual(len(restored.quick_chips), 2)
+        self.assertEqual(restored.mood, "happy")
+
+
+if __name__ == "__main__":
+    unittest.main()
