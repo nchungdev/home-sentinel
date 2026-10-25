@@ -53,7 +53,7 @@
           <p style="font-size:12.5px; color:var(--text-muted); line-height:1.5;">
             Khi phòng khách không có người (Camera Person + Sensor Fusion âm thanh) vượt quá số phút quy định và thỏa điều kiện TV, hệ thống tự động tắt toàn bộ các đèn/thiết bị được chọn bên dưới.
           </p>
-          <div class="auto-editable-field" style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px;">
+          <div class="auto-editable-field" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:14px;">
             <div class="form-group">
               <label><span class="mi" style="font-size:13px; color:var(--accent);">schedule</span> Khi vắng người liên tục (Phút):</label>
               <input type="number" id="autoIdleMinutes" min="1" max="120" value="1">
@@ -84,7 +84,7 @@
                 </div>
               </div>
             </div>
-            <div id="autoIdleLightsChecklist" class="auto-editable-field" style="max-height:420px; overflow-y:auto; background:rgba(0,0,0,0.25); border:1px solid var(--border); border-radius:10px; padding:12px; display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:10px;">
+            <div id="autoIdleLightsChecklist" class="auto-editable-field ha-checklist-grid">
               <div style="font-size:12px; color:var(--text-muted);">Đang tải danh sách thiết bị từ Home Assistant...</div>
             </div>
           </div>
@@ -117,7 +117,7 @@
           <p style="font-size:12.5px; color:var(--text-muted); line-height:1.5;">
             Khi Camera phát hiện có người ngồi ở vùng Sofa (Preset 1) và thu được tiếng vỗ tay (YAMNet Clapping), hệ thống tự động đánh thức Android TV và bật các Quạt / Đèn / Công tắc được chọn bên dưới.
           </p>
-          <div class="auto-editable-field" style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px;">
+          <div class="auto-editable-field" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:14px;">
             <div class="form-group">
               <label><span class="mi" style="font-size:13px; color:var(--accent);">tv</span> Địa chỉ IP Android TV cần mở (ADB):</label>
               <input type="text" id="autoClapTV" value="192.168.1.8" placeholder="192.168.1.8">
@@ -141,7 +141,7 @@
                 <button class="ha-filter-chip" onclick="filterSelectedOnly('autoClapDevicesChecklist', this)">Chỉ hiện đã chọn</button>
               </div>
             </div>
-            <div id="autoClapDevicesChecklist" class="auto-editable-field" style="max-height:420px; overflow-y:auto; background:rgba(0,0,0,0.25); border:1px solid var(--border); border-radius:10px; padding:12px; display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:10px;">
+            <div id="autoClapDevicesChecklist" class="auto-editable-field ha-checklist-grid">
               <div style="font-size:12px; color:var(--text-muted);">Đang tải danh sách thiết bị từ Home Assistant...</div>
             </div>
           </div>
@@ -174,7 +174,7 @@
           <p style="font-size:12.5px; color:var(--text-muted); line-height:1.5;">
             Khi phát hiện có người vào khung giờ buổi tối và khu vực đón đang tối, hệ thống tự động bật các đèn chào đón được chọn bên dưới và xoay Camera về Preset tương ứng.
           </p>
-          <div class="auto-editable-field" style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px;">
+          <div class="auto-editable-field" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:14px;">
             <div class="form-group">
               <label><span class="mi" style="font-size:13px; color:var(--accent);">schedule</span> Khung giờ bắt đầu (0-23):</label>
               <input type="number" id="autoEveningStart" value="18" min="0" max="23">
@@ -201,7 +201,7 @@
                 <button class="ha-filter-chip" onclick="filterSelectedOnly('autoEveningLightsChecklist', this)">Chỉ hiện đã chọn</button>
               </div>
             </div>
-            <div id="autoEveningLightsChecklist" class="auto-editable-field" style="max-height:420px; overflow-y:auto; background:rgba(0,0,0,0.25); border:1px solid var(--border); border-radius:10px; padding:12px; display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:10px;">
+            <div id="autoEveningLightsChecklist" class="auto-editable-field ha-checklist-grid">
               <div style="font-size:12px; color:var(--text-muted);">Đang tải danh sách thiết bị từ Home Assistant...</div>
             </div>
           </div>

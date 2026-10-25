@@ -129,7 +129,7 @@
                     <button class="ha-filter-chip" onclick="filterSelectedOnly('${escapeHtml(gridId)}', this)">Chỉ hiện đã chọn</button>
                   </div>
                 </div>
-                <div id="${escapeHtml(gridId)}" class="auto-editable-field" style="max-height:420px; overflow-y:auto; background:rgba(0,0,0,0.25); border:1px solid var(--border); border-radius:10px; padding:12px; display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:10px;">
+                <div id="${escapeHtml(gridId)}" class="auto-editable-field ha-checklist-grid">
                   ${devicesHtml}
                 </div>
               </div>

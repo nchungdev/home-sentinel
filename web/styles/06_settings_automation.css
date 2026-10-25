@@ -59,11 +59,29 @@
       border-color: var(--accent);
       color: #fff;
     }
+    #view-automation {
+      padding: 16px 24px;
+      width: 100%;
+      max-width: 100%;
+    }
     .ha-auto-card {
-      max-width: 1020px;
-      padding: 22px 24px;
-      gap: 16px;
+      width: 100%;
+      max-width: 100%;
+      padding: 18px 22px;
+      gap: 14px;
       transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .ha-checklist-grid {
+      max-height: calc(100vh - 350px);
+      min-height: 240px;
+      overflow-y: auto;
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+      gap: 8px;
     }
     .ha-auto-card.editing {
       border-color: rgba(99, 102, 241, 0.55);
@@ -95,7 +113,7 @@
       align-items: center;
       justify-content: space-between;
       gap: 6px;
-      padding: 7px 10px;
+      padding: 5px 8px;
       background: rgba(255, 255, 255, 0.03);
       border: 1px solid rgba(255, 255, 255, 0.06);
       border-radius: 7px;
