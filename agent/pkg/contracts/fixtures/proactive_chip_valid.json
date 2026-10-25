@@ -1,0 +1,9 @@
+{
+  "chip_id": "chip-quick-1",
+  "label": "Tắt đèn phòng khách",
+  "icon_key": "lightbulb",
+  "action_payload": {
+    "entity_id": "light.living_room",
+    "domain": "home_assistant"
+  }
+}

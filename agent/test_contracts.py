@@ -1,3 +1,6 @@
+import json
+import os
+from pathlib import Path
 import unittest
 
 from contracts import (
@@ -202,6 +205,77 @@ class ContractsInitializationTest(unittest.TestCase):
         self.assertEqual(restored.label, "Pha cà phê sáng")
         self.assertEqual(restored.icon_key, "coffee")
         self.assertEqual(restored.action_payload["entity_id"], "switch.coffee_maker")
+
+
+class ContractFixturesTest(unittest.TestCase):
+    def setUp(self):
+        self.fixtures_dir = Path(__file__).parent / "pkg" / "contracts" / "fixtures"
+
+    def _read_fixture(self, filename: str) -> dict:
+        with open(self.fixtures_dir / filename, "r", encoding="utf-8") as f:
+            return json.load(f)
+
+    def test_input_event_fixtures(self):
+        valid_data = self._read_fixture("input_event_valid.json")
+        event = InputEvent.from_dict(valid_data)
+        self.assertEqual(event.request_id, "req-1001")
+        self.assertEqual(event.text, "bật quạt phòng khách")
+        self.assertEqual(len(event.alternatives), 2)
+        self.assertEqual(event.locale, "vi-VN")
+
+        invalid_data = self._read_fixture("input_event_invalid.json")
+        invalid_event = InputEvent.from_dict(invalid_data)
+        self.assertEqual(invalid_event.request_id, "")
+        self.assertEqual(invalid_event.text, "")
+
+    def test_intent_fixture(self):
+        data = self._read_fixture("intent_valid.json")
+        intent = Intent.from_dict(data)
+        self.assertEqual(intent.name, "turn_on")
+        self.assertEqual(intent.domain, "home_assistant")
+        self.assertAlmostEqual(intent.confidence, 0.95)
+        self.assertEqual(intent.slots["device"], "fan")
+
+    def test_action_plan_fixture(self):
+        data = self._read_fixture("action_plan_valid.json")
+        plan = ActionPlan.from_dict(data)
+        self.assertEqual(plan.plan_id, "plan-101")
+        self.assertEqual(plan.intent_name, "turn_on")
+        self.assertEqual(len(plan.steps), 1)
+        self.assertEqual(plan.steps[0].step_id, "step-1")
+        self.assertEqual(plan.steps[0].action_type, "service_call")
+        self.assertTrue(plan.steps[0].is_idempotent)
+
+    def test_presentation_response_fixture(self):
+        data = self._read_fixture("presentation_response_valid.json")
+        response = PresentationResponse.from_dict(data)
+        self.assertEqual(response.speech_text, "Đã bật quạt phòng khách")
+        self.assertEqual(len(response.cards), 1)
+        self.assertEqual(len(response.quick_chips), 2)
+        self.assertEqual(response.mood, "friendly")
+
+    def test_suggestion_fixture(self):
+        data = self._read_fixture("suggestion_valid.json")
+        sug = Suggestion.from_dict(data)
+        self.assertEqual(sug.id, "sug-901")
+        self.assertEqual(sug.kind, "turn_off_reminder")
+        self.assertEqual(sug.action.step_id, "step-sug-1")
+        self.assertEqual(sug.generated_at, 1729850000000)
+
+    def test_context_snapshot_fixture(self):
+        data = self._read_fixture("context_snapshot_valid.json")
+        snapshot = ContextSnapshot.from_dict(data)
+        self.assertEqual(snapshot.timestamp_epoch_ms, 1729850000000)
+        self.assertEqual(snapshot.time_of_day, "evening")
+        self.assertEqual(snapshot.viewer_profile, "husband")
+        self.assertEqual(len(snapshot.recent_media), 1)
+
+    def test_proactive_chip_fixture(self):
+        data = self._read_fixture("proactive_chip_valid.json")
+        chip = ProactiveChip.from_dict(data)
+        self.assertEqual(chip.chip_id, "chip-quick-1")
+        self.assertEqual(chip.label, "Tắt đèn phòng khách")
+
 
 
 if __name__ == "__main__":

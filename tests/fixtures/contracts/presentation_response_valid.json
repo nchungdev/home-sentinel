@@ -1,0 +1,21 @@
+{
+  "speech_text": "Đã bật quạt phòng khách",
+  "cards": [
+    {
+      "title": "Quạt phòng khách",
+      "state": "on",
+      "type": "device_status"
+    }
+  ],
+  "quick_chips": [
+    "Tắt quạt",
+    "Hẹn giờ 30 phút"
+  ],
+  "client_actions": [
+    {
+      "action": "toast",
+      "message": "Quạt đang chạy"
+    }
+  ],
+  "mood": "friendly"
+}

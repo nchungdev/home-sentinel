@@ -1,0 +1,11 @@
+{
+  "name": "turn_on",
+  "domain": "home_assistant",
+  "confidence": 0.95,
+  "slots": {
+    "device": "fan",
+    "room": "living_room"
+  },
+  "explicit_source": "voice_rule",
+  "missing_slots": []
+}

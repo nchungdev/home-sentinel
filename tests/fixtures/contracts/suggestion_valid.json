@@ -1,0 +1,25 @@
+{
+  "id": "sug-901",
+  "kind": "turn_off_reminder",
+  "title": "Tắt quạt",
+  "message": "Không có ai ở phòng khách, bạn có muốn tắt quạt?",
+  "target_id": "fan.living_room",
+  "action": {
+    "step_id": "step-sug-1",
+    "action_type": "service_call",
+    "target_id": "fan.living_room",
+    "parameters": {
+      "entity_id": "fan.living_room"
+    },
+    "runs_on": "backend",
+    "timeout_ms": 3000,
+    "is_idempotent": true
+  },
+  "evidence": {
+    "idle_minutes": 15,
+    "room_empty": true
+  },
+  "generated_at": 1729850000000,
+  "expires_at": 1729853600000,
+  "dedupe_key": "sug-living-room-fan-empty"
+}

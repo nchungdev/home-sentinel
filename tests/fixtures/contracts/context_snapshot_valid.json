@@ -1,0 +1,15 @@
+{
+  "timestamp_epoch_ms": 1729850000000,
+  "time_of_day": "evening",
+  "viewer_profile": "husband",
+  "environment": {
+    "noise_level": "quiet",
+    "temperature": 27.5
+  },
+  "recent_media": [
+    {
+      "media_type": "youtube",
+      "title": "Bản tin thời sự 19h"
+    }
+  ]
+}

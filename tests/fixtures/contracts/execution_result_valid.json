@@ -1,0 +1,10 @@
+{
+  "step_id": "step-1",
+  "status": "succeeded",
+  "error_code": null,
+  "detail": "Command executed successfully",
+  "actual_state": {
+    "state": "on"
+  },
+  "can_retry": false
+}

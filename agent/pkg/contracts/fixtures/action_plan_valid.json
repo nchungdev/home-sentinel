@@ -1,0 +1,21 @@
+{
+  "plan_id": "plan-101",
+  "intent_name": "turn_on",
+  "steps": [
+    {
+      "step_id": "step-1",
+      "action_type": "service_call",
+      "target_id": "fan.living_room",
+      "parameters": {
+        "entity_id": "fan.living_room"
+      },
+      "runs_on": "backend",
+      "timeout_ms": 3000,
+      "is_idempotent": true
+    }
+  ],
+  "confirmation_required": false,
+  "evidence": {
+    "user_location": "sofa"
+  }
+}
