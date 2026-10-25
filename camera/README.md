@@ -8,9 +8,7 @@ Two components optimized for minimal CPU & RAM footprint:
 ## Running Camera Command Center (Go)
 
 ```bash
-make camera-web
-# or
-cd services/camera && ./bin/camera_center
+cd camera && go run ./cmd/camera_center
 ```
 
 ## Running Vision Worker (Python)

@@ -14,10 +14,11 @@ Go backend API service (`camera_center`) and Python 3 vision worker (`vision/`).
 |---|---|
 | `cmd/camera_center` | Main Go daemon binary entrypoint |
 | `cmd/tapo_speaker` | CLI tool to speak directly through Tapo camera |
-| `server.go` | REST HTTP API routes and request handlers |
-| `sentinel.go` | Intrusion detection over go2rtc streams and TV UDP notifier |
-| `tapo_ptz.go` | Tapo KLAP / ONVIF protocol for PTZ movements |
-| `tts.go` | Vietnamese TTS engine and audio encoder |
+| `pkg/camera/server.go` | REST HTTP API routes and request handlers |
+| `pkg/camera/sentinel.go` | Intrusion detection over go2rtc streams and TV UDP notifier |
+| `pkg/camera/tapo_ptz.go` | Tapo KLAP / ONVIF protocol for PTZ movements |
+| `pkg/camera/tapo.go` | Tapo camera stream and audio dialer |
+| `pkg/camera/tts.go` | Vietnamese TTS engine and audio encoder |
 | `vision/` | Ultra-low CPU Python computer vision pipeline (YOLOv8 + motion pre-filter) |
 
 ## Invariants

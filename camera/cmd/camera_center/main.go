@@ -5,7 +5,7 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/kienmai160598/freeTV/services/camera"
+	"github.com/nchungdev/home-sentinel/camera/pkg/camera"
 )
 
 func main() {
