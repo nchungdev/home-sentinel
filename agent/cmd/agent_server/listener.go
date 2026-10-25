@@ -184,6 +184,7 @@ func startCameraWakeWordListener(server *Server) {
 								if terr != nil || text == "" {
 									return
 								}
+								logMic("Local Whisper nhận: %q", text)
 								lowerT := strings.ToLower(text)
 								if isWhisperHallucination(lowerT) {
 									return
