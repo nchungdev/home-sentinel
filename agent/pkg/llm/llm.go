@@ -14,21 +14,23 @@ import (
 )
 
 type EngineInfo struct {
-	ID          string `json:"id"`
-	Name        string `json:"name"`
-	Type        string `json:"type"`        // "local_llm", "gemini", "claude", "rule"
-	Endpoint    string `json:"endpoint"`
-	ModelName   string `json:"model_name"`
-	Available   bool   `json:"available"`
-	Priority    int    `json:"priority"`    // 1 là cao nhất
-	StatusDesc  string `json:"status_desc"`
+	ID         string `json:"id"`
+	Name       string `json:"name"`
+	Type       string `json:"type"` // "local_llm", "gemini", "claude", "agy", "codex", "rule"
+	Endpoint   string `json:"endpoint"`
+	ModelName  string `json:"model_name"`
+	Available  bool   `json:"available"`
+	Priority   int    `json:"priority"`
+	StatusDesc string `json:"status_desc"`
 }
 
 type Config struct {
-	PriorityOrder []string `json:"priority_order"` // Danh sách Engine ID theo thứ tự ưu tiên
+	PriorityOrder []string `json:"priority_order"`
 	GeminiKey     string   `json:"gemini_key"`
 	LocalLLMURL   string   `json:"local_llm_url"`
 	ClaudePath    string   `json:"claude_path"`
+	AgyPath       string   `json:"agy_path"`
+	CodexPath     string   `json:"codex_path"`
 	ConfigPath    string   `json:"-"`
 	mu            sync.RWMutex
 }
@@ -40,18 +42,26 @@ type Manager struct {
 
 func NewManager(configPath string) *Manager {
 	if configPath == "" {
-		configPath = "sentinel_config.json"
+		configPath = "sentinel_llm_config.json"
 	}
 
 	cfg := &Config{
-		ConfigPath:    configPath,
-		PriorityOrder: []string{"local_qwen", "gemini", "claude", "rule_fallback"},
-		LocalLLMURL:   "http://127.0.0.1:9931/v1/chat/completions",
-		GeminiKey:     os.Getenv("GEMINI_API_KEY"),
-		ClaudePath:    "/home/linuxbrew/.linuxbrew/bin/claude",
+		ConfigPath: configPath,
+		PriorityOrder: []string{
+			"local_qwen",
+			"agy",
+			"codex",
+			"claude",
+			"gemini",
+			"rule_fallback",
+		},
+		LocalLLMURL: "http://127.0.0.1:9931/v1/chat/completions",
+		GeminiKey:   os.Getenv("GEMINI_API_KEY"),
+		ClaudePath:  findBinary("claude", []string{"/home/linuxbrew/.linuxbrew/bin/claude", "/usr/local/bin/claude"}),
+		AgyPath:     findBinary("agy", []string{"/home/chungnh/.local/bin/agy", "/usr/local/bin/agy"}),
+		CodexPath:   findBinary("codex", []string{"/home/linuxbrew/.linuxbrew/bin/codex", "/usr/bin/codex"}),
 	}
 
-	// Đọc config đã lưu nếu có
 	if data, err := os.ReadFile(configPath); err == nil {
 		_ = json.Unmarshal(data, cfg)
 	}
@@ -62,6 +72,18 @@ func NewManager(configPath string) *Manager {
 			Timeout: 45 * time.Second,
 		},
 	}
+}
+
+func findBinary(name string, fallbacks []string) string {
+	if p, err := exec.LookPath(name); err == nil {
+		return p
+	}
+	for _, f := range fallbacks {
+		if _, err := os.Stat(f); err == nil {
+			return f
+		}
+	}
+	return name
 }
 
 func (m *Manager) SaveConfig(newOrder []string, geminiKey string, localURL string) error {
@@ -91,7 +113,7 @@ func (m *Manager) ListEngines() []EngineInfo {
 
 	var engines []EngineInfo
 
-	// 1. Local LLM (NAS port 9931)
+	// 1. Local LLM (Llama.cpp port 9931)
 	localAvail, localDesc := m.probeLocalLLM()
 	engines = append(engines, EngineInfo{
 		ID:         "local_qwen",
@@ -103,7 +125,43 @@ func (m *Manager) ListEngines() []EngineInfo {
 		StatusDesc: localDesc,
 	})
 
-	// 2. Google Gemini API
+	// 2. AGY CLI (Google Antigravity)
+	agyAvail, agyDesc := m.probeCLI(m.config.AgyPath, "--version")
+	engines = append(engines, EngineInfo{
+		ID:         "agy",
+		Name:       "AGY CLI (Google Antigravity Engine)",
+		Type:       "agy",
+		Endpoint:   m.config.AgyPath,
+		ModelName:  "antigravity-native",
+		Available:  agyAvail,
+		StatusDesc: agyDesc,
+	})
+
+	// 3. Codex CLI (OpenAI Codex CLI)
+	codexAvail, codexDesc := m.probeCLI(m.config.CodexPath, "--version")
+	engines = append(engines, EngineInfo{
+		ID:         "codex",
+		Name:       "Codex CLI (OpenAI Codex Engine)",
+		Type:       "codex",
+		Endpoint:   m.config.CodexPath,
+		ModelName:  "codex-app-server",
+		Available:  codexAvail,
+		StatusDesc: codexDesc,
+	})
+
+	// 4. Claude CLI
+	claudeAvail, claudeDesc := m.probeCLI(m.config.ClaudePath, "--version")
+	engines = append(engines, EngineInfo{
+		ID:         "claude",
+		Name:       "Claude CLI (Anthropic Claude 3.5)",
+		Type:       "claude",
+		Endpoint:   m.config.ClaudePath,
+		ModelName:  "claude-3-5-sonnet",
+		Available:  claudeAvail,
+		StatusDesc: claudeDesc,
+	})
+
+	// 5. Google Gemini API
 	geminiAvail := m.config.GeminiKey != ""
 	geminiDesc := "Chưa cấu hình API Key"
 	if geminiAvail {
@@ -119,27 +177,7 @@ func (m *Manager) ListEngines() []EngineInfo {
 		StatusDesc: geminiDesc,
 	})
 
-	// 3. Claude CLI
-	claudeAvail := false
-	claudeDesc := "Không tìm thấy binary claude CLI"
-	if _, err := os.Stat(m.config.ClaudePath); err == nil {
-		claudeAvail = true
-		claudeDesc = "Sẵn sàng (Claude 3.5 Sonnet CLI)"
-	} else if p, err := exec.LookPath("claude"); err == nil {
-		claudeAvail = true
-		claudeDesc = fmt.Sprintf("Sẵn sàng (%s)", p)
-	}
-	engines = append(engines, EngineInfo{
-		ID:         "claude",
-		Name:       "Claude CLI (Anthropic Claude 3.5)",
-		Type:       "claude",
-		Endpoint:   m.config.ClaudePath,
-		ModelName:  "claude-3-5-sonnet",
-		Available:  claudeAvail,
-		StatusDesc: claudeDesc,
-	})
-
-	// 4. Built-in Fallback Engine
+	// 6. Built-in Rule Engine
 	engines = append(engines, EngineInfo{
 		ID:         "rule_fallback",
 		Name:       "Built-in Rule Engine (Dự phòng cơ bản)",
@@ -150,7 +188,7 @@ func (m *Manager) ListEngines() []EngineInfo {
 		StatusDesc: "Luôn hoạt động offline",
 	})
 
-	// Gán priority theo thứ tự m.config.PriorityOrder
+	// Gán thứ tự ưu tiên
 	orderMap := make(map[string]int)
 	for idx, id := range m.config.PriorityOrder {
 		orderMap[id] = idx + 1
@@ -180,11 +218,26 @@ func (m *Manager) probeLocalLLM() (bool, string) {
 	return false, fmt.Sprintf("HTTP status %d", resp.StatusCode)
 }
 
+func (m *Manager) probeCLI(path string, arg string) (bool, string) {
+	if path == "" {
+		return false, "Chưa cài đặt CLI"
+	}
+	cmd := exec.Command(path, arg)
+	out, err := cmd.Output()
+	if err == nil {
+		ver := strings.TrimSpace(string(out))
+		if len(ver) > 40 {
+			ver = ver[:40]
+		}
+		return true, fmt.Sprintf("Sẵn sàng (%s)", ver)
+	}
+	return false, "Không tìm thấy hoặc chưa xác thực"
+}
+
 const SystemPrompt = `Bạn là trợ lý thông minh Home Sentinel trên TV và nhà thông minh.
 Trả lời bằng tiếng Việt, súc tích, định dạng ngắn gọn, thân thiện và dễ đọc.
 Không khẳng định đã thao tác thiết bị nếu không có kết quả từ công cụ.`
 
-// StreamChat tự động chạy theo thứ tự ưu tiên (Priority Order), nếu 1 engine lỗi sẽ fallback sang cái kế tiếp
 func (m *Manager) StreamChat(prompt string, onChunk func(string)) {
 	m.config.mu.RLock()
 	order := make([]string, len(m.config.PriorityOrder))
@@ -196,17 +249,21 @@ func (m *Manager) StreamChat(prompt string, onChunk func(string)) {
 		switch engineID {
 		case "local_qwen":
 			err = m.callLocalLLM(prompt, onChunk)
+		case "agy":
+			err = m.callGenericCLI(m.config.AgyPath, []string{"-p", prompt, "--append-system-prompt", SystemPrompt}, onChunk)
+		case "codex":
+			err = m.callGenericCLI(m.config.CodexPath, []string{"exec", prompt}, onChunk)
+		case "claude":
+			err = m.callGenericCLI(m.config.ClaudePath, []string{"-p", prompt, "--append-system-prompt", SystemPrompt}, onChunk)
 		case "gemini":
 			err = m.callGemini(prompt, onChunk)
-		case "claude":
-			err = m.callClaude(prompt, onChunk)
 		case "rule_fallback":
 			onChunk(fmt.Sprintf("Chào bạn! Yêu cầu \"%s\" đã được ghi nhận qua Rule Engine dự phòng.", prompt))
 			return
 		}
 
 		if err == nil {
-			return // Thành công, kết thúc
+			return
 		}
 	}
 
@@ -275,6 +332,40 @@ func (m *Manager) callLocalLLM(prompt string, onChunk func(string)) error {
 
 	if !hasData {
 		return fmt.Errorf("empty local llm stream")
+	}
+	return nil
+}
+
+func (m *Manager) callGenericCLI(binPath string, args []string, onChunk func(string)) error {
+	if binPath == "" {
+		return fmt.Errorf("binary path empty")
+	}
+	cmd := exec.Command(binPath, args...)
+	cmd.Dir = os.Getenv("HOME")
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return err
+	}
+
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+
+	scanner := bufio.NewScanner(stdout)
+	hasData := false
+	for scanner.Scan() {
+		text := scanner.Text()
+		if text != "" {
+			hasData = true
+			onChunk(text + "\n")
+		}
+	}
+
+	if err := cmd.Wait(); err != nil {
+		return err
+	}
+	if !hasData {
+		return fmt.Errorf("empty cli response")
 	}
 	return nil
 }
@@ -353,37 +444,6 @@ func (m *Manager) callGemini(prompt string, onChunk func(string)) error {
 
 	if !hasData {
 		return fmt.Errorf("empty gemini stream")
-	}
-	return nil
-}
-
-func (m *Manager) callClaude(prompt string, onChunk func(string)) error {
-	cmd := exec.Command(m.config.ClaudePath, "-p", prompt, "--append-system-prompt", SystemPrompt)
-	cmd.Dir = os.Getenv("HOME")
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		return err
-	}
-
-	if err := cmd.Start(); err != nil {
-		return err
-	}
-
-	scanner := bufio.NewScanner(stdout)
-	hasData := false
-	for scanner.Scan() {
-		text := scanner.Text()
-		if text != "" {
-			hasData = true
-			onChunk(text + "\n")
-		}
-	}
-
-	if err := cmd.Wait(); err != nil {
-		return err
-	}
-	if !hasData {
-		return fmt.Errorf("empty claude response")
 	}
 	return nil
 }

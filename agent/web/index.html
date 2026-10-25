@@ -846,8 +846,8 @@
         row.className = 'engine-row';
         row.innerHTML = `
           <div class="engine-info">
-            <h4>${e.name} ${e.available ? '●' : '○'}</h4>
-            <p>${e.statusDesc}</p>
+            <h4>${e.name || e.id} ${e.available ? '<span style="color:var(--accent);">●</span>' : '<span style="color:var(--text-muted);">○</span>'}</h4>
+            <p>${e.status_desc || e.statusDesc || (e.available ? 'Sẵn sàng hoạt động' : 'Chưa khả dụng')}</p>
           </div>
           <div style="display:flex; align-items:center; gap:8px;">
             <button class="btn-action" style="padding:4px 8px;" onclick="moveRank(${idx}, -1)">▲</button>
