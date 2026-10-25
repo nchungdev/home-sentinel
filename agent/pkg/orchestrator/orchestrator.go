@@ -3,8 +3,11 @@ package orchestrator
 import (
 	"context"
 	"errors"
+	"os"
+	"time"
 
 	"github.com/nchungdev/home-sentinel/agent/pkg/contracts"
+	"github.com/nchungdev/home-sentinel/agent/pkg/telemetry"
 )
 
 var (
@@ -89,32 +92,49 @@ func (o *Orchestrator) Process(
 		reqCtx = &contracts.RequestContext{ClientID: "tv-client"}
 	}
 
+	trace := telemetry.NewRequestTrace(input.RequestID, input.SessionID)
+	defer func() {
+		trace.Finish()
+		_ = trace.LogStructured(os.Stdout)
+	}()
+
 	if err := ctx.Err(); err != nil {
+		trace.Record("lifecycle", 0, "cancelled", err.Error())
 		return nil, err
 	}
 
+	startUnderstanding := time.Now()
 	intent, err := o.understanding.Parse(ctx, input, reqCtx)
 	if err != nil {
+		trace.Record("understanding", time.Since(startUnderstanding), "failed", err.Error())
 		return nil, err
 	}
+	trace.Record("understanding", time.Since(startUnderstanding), "ok", intent.Name)
 
 	if err := ctx.Err(); err != nil {
+		trace.Record("lifecycle", 0, "cancelled", err.Error())
 		return nil, err
 	}
 
+	startResolution := time.Now()
 	plan, err := o.resolution.Resolve(ctx, intent, reqCtx)
 	if err != nil {
+		trace.Record("resolution", time.Since(startResolution), "failed", err.Error())
 		return nil, err
 	}
+	trace.Record("resolution", time.Since(startResolution), "ok", plan.PlanID)
 
 	if err := ctx.Err(); err != nil {
+		trace.Record("lifecycle", 0, "cancelled", err.Error())
 		return nil, err
 	}
 
+	startExecution := time.Now()
 	var results []*contracts.ExecutionResult
 	if plan != nil && len(plan.Steps) > 0 {
 		for stepIndex := range plan.Steps {
 			if err := ctx.Err(); err != nil {
+				trace.Record("execution", time.Since(startExecution), "cancelled", err.Error())
 				return nil, err
 			}
 
@@ -142,10 +162,19 @@ func (o *Orchestrator) Process(
 			}
 		}
 	}
+	trace.Record("execution", time.Since(startExecution), "ok", plan.PlanID)
 
 	if err := ctx.Err(); err != nil {
+		trace.Record("lifecycle", 0, "cancelled", err.Error())
 		return nil, err
 	}
 
-	return o.presentation.Compose(ctx, input, intent, plan, results, reqCtx)
+	startPresentation := time.Now()
+	pres, err := o.presentation.Compose(ctx, input, intent, plan, results, reqCtx)
+	if err != nil {
+		trace.Record("presentation", time.Since(startPresentation), "failed", err.Error())
+		return nil, err
+	}
+	trace.Record("presentation", time.Since(startPresentation), "ok", pres.Mood)
+	return pres, nil
 }
