@@ -40,7 +40,9 @@
       border-right: 1px solid var(--border);
       display: flex;
       flex-direction: column;
+      justify-content: space-between;
       user-select: none;
+      padding-bottom: 16px;
     }
     .brand {
       padding: 20px 24px;
@@ -69,9 +71,15 @@
     .nav-list {
       display: flex;
       flex-direction: column;
-      padding: 12px 14px;
+      padding: 12px 14px 0 14px;
       gap: 6px;
       flex: 1;
+    }
+    .nav-bottom {
+      display: flex;
+      flex-direction: column;
+      padding: 12px 14px 0 14px;
+      border-top: 1px solid var(--border);
     }
     .nav-item {
       display: flex;
@@ -530,17 +538,23 @@
 
   <!-- LEFT SIDEBAR -->
   <aside class="sidebar">
-    <div class="brand">
-      <div class="brand-icon">🛡️</div>
-      <h2>Home Sentinel</h2>
+    <div>
+      <div class="brand">
+        <div class="brand-icon">🛡️</div>
+        <h2>Home Sentinel</h2>
+      </div>
+      <div class="nav-list">
+        <div class="nav-item active" id="nav-agent" onclick="switchNav('agent', this)">
+          <span>💬</span> Agent Chat
+        </div>
+        <div class="nav-item" id="nav-camera" onclick="switchNav('camera', this)">
+          <span>📹</span> Camera Live
+        </div>
+      </div>
     </div>
-    <div class="nav-list">
-      <div class="nav-item active" id="nav-agent" onclick="switchNav('agent', this)">
-        <span>💬</span> Agent Chat
-      </div>
-      <div class="nav-item" id="nav-camera" onclick="switchNav('camera', this)">
-        <span>📹</span> Camera Live
-      </div>
+
+    <!-- SETTING BOTTOM -->
+    <div class="nav-bottom">
       <div class="nav-item" id="nav-setting" onclick="switchNav('setting', this)">
         <span>⚙️</span> Settings
       </div>
@@ -799,6 +813,10 @@
       const titles = { 'agent': 'Agent Chat', 'camera': 'Camera Live & PTZ', 'setting': 'Settings' };
       document.getElementById('viewHeaderTitle').textContent = titles[name] || 'Home Sentinel';
 
+      try {
+        localStorage.setItem('sentinel_active_nav', name);
+      } catch (e) {}
+
       if (name === 'setting') loadEngines();
     }
 
@@ -809,6 +827,10 @@
       if (el) el.classList.add('active');
       const targetPane = document.getElementById('subtab-' + id);
       if (targetPane) targetPane.classList.add('active');
+
+      try {
+        localStorage.setItem('sentinel_active_subtab', id);
+      } catch (e) {}
     }
 
     // CHAT
@@ -1196,7 +1218,7 @@
       resDiv.innerHTML = `<span style="color:var(--text-muted);">Đang kết nối RTSP rtsp://${ip}:554${path}...</span>`;
 
       try {
-        const res = await fetch('http://192.168.1.37:8792/api/test-camera', {
+        const res = await fetch('/api/camera/test-rtsp', {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({ ip: ip, port: 554, user: user, password: pass, path: path })
@@ -1208,7 +1230,7 @@
           resDiv.innerHTML = `<span style="color:#ef4444;">❌ Kết nối thất bại: ${data.message || 'Không thể liên lạc'}</span>`;
         }
       } catch (e) {
-        resDiv.innerHTML = `<span style="color:#ef4444;">❌ Lỗi kiểm tra (Camera Center :8792): ${e.message}</span>`;
+        resDiv.innerHTML = `<span style="color:#ef4444;">❌ Lỗi kiểm tra RTSP: ${e.message}</span>`;
       } finally {
         btn.disabled = false;
         btn.textContent = '⚡ Thử Kết Nối';
@@ -1218,6 +1240,23 @@
     // Tự động load config khi mở
     loadSavedCameraConfig();
     loadSavedHAConfig();
+
+    // Khôi phục tab đang chọn từ localStorage (tránh bị reset khi F5)
+    (function restoreNavigationState() {
+      try {
+        const savedNav = localStorage.getItem('sentinel_active_nav');
+        if (savedNav) {
+          const navEl = document.getElementById('nav-' + savedNav);
+          if (navEl) switchNav(savedNav, navEl);
+        }
+
+        const savedSubTab = localStorage.getItem('sentinel_active_subtab');
+        if (savedSubTab) {
+          const subBtn = document.getElementById('btn-tab-' + savedSubTab);
+          if (subBtn) switchSubTab(savedSubTab, subBtn);
+        }
+      } catch (e) {}
+    })();
   </script>
 </body>
 </html>

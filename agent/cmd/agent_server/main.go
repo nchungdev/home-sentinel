@@ -309,6 +309,122 @@ func (s *Server) handleCameraConfig(w http.ResponseWriter, r *http.Request) {
 	http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 }
 
+func (s *Server) handleTestCameraRTSP(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req struct {
+		IP       string `json:"ip"`
+		Port     int    `json:"port"`
+		User     string `json:"user"`
+		Password string `json:"password"`
+		Path     string `json:"path"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
+
+	if req.Port <= 0 {
+		req.Port = 554
+	}
+	if req.Path == "" {
+		req.Path = "/stream1"
+	}
+	if !strings.HasPrefix(req.Path, "/") {
+		req.Path = "/" + req.Path
+	}
+
+	target := fmt.Sprintf("%s:%d", req.IP, req.Port)
+	conn, err := net.DialTimeout("tcp", target, 3*time.Second)
+	if err != nil {
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"message": fmt.Sprintf("Không thể kết nối tới %s: %v", target, err),
+		})
+		return
+	}
+	defer conn.Close()
+
+	auth := ""
+	if req.User != "" && req.Password != "" {
+		raw := fmt.Sprintf("%s:%s", req.User, req.Password)
+		encoded := hex.EncodeToString([]byte(raw)) // or base64
+		_ = encoded
+		// Basic Auth requires base64
+		encodedAuth := fmt.Sprintf("Basic %s", base64Encode(raw))
+		auth = fmt.Sprintf("Authorization: %s\r\n", encodedAuth)
+	}
+
+	probeMsg := fmt.Sprintf("DESCRIBE rtsp://%s:%d%s RTSP/1.0\r\nCSeq: 1\r\n%sAccept: application/sdp\r\n\r\n",
+		req.IP, req.Port, req.Path, auth)
+
+	_ = conn.SetDeadline(time.Now().Add(4 * time.Second))
+	if _, err := conn.Write([]byte(probeMsg)); err != nil {
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"message": fmt.Sprintf("Lỗi gửi RTSP probe: %v", err),
+		})
+		return
+	}
+
+	buf := make([]byte, 2048)
+	n, err := conn.Read(buf)
+	if err != nil {
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"message": fmt.Sprintf("Lỗi nhận RTSP response: %v", err),
+		})
+		return
+	}
+
+	firstLine := strings.Split(string(buf[:n]), "\r\n")[0]
+	if strings.Contains(firstLine, "200 OK") {
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": true,
+			"message": "Kết nối thành công (200 OK - Luồng RTSP sẵn sàng)",
+		})
+		return
+	} else if strings.Contains(firstLine, "401") {
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"message": "Sai tài khoản hoặc mật khẩu Camera (401 Unauthorized)",
+		})
+		return
+	}
+
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"message": fmt.Sprintf("Camera phản hồi: %s", firstLine),
+	})
+}
+
+func base64Encode(str string) string {
+	bytes := []byte(str)
+	const base64Table = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+	var result []byte
+	pad := len(bytes) % 3
+	for i := 0; i < len(bytes); i += 3 {
+		var n uint32
+		switch len(bytes) - i {
+		case 1:
+			n = uint32(bytes[i]) << 16
+			result = append(result, base64Table[(n>>18)&63], base64Table[(n>>12)&63], '=', '=')
+		case 2:
+			n = (uint32(bytes[i]) << 16) | (uint32(bytes[i+1]) << 8)
+			result = append(result, base64Table[(n>>18)&63], base64Table[(n>>12)&63], base64Table[(n>>6)&63], '=')
+		default:
+			n = (uint32(bytes[i]) << 16) | (uint32(bytes[i+1]) << 8) | uint32(bytes[i+2])
+			result = append(result, base64Table[(n>>18)&63], base64Table[(n>>12)&63], base64Table[(n>>6)&63], base64Table[n&63])
+		}
+	}
+	_ = pad
+	return string(result)
+}
+
 func (s *Server) handleHAConfig(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	configPath := "sentinel_ha_config.json"
@@ -393,6 +509,7 @@ func main() {
 	mux.HandleFunc("/api/token/generate", server.handleGenerateToken)
 	mux.HandleFunc("/api/camera/scan", server.handleScanCameras)
 	mux.HandleFunc("/api/camera/config", server.handleCameraConfig)
+	mux.HandleFunc("/api/camera/test-rtsp", server.handleTestCameraRTSP)
 	mux.HandleFunc("/api/ha/config", server.handleHAConfig)
 
 	mux.HandleFunc("/notify", func(w http.ResponseWriter, r *http.Request) {
