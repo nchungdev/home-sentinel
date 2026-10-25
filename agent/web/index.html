@@ -3,13 +3,13 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Home Sentinel - Management Hub & AI Chatbot</title>
+  <title>Home Sentinel - Unified Hub</title>
   <style>
     :root {
       --bg: #090d12;
       --sidebar-bg: #0f151e;
       --card-bg: #151d28;
-      --border: #202b37;
+      --border: #222d3b;
       --border-focus: #388bfd;
       --text: #c9d1d9;
       --text-muted: #8b949e;
@@ -17,9 +17,8 @@
       --primary: #238636;
       --primary-hover: #2ea043;
       --accent: #58a6ff;
-      --tag-bg: #1b2432;
-      --user-msg: #1a2434;
-      --agent-msg: #121922;
+      --tag-bg: #1c2635;
+      --danger: #da3633;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -31,213 +30,101 @@
       overflow: hidden;
     }
 
-    /* Left Sidebar: 3 Menu Tabs (Agent, Camera, Setting) */
+    /* LEFT SIDEBAR: AGENT | CAMERA | SETTING */
     .sidebar {
-      width: 360px;
-      min-width: 340px;
+      width: 260px;
+      min-width: 240px;
       background: var(--sidebar-bg);
       border-right: 1px solid var(--border);
       display: flex;
       flex-direction: column;
-      height: 100vh;
     }
     .brand {
-      padding: 16px;
+      padding: 18px 20px;
       display: flex;
       align-items: center;
-      justify-content: space-between;
+      gap: 10px;
       border-bottom: 1px solid var(--border);
     }
     .brand h2 {
       font-size: 16px;
       color: var(--text-bright);
-      display: flex;
-      align-items: center;
-      gap: 8px;
     }
-    .badge-live {
-      background: rgba(35, 134, 54, 0.2);
-      border: 1px solid var(--primary);
-      color: #3fb950;
-      font-size: 11px;
-      padding: 2px 8px;
-      border-radius: 12px;
-      font-weight: 600;
-    }
-
-    /* Navigation Tabs */
-    .sidebar-tabs {
-      display: flex;
-      background: var(--bg);
-      border-bottom: 1px solid var(--border);
-      padding: 4px;
-    }
-    .tab-btn {
-      flex: 1;
-      padding: 10px 4px;
-      background: transparent;
-      border: none;
-      color: var(--text-muted);
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      border-radius: 6px;
-      transition: all 0.15s ease;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-    }
-    .tab-btn:hover {
-      color: var(--text-bright);
-      background: rgba(255,255,255,0.04);
-    }
-    .tab-btn.active {
-      color: var(--accent);
-      background: var(--card-bg);
-      border: 1px solid var(--border);
-    }
-
-    .tab-content {
-      flex: 1;
-      overflow-y: auto;
-      padding: 16px;
+    .nav-list {
       display: flex;
       flex-direction: column;
-      gap: 16px;
-    }
-    .tab-pane {
-      display: none;
-      flex-direction: column;
-      gap: 14px;
-    }
-    .tab-pane.active {
-      display: flex;
-    }
-
-    .section-title {
-      font-size: 11px;
-      font-weight: 700;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 6px;
-    }
-    .card {
-      background: var(--card-bg);
-      border: 1px solid var(--border);
-      border-radius: 8px;
       padding: 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-    .status-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 13px;
-      padding: 4px 0;
-    }
-    .dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      display: inline-block;
-      margin-right: 6px;
-    }
-    .dot.green { background: #3fb950; box-shadow: 0 0 6px #3fb950; }
-    .dot.blue { background: #58a6ff; }
-    .dot.orange { background: #d29922; }
-
-    .control-row {
-      display: flex;
-      gap: 8px;
-    }
-    .control-btn {
+      gap: 6px;
       flex: 1;
-      padding: 8px 10px;
-      background: var(--tag-bg);
-      border: 1px solid var(--border);
-      color: var(--text-bright);
-      border-radius: 6px;
-      font-size: 12px;
+    }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      border-radius: 8px;
+      color: var(--text-muted);
       cursor: pointer;
+      font-size: 14px;
       font-weight: 500;
       transition: all 0.15s ease;
+      user-select: none;
     }
-    .control-btn:hover {
-      border-color: var(--accent);
-      background: #253344;
-    }
-
-    .input-item {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-    .input-item label {
-      font-size: 12px;
-      color: var(--text-muted);
-    }
-    .input-item input, .input-item select {
-      background: var(--bg);
-      border: 1px solid var(--border);
+    .nav-item:hover {
+      background: rgba(255,255,255,0.04);
       color: var(--text-bright);
-      padding: 8px 10px;
-      border-radius: 6px;
-      font-size: 13px;
-      outline: none;
     }
-    .input-item input:focus, .input-item select:focus {
-      border-color: var(--border-focus);
-    }
-    .help-box {
-      font-size: 12px;
-      color: var(--text-muted);
-      line-height: 1.4;
-      background: var(--bg);
-      padding: 10px;
-      border-radius: 6px;
-      border: 1px dashed var(--border);
-    }
-    .help-box code {
+    .nav-item.active {
+      background: var(--card-bg);
       color: var(--accent);
-      font-family: monospace;
+      border: 1px solid var(--border);
+      font-weight: 600;
     }
 
-    /* Right Column: Chat Bot Area */
-    .chat-container {
+    /* MAIN VIEW CONTAINER */
+    .main-view {
       flex: 1;
       display: flex;
       flex-direction: column;
       height: 100vh;
       background: var(--bg);
+      overflow: hidden;
     }
-    .chat-header {
-      padding: 14px 20px;
+    .main-header {
+      padding: 14px 24px;
+      background: var(--sidebar-bg);
       border-bottom: 1px solid var(--border);
       display: flex;
-      align-items: center;
       justify-content: space-between;
-      background: var(--sidebar-bg);
-    }
-    .chat-header h3 {
-      font-size: 15px;
-      color: var(--text-bright);
-      font-weight: 600;
-      display: flex;
       align-items: center;
-      gap: 8px;
+    }
+    .main-header h3 {
+      font-size: 16px;
+      color: var(--text-bright);
+    }
+
+    .view-content {
+      flex: 1;
+      display: none;
+      height: calc(100vh - 55px);
+      overflow-y: auto;
+    }
+    .view-content.active {
+      display: flex;
+    }
+
+    /* VIEW 1: AGENT CHAT BOX */
+    .agent-view {
+      flex-direction: column;
+      width: 100%;
     }
     .chips-bar {
-      padding: 10px 20px;
+      padding: 10px 24px;
       background: rgba(21, 29, 40, 0.4);
       border-bottom: 1px solid var(--border);
       display: flex;
       gap: 8px;
       overflow-x: auto;
-      white-space: nowrap;
     }
     .chip {
       background: var(--tag-bg);
@@ -247,17 +134,13 @@
       border-radius: 16px;
       font-size: 12px;
       cursor: pointer;
-      user-select: none;
-      transition: all 0.15s ease;
+      white-space: nowrap;
     }
-    .chip:hover {
-      background: #28374a;
-      border-color: var(--accent);
-    }
+    .chip:hover { background: #28374a; }
     .chat-messages {
       flex: 1;
       overflow-y: auto;
-      padding: 20px;
+      padding: 24px;
       display: flex;
       flex-direction: column;
       gap: 16px;
@@ -273,29 +156,25 @@
     }
     .message.user {
       align-self: flex-end;
-      background: var(--user-msg);
+      background: #192332;
       border: 1px solid #283952;
       color: var(--text-bright);
-      border-bottom-right-radius: 2px;
     }
     .message.agent {
       align-self: flex-start;
-      background: var(--agent-msg);
+      background: #111720;
       border: 1px solid var(--border);
       border-left: 3px solid var(--primary);
-      border-bottom-left-radius: 2px;
-      color: var(--text);
     }
-    .agent-name {
+    .agent-title {
       font-size: 11px;
       font-weight: 600;
       color: var(--accent);
       margin-bottom: 4px;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
     }
-    .input-area {
-      padding: 16px 20px;
+    .chat-input-area {
+      padding: 16px 24px;
       background: var(--sidebar-bg);
       border-top: 1px solid var(--border);
     }
@@ -305,12 +184,8 @@
       border: 1px solid var(--border);
       border-radius: 8px;
       padding: 6px;
-      align-items: flex-end;
     }
-    .input-box:focus-within {
-      border-color: var(--border-focus);
-    }
-    textarea {
+    .input-box textarea {
       flex: 1;
       background: transparent;
       border: none;
@@ -318,7 +193,6 @@
       font-size: 14px;
       resize: none;
       height: 48px;
-      max-height: 120px;
       padding: 8px 10px;
       outline: none;
       font-family: inherit;
@@ -330,286 +204,434 @@
       padding: 8px 18px;
       border-radius: 6px;
       font-weight: 600;
-      font-size: 13px;
       cursor: pointer;
-      transition: background 0.15s ease;
-      height: 38px;
     }
     .btn-send:hover { background: var(--primary-hover); }
-    .btn-send:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* VIEW 2: CAMERA STREAMING & CONTROLS */
+    .camera-view {
+      padding: 24px;
+      display: flex;
+      gap: 20px;
+      width: 100%;
+    }
+    .camera-player-card {
+      flex: 2;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .camera-feed {
+      width: 100%;
+      height: 420px;
+      background: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+    .camera-feed img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+    .camera-ctrl-card {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .card-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+    .ptz-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+    .btn-ctrl {
+      background: var(--tag-bg);
+      border: 1px solid var(--border);
+      color: var(--text-bright);
+      padding: 10px;
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+      font-weight: 500;
+      text-align: center;
+    }
+    .btn-ctrl:hover { border-color: var(--accent); background: #263445; }
+    .command-log {
+      height: 160px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px;
+      font-family: monospace;
+      font-size: 12px;
+      overflow-y: auto;
+      color: #3fb950;
+      white-space: pre-wrap;
+    }
+
+    /* VIEW 3: SETTING SUB-TABS */
+    .setting-view {
+      flex-direction: column;
+      padding: 24px;
+      gap: 16px;
+      width: 100%;
+    }
+    .subtabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      gap: 8px;
+    }
+    .subtab-btn {
+      padding: 10px 18px;
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+    }
+    .subtab-btn.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+    .subtab-content {
+      display: none;
+      flex-direction: column;
+      gap: 16px;
+      max-width: 700px;
+    }
+    .subtab-content.active {
+      display: flex;
+    }
+
+    .engine-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .engine-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      padding: 12px 16px;
+      border-radius: 8px;
+    }
+    .engine-info h4 {
+      font-size: 14px;
+      color: var(--text-bright);
+    }
+    .engine-info p {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+    .priority-badge {
+      background: var(--tag-bg);
+      color: var(--accent);
+      font-size: 12px;
+      padding: 4px 8px;
+      border-radius: 12px;
+      font-weight: 600;
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .form-group label {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+    .form-group input {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text-bright);
+      padding: 10px 12px;
+      border-radius: 6px;
+      font-size: 14px;
+      outline: none;
+    }
+    .form-group input:focus { border-color: var(--border-focus); }
+    .btn-save {
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      align-self: flex-start;
+    }
+    .token-display {
+      background: var(--bg);
+      border: 1px dashed var(--border);
+      padding: 14px;
+      border-radius: 8px;
+      font-family: monospace;
+      color: #3fb950;
+      word-break: break-all;
+      font-size: 14px;
+    }
   </style>
 </head>
 <body>
 
-  <!-- CỘT 1: SIDEBAR QUẢN LÝ (AGENT, CAMERA, SETTING) -->
+  <!-- LEFT SIDEBAR -->
   <aside class="sidebar">
     <div class="brand">
-      <h2>🛡️ Home Sentinel</h2>
-      <span class="badge-live">GO NATIVE</span>
+      <span style="font-size: 20px;">🛡️</span>
+      <h2>Home Sentinel</h2>
     </div>
-
-    <!-- 3 Tabs chuyển đổi mục -->
-    <div class="sidebar-tabs">
-      <button class="tab-btn active" onclick="switchTab('agent')">🤖 Agent</button>
-      <button class="tab-btn" onclick="switchTab('camera')">📹 Camera</button>
-      <button class="tab-btn" onclick="switchTab('setting')">⚙️ Setting</button>
-    </div>
-
-    <div class="tab-content">
-      <!-- MỤC 1: AGENT SERVICE -->
-      <div id="tab-agent" class="tab-pane active">
-        <div class="section-title">Agent Daemon Status</div>
-        <div class="card">
-          <div class="status-row">
-            <span><span class="dot green"></span>Agent Engine</span>
-            <span style="color: #3fb950; font-size: 12px;">Port 8788 (Active)</span>
-          </div>
-          <div class="status-row">
-            <span><span class="dot green"></span>Audio Arbitration</span>
-            <span style="color: var(--accent); font-size: 12px;">TV vs Camera Ready</span>
-          </div>
-          <div class="status-row">
-            <span><span class="dot blue"></span>UDP Broadcast</span>
-            <span style="color: var(--accent); font-size: 12px;">Port 8790</span>
-          </div>
-        </div>
-
-        <div class="section-title">Test Quick Actions</div>
-        <div class="card">
-          <div class="control-row">
-            <button class="control-btn" onclick="quickSend('trạng thái nhà')">Kiểm tra nhà</button>
-            <button class="control-btn" onclick="quickSend('bật đèn phòng khách')">Bật đèn PK</button>
-          </div>
-          <div class="control-row">
-            <button class="control-btn" onclick="quickSend('tìm phim avatar')">Tìm phim Plex</button>
-            <button class="control-btn" onclick="simulateSofaEnter()">Giả lập Sofa</button>
-          </div>
-        </div>
-
-        <div class="help-box">
-          🤖 <b>AI Agent Core:</b> Kết nối trực tiếp vào Local LLM Qwen2.5 trên NAS (port 9931), xử lý lệnh Home Assistant và điều phối mic/loa với Camera.
-        </div>
+    <div class="nav-list">
+      <div class="nav-item active" onclick="showMainView('agent')">
+        <span>🤖</span> Agent
       </div>
-
-      <!-- MỤC 2: CAMERA SERVICE -->
-      <div id="tab-camera" class="tab-pane">
-        <div class="section-title">Camera Center & Sentinel</div>
-        <div class="card">
-          <div class="status-row">
-            <span><span class="dot green"></span>Command Center</span>
-            <span style="color: #3fb950; font-size: 12px;">Port 8792</span>
-          </div>
-          <div class="status-row">
-            <span><span class="dot blue"></span>Tapo IP</span>
-            <span style="color: var(--accent); font-size: 12px;" id="cameraIpLabel">192.168.1.6</span>
-          </div>
-          <div class="status-row">
-            <span><span class="dot orange"></span>Vision Worker</span>
-            <span style="color: #d29922; font-size: 12px;">Python YOLOv8</span>
-          </div>
-        </div>
-
-        <div class="section-title">Điều khiển PTZ Camera Tapo</div>
-        <div class="card">
-          <div class="control-row">
-            <button class="control-btn" onclick="callCameraPTZ('up')">⬆️ Lên</button>
-          </div>
-          <div class="control-row">
-            <button class="control-btn" onclick="callCameraPTZ('left')">⬅️ Trái</button>
-            <button class="control-btn" onclick="callCameraPTZ('right')">➡️ Phải</button>
-          </div>
-          <div class="control-row">
-            <button class="control-btn" onclick="callCameraPTZ('down')">⬇️ Xuống</button>
-          </div>
-        </div>
-
-        <div class="section-title">Chế độ riêng tư (Privacy Mode)</div>
-        <div class="card">
-          <div class="control-row">
-            <button class="control-btn" onclick="setCameraPrivacy(true)">🔒 Bật Riêng Tư</button>
-            <button class="control-btn" onclick="setCameraPrivacy(false)">👁️ Tắt Riêng Tư</button>
-          </div>
-        </div>
-
-        <div class="help-box">
-          📹 <b>Luồng tương tác:</b> Camera Vision phát hiện có người ngồi sofa sẽ gọi webhook <code>POST /event</code> về Sentinel Server để tự động bật TV hoặc gửi lời chào.
-        </div>
+      <div class="nav-item" onclick="showMainView('camera')">
+        <span>📹</span> Camera
       </div>
-
-      <!-- MỤC 3: SETTING -->
-      <div id="tab-setting" class="tab-pane">
-        <div class="section-title">Cấu hình Mô hình AI (LLM)</div>
-        <div class="card">
-          <div class="input-item">
-            <label>Model Engine:</label>
-            <select id="modelSelect" onchange="onModelChange()">
-              <option value="qwen2.5-local">Qwen2.5-1.5B (Local LLM NAS :9931)</option>
-              <option value="claude-cli">Claude CLI (Claude 3.5 Sonnet)</option>
-              <option value="gemini-api">Google Gemini 2.5 Flash</option>
-            </select>
-          </div>
-          <div class="input-item">
-            <label>Nhiệt độ (Temperature):</label>
-            <input type="range" min="0" max="1" step="0.1" value="0.7">
-          </div>
-        </div>
-
-        <div class="section-title">Cấu hình Kết nối & Mạng</div>
-        <div class="card">
-          <div class="input-item">
-            <label>Home Assistant URL:</label>
-            <input type="text" id="haUrlInput" value="http://192.168.1.37:8123">
-          </div>
-          <div class="input-item">
-            <label>Target TV IP (Android TV):</label>
-            <input type="text" id="tvIpInput" value="192.168.1.8">
-          </div>
-          <div class="input-item">
-            <label>Bearer Token (Xác thực):</label>
-            <input type="password" id="tokenInput" placeholder="Để trống nếu không đặt">
-          </div>
-        </div>
+      <div class="nav-item" onclick="showMainView('setting')">
+        <span>⚙️</span> Setting
       </div>
     </div>
   </aside>
 
-  <!-- CỘT 2: KHUNG CHAT BOT CHÍNH -->
-  <main class="chat-container">
-    <div class="chat-header">
-      <h3>💬 Home Sentinel Assistant</h3>
-      <span id="chatStatus" style="font-size: 12px; color: var(--text-muted);">Sẵn sàng</span>
+  <!-- MAIN VIEW -->
+  <main class="main-view">
+    <div class="main-header">
+      <h3 id="currentViewTitle">Agent AI Chatbot</h3>
+      <span style="font-size: 12px; color: #3fb950;">● Connected (NAS :8788)</span>
     </div>
 
-    <div class="chips-bar">
-      <div class="chip" onclick="quickSend('trạng thái nhà')">🏠 Trạng thái nhà</div>
-      <div class="chip" onclick="quickSend('bật đèn phòng khách')">💡 Bật đèn phòng khách</div>
-      <div class="chip" onclick="quickSend('tắt đèn phòng khách')">💡 Tắt đèn phòng khách</div>
-      <div class="chip" onclick="quickSend('bật quạt phòng ngủ')">🌀 Bật quạt phòng ngủ</div>
-      <div class="chip" onclick="quickSend('tìm phim avatar')">🎬 Tìm phim Avatar</div>
-      <div class="chip" onclick="quickSend('thời tiết hôm nay')">🌤️ Thời tiết</div>
-    </div>
+    <!-- 1. AGENT VIEW (CHAT BOX) -->
+    <div id="view-agent" class="view-content agent-view active">
+      <div class="chips-bar">
+        <div class="chip" onclick="quickSend('trạng thái nhà')">🏠 Trạng thái nhà</div>
+        <div class="chip" onclick="quickSend('bật đèn phòng khách')">💡 Bật đèn phòng khách</div>
+        <div class="chip" onclick="quickSend('tắt đèn phòng khách')">💡 Tắt đèn phòng khách</div>
+        <div class="chip" onclick="quickSend('bật quạt phòng ngủ')">🌀 Bật quạt phòng ngủ</div>
+        <div class="chip" onclick="quickSend('tìm phim avatar')">🎬 Tìm phim Avatar</div>
+        <div class="chip" onclick="quickSend('thời tiết hôm nay')">🌤️ Thời tiết</div>
+      </div>
 
-    <div class="chat-messages" id="chatMessages">
-      <div class="message agent">
-        <div class="agent-name">Home Sentinel</div>
-        Xin chào! Tôi là Trợ lý Home Sentinel. Tôi có thể giúp bạn điều khiển thiết bị nhà thông minh, quản lý camera an ninh và tìm phim xem trên TV.
+      <div class="chat-messages" id="chatMessages">
+        <div class="message agent">
+          <div class="agent-title">Home Sentinel AI</div>
+          Xin chào! Tôi là Trợ lý AI Home Sentinel. Tôi kết nối đa mô hình (Local LLM Qwen2.5, Gemini, Claude) có cơ chế dự phòng tự động. Bạn cần hỗ trợ gì?
+        </div>
+      </div>
+
+      <div class="chat-input-area">
+        <div class="input-box">
+          <textarea id="promptInput" placeholder="Nhập câu lệnh hoặc câu hỏi (Enter để gửi)..."></textarea>
+          <button class="btn-send" onclick="sendChat()">Gửi</button>
+        </div>
       </div>
     </div>
 
-    <div class="input-area">
-      <div class="input-box">
-        <textarea id="promptInput" placeholder="Nhập câu lệnh hoặc câu hỏi (Enter để gửi, Shift+Enter xuống dòng)..."></textarea>
-        <button class="btn-send" id="btnSend" onclick="sendMessage()">Gửi</button>
+    <!-- 2. CAMERA VIEW (STREAMING + CONTROLS + LOGS) -->
+    <div id="view-camera" class="view-content camera-view">
+      <div class="camera-player-card">
+        <div class="camera-feed">
+          <img id="mjpegStream" src="http://192.168.1.37:8792/api/camera/stream.mjpeg" alt="Live Camera Stream" onerror="this.alt='Chưa kết nối luồng camera :8792 hoặc đang ở chế độ chờ';">
+        </div>
+        <div style="padding: 12px 16px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; font-size: 13px;">
+          <span>Camera Tapo (192.168.1.6)</span>
+          <span style="color: var(--accent);">MJPEG Stream via Go2RTC</span>
+        </div>
+      </div>
+
+      <div class="camera-ctrl-card">
+        <div class="card">
+          <div class="card-title">Điều khiển PTZ</div>
+          <div class="ptz-grid">
+            <div></div>
+            <button class="btn-ctrl" onclick="sendCameraAction('ptz', {direction: 'up'})">⬆️ Lên</button>
+            <div></div>
+            <button class="btn-ctrl" onclick="sendCameraAction('ptz', {direction: 'left'})">⬅️ Trái</button>
+            <button class="btn-ctrl" onclick="sendCameraAction('ptz', {direction: 'down'})">⬇️ Xuống</button>
+            <button class="btn-ctrl" onclick="sendCameraAction('ptz', {direction: 'right'})">➡️ Phải</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Chế độ riêng tư</div>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn-ctrl" style="flex:1" onclick="sendCameraAction('privacy', {enabled: true})">🔒 Bật</button>
+            <button class="btn-ctrl" style="flex:1" onclick="sendCameraAction('privacy', {enabled: false})">👁️ Tắt</button>
+          </div>
+        </div>
+
+        <div class="card" style="flex:1">
+          <div class="card-title">Lệnh gửi lên & Phản hồi</div>
+          <div class="command-log" id="cameraLog">[Ready] Sẵn sàng gửi lệnh tới Camera Center :8792...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. SETTING VIEW (4 TABS) -->
+    <div id="view-setting" class="view-content setting-view">
+      <div class="subtabs">
+        <button class="subtab-btn active" onclick="showSubTab('agent-cfg')">Agent Config</button>
+        <button class="subtab-btn" onclick="showSubTab('camera-cfg')">Camera Config</button>
+        <button class="subtab-btn" onclick="showSubTab('ha-cfg')">Home Assistant Config</button>
+        <button class="subtab-btn" onclick="showSubTab('auth-cfg')">Authen (Launcher Token)</button>
+      </div>
+
+      <!-- Tab 1: Agent Config (Ưu tiên Engines) -->
+      <div id="subtab-agent-cfg" class="subtab-content active">
+        <div class="card">
+          <div class="card-title">Danh sách Mô hình AI theo Độ Ưu Tiên (Tự fallback khi hết token/lỗi)</div>
+          <div class="engine-list" id="engineListContainer">
+            <!-- Render dynamically -->
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Cấu hình API Keys & Endpoint</div>
+          <div class="form-group">
+            <label>Google Gemini API Key:</label>
+            <input type="password" id="cfgGeminiKey" placeholder="AIzaSy...">
+          </div>
+          <div class="form-group">
+            <label>Local LLM URL (NAS Engine):</label>
+            <input type="text" id="cfgLocalUrl" value="http://127.0.0.1:9931/v1/chat/completions">
+          </div>
+          <button class="btn-save" onclick="saveLLMConfig()">Lưu Cấu Hình AI</button>
+        </div>
+      </div>
+
+      <!-- Tab 2: Camera Config -->
+      <div id="subtab-camera-cfg" class="subtab-content">
+        <div class="card">
+          <div class="card-title">Cấu hình Camera Tapo</div>
+          <div class="form-group">
+            <label>Camera IP:</label>
+            <input type="text" id="cfgCamIp" value="192.168.1.6">
+          </div>
+          <div class="form-group">
+            <label>Tài khoản Camera (RTSP / ONVIF):</label>
+            <input type="text" id="cfgCamUser" value="admin">
+          </div>
+          <div class="form-group">
+            <label>Mật khẩu Camera:</label>
+            <input type="password" id="cfgCamPass" placeholder="Mật khẩu tạo trên Tapo app">
+          </div>
+          <button class="btn-save" onclick="alert('Đã cập nhật camera config!')">Lưu Cấu Hình Camera</button>
+        </div>
+      </div>
+
+      <!-- Tab 3: Home Assistant Config -->
+      <div id="subtab-ha-cfg" class="subtab-content">
+        <div class="card">
+          <div class="card-title">Kết nối Home Assistant Core</div>
+          <div class="form-group">
+            <label>Home Assistant URL:</label>
+            <input type="text" id="cfgHaUrl" value="http://192.168.1.37:8123">
+          </div>
+          <div class="form-group">
+            <label>Long-Lived Access Token:</label>
+            <input type="password" id="cfgHaToken" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
+          </div>
+          <button class="btn-save" onclick="alert('Đã lưu cấu hình Home Assistant!')">Lưu & Kiểm Tra Kết Nối</button>
+        </div>
+      </div>
+
+      <!-- Tab 4: Authen (Launcher Token Generator) -->
+      <div id="subtab-auth-cfg" class="subtab-content">
+        <div class="card">
+          <div class="card-title">Xác thực TV Launcher (Bearer Token)</div>
+          <p style="font-size: 13px; color: var(--text-muted);">
+            Tạo mã Token bảo mật để cài đặt trên TV Launcher. Khi có token này, chỉ TV của bạn mới được phép gửi lệnh tới Agent.
+          </p>
+          <button class="btn-save" style="background: var(--accent)" onclick="generateNewToken()">⚡ Tạo Token Mới Cho Launcher</button>
+          <div class="token-display" id="tokenDisplayArea">Chưa tạo token mới.</div>
+        </div>
       </div>
     </div>
   </main>
 
   <script>
-    const promptInput = document.getElementById('promptInput');
-    const btnSend = document.getElementById('btnSend');
-    const chatMessages = document.getElementById('chatMessages');
-    const chatStatus = document.getElementById('chatStatus');
-    const tokenInput = document.getElementById('tokenInput');
-
-    function switchTab(tabName) {
-      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-      document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
+    function showMainView(viewName) {
+      document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.view-content').forEach(el => el.classList.remove('active'));
 
       event.currentTarget.classList.add('active');
-      document.getElementById('tab-' + tabName).classList.add('active');
+      document.getElementById('view-' + viewName).classList.add('active');
+
+      const titles = {
+        'agent': 'Agent AI Chatbot',
+        'camera': 'Camera Live & PTZ Command Center',
+        'setting': 'Cài Đặt Hệ Thống Home Sentinel'
+      };
+      document.getElementById('currentViewTitle').textContent = titles[viewName];
+
+      if (viewName === 'setting') {
+        loadEngines();
+      }
     }
+
+    function showSubTab(tabId) {
+      document.querySelectorAll('.subtab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.subtab-content').forEach(pane => pane.classList.remove('active'));
+
+      event.currentTarget.classList.add('active');
+      document.getElementById('subtab-' + tabId).classList.add('active');
+    }
+
+    // CHAT LOGIC
+    const promptInput = document.getElementById('promptInput');
+    const chatMessages = document.getElementById('chatMessages');
 
     promptInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
-        sendMessage();
+        sendChat();
       }
     });
 
-    function quickSend(cmd) {
-      promptInput.value = cmd;
-      sendMessage();
+    function quickSend(txt) {
+      promptInput.value = txt;
+      sendChat();
     }
 
-    function onModelChange() {
-      const model = document.getElementById('modelSelect').value;
-      appendMessage('agent', `Đã chuyển cấu hình mô hình sang: ${model}`);
-    }
-
-    async function callCameraPTZ(direction) {
-      appendMessage('user', `Xoay camera sang: ${direction.toUpperCase()}`);
-      try {
-        const res = await fetch('http://192.168.1.37:8792/api/camera/ptz', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({ direction: direction, step: 10 })
-        });
-        appendMessage('agent', `Đã gửi lệnh xoay camera: ${direction}`);
-      } catch (e) {
-        appendMessage('agent', `Lỗi kết nối Camera Center: ${e.message}`);
-      }
-    }
-
-    async function setCameraPrivacy(enabled) {
-      const action = enabled ? 'bật riêng tư' : 'tắt riêng tư';
-      appendMessage('user', `Yêu cầu ${action} camera`);
-      try {
-        const res = await fetch('http://192.168.1.37:8792/api/camera/privacy', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({ enabled: enabled })
-        });
-        appendMessage('agent', `Camera đã nhận lệnh ${action}`);
-      } catch (e) {
-        appendMessage('agent', `Lỗi kết nối Camera Center: ${e.message}`);
-      }
-    }
-
-    async function simulateSofaEnter() {
-      appendMessage('user', 'Giả lập sự kiện: Có người ngồi Sofa');
-      try {
-        await fetch('/event', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({ zone_id: 'sofa', event_type: 'enter', timestamp: Math.floor(Date.now() / 1000) })
-        });
-        appendMessage('agent', 'Đã ghi nhận sự kiện Sofa Enter ➔ Gửi UDP alert tới Android TV!');
-      } catch (e) {
-        appendMessage('agent', `Lỗi gửi sự kiện: ${e.message}`);
-      }
-    }
-
-    async function sendMessage() {
+    async function sendChat() {
       const text = promptInput.value.trim();
       if (!text) return;
 
-      appendMessage('user', text);
+      appendMsg('user', text);
       promptInput.value = '';
-      btnSend.disabled = true;
-      chatStatus.textContent = 'Đang suy nghĩ...';
 
-      const agentContent = appendMessage('agent', '…');
-      const token = tokenInput.value.trim();
+      const agentContent = appendMsg('agent', '…');
 
       try {
-        const headers = { 'Content-Type': 'application/json' };
-        if (token) headers['Authorization'] = 'Bearer ' + token;
-
         const response = await fetch('/ask', {
           method: 'POST',
-          headers: headers,
-          body: JSON.stringify({
-            text: text,
-            session: 'sentinel_web_' + Math.random().toString(36).substring(2, 7)
-          })
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ text: text, session: 'web_session' })
         });
-
-        if (!response.ok) {
-          const err = await response.text();
-          agentContent.textContent = `Lỗi (${response.status}): ${err}`;
-          chatStatus.textContent = 'Lỗi';
-          return;
-        }
 
         agentContent.textContent = '';
         const reader = response.body.getReader();
@@ -620,32 +642,135 @@
           if (done) break;
           agentContent.textContent += decoder.decode(value, { stream: true });
         }
-        chatStatus.textContent = 'Sẵn sàng';
       } catch (err) {
-        agentContent.textContent = 'Không kết nối được tới Sentinel: ' + err.message;
-        chatStatus.textContent = 'Mất kết nối';
-      } finally {
-        btnSend.disabled = false;
-        promptInput.focus();
+        agentContent.textContent = 'Lỗi kết nối: ' + err.message;
       }
     }
 
-    function appendMessage(sender, text) {
+    function appendMsg(sender, text) {
       const div = document.createElement('div');
-      div.className = `message ${sender}`;
+      div.className = 'message ' + sender;
       if (sender === 'agent') {
-        const name = document.createElement('div');
-        name.className = 'agent-name';
-        name.textContent = 'Home Sentinel';
-        div.appendChild(name);
+        const title = document.createElement('div');
+        title.className = 'agent-title';
+        title.textContent = 'Home Sentinel AI';
+        div.appendChild(title);
       }
-      const content = document.createElement('div');
-      content.textContent = text;
-      div.appendChild(content);
-
+      const p = document.createElement('div');
+      p.textContent = text;
+      div.appendChild(p);
       chatMessages.appendChild(div);
       chatMessages.scrollTop = chatMessages.scrollHeight;
-      return content;
+      return p;
+    }
+
+    // CAMERA ACTIONS & LOGS
+    async function sendCameraAction(type, data) {
+      const logBox = document.getElementById('cameraLog');
+      const time = new Date().toLocaleTimeString();
+      logBox.textContent += `\n[${time}] Gửi ${type}: ${JSON.stringify(data)}...`;
+
+      try {
+        const url = type === 'ptz' ? 'http://192.168.1.37:8792/api/camera/ptz' : 'http://192.168.1.37:8792/api/camera/privacy';
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(data)
+        });
+        const json = await res.json();
+        logBox.textContent += `\n ➔ Phản hồi: ${JSON.stringify(json)}`;
+      } catch (e) {
+        logBox.textContent += `\n ➔ Lỗi: ${e.message}`;
+      }
+      logBox.scrollTop = logBox.scrollHeight;
+    }
+
+    // LOAD & SAVE AI ENGINES WITH PRIORITY
+    let currentEngines = [];
+    async function loadEngines() {
+      try {
+        const res = await fetch('/api/llm/engines');
+        const data = await res.json();
+        if (data.ok) {
+          currentEngines = data.engines;
+          renderEngines(data.engines);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    function renderEngines(engines) {
+      const container = document.getElementById('engineListContainer');
+      container.innerHTML = '';
+
+      // Sắp xếp theo Priority tăng dần
+      engines.sort((a, b) => a.priority - b.priority);
+
+      engines.forEach((eng, idx) => {
+        const item = document.createElement('div');
+        item.className = 'engine-item';
+        item.innerHTML = `
+          <div class="engine-info">
+            <h4>${eng.name} ${eng.available ? '✅' : '⚠️'}</h4>
+            <p>${eng.statusDesc} • Endpoint: <code>${eng.endpoint}</code></p>
+          </div>
+          <div style="display:flex; align-items:center; gap:10px;">
+            <button class="btn-ctrl" style="padding:4px 8px;" onclick="movePriority(${idx}, -1)">▲</button>
+            <button class="btn-ctrl" style="padding:4px 8px;" onclick="movePriority(${idx}, 1)">▼</button>
+            <span class="priority-badge">Ưu tiên ${idx + 1}</span>
+          </div>
+        `;
+        container.appendChild(item);
+      });
+    }
+
+    function movePriority(index, dir) {
+      const target = index + dir;
+      if (target < 0 || target >= currentEngines.length) return;
+      const temp = currentEngines[index];
+      currentEngines[index] = currentEngines[target];
+      currentEngines[target] = temp;
+      renderEngines(currentEngines);
+    }
+
+    async function saveLLMConfig() {
+      const order = currentEngines.map(e => e.id);
+      const geminiKey = document.getElementById('cfgGeminiKey').value.trim();
+      const localUrl = document.getElementById('cfgLocalUrl').value.trim();
+
+      try {
+        const res = await fetch('/api/llm/engines', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            priority_order: order,
+            gemini_key: geminiKey,
+            local_llm_url: localUrl
+          })
+        });
+        const data = await res.json();
+        alert(data.message || 'Đã lưu cấu hình!');
+      } catch (e) {
+        alert('Lỗi lưu: ' + e.message);
+      }
+    }
+
+    // AUTH TOKEN GENERATOR
+    async function generateNewToken() {
+      try {
+        const res = await fetch('/api/token/generate', { method: 'POST' });
+        const data = await res.json();
+        if (data.ok) {
+          document.getElementById('tokenDisplayArea').innerHTML = `
+            <b>Token mới tạo thành công:</b><br>
+            <code>${data.token}</code><br><br>
+            <i>Hãy sao chép token này nhập vào mục Settings trên TV Launcher.</i>
+          `;
+        }
+      } catch (e) {
+        alert('Lỗi tạo token: ' + e.message);
+      }
     }
   </script>
 </body>

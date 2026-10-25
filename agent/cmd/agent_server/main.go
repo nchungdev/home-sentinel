@@ -1,7 +1,9 @@
 package main
 
 import (
+	"crypto/rand"
 	_ "embed"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -18,7 +20,7 @@ import (
 )
 
 //go:embed web/index.html
-var testWebPage []byte
+var webIndexPage []byte
 
 type Server struct {
 	Token          string
@@ -29,22 +31,10 @@ type Server struct {
 	Arbitrator     *arbitration.AudioArbitrator
 	HAClient       *haclient.Client
 	MediaBridge    *mediabridge.Bridge
-	LLMEngine      *llm.Engine
+	LLMManager     *llm.Manager
 	UserOnSofa     bool
 	StateMutex     sync.RWMutex
 	RequestLimiter chan struct{}
-}
-
-type NotificationPayload struct {
-	Type    string `json:"type"`
-	Title   string `json:"title"`
-	Message string `json:"message"`
-	TTS     bool   `json:"tts"`
-}
-
-type AskRequest struct {
-	Text    string `json:"text"`
-	Session string `json:"session"`
 }
 
 func NewServer() *Server {
@@ -78,12 +68,12 @@ func NewServer() *Server {
 		Arbitrator:     arbitration.NewAudioArbitrator(0.15),
 		HAClient:       haclient.NewClient("", ""),
 		MediaBridge:    mediabridge.NewBridge(""),
-		LLMEngine:      llm.NewEngine(),
+		LLMManager:     llm.NewManager("sentinel_llm_config.json"),
 		RequestLimiter: make(chan struct{}, 4),
 	}
 }
 
-func (s *Server) BroadcastNotification(payload NotificationPayload) error {
+func (s *Server) BroadcastNotification(payload map[string]interface{}) error {
 	data, err := json.Marshal(payload)
 	if err != nil {
 		return err
@@ -136,86 +126,6 @@ func (s *Server) checkAuth(r *http.Request) bool {
 	return false
 }
 
-func (s *Server) handleNotify(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	if !s.checkAuth(r) {
-		http.Error(w, "unauthorised", http.StatusUnauthorized)
-		return
-	}
-
-	var payload NotificationPayload
-	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		http.Error(w, "bad json", http.StatusBadRequest)
-		return
-	}
-
-	_ = s.BroadcastNotification(payload)
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	_ = json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
-}
-
-func (s *Server) handleArbitration(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	var ctx arbitration.Context
-	if err := json.NewDecoder(r.Body).Decode(&ctx); err != nil {
-		http.Error(w, "bad json", http.StatusBadRequest)
-		return
-	}
-
-	s.StateMutex.RLock()
-	if !ctx.UserOnSofa && s.UserOnSofa {
-		ctx.UserOnSofa = true
-	}
-	s.StateMutex.RUnlock()
-
-	decision := s.Arbitrator.Arbitrate(ctx)
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	_ = json.NewEncoder(w).Encode(decision)
-}
-
-func (s *Server) handleEvent(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	var event struct {
-		ZoneID    string `json:"zone_id"`
-		EventType string `json:"event_type"`
-		Timestamp int64  `json:"timestamp"`
-	}
-
-	if err := json.NewDecoder(r.Body).Decode(&event); err != nil {
-		http.Error(w, "bad json", http.StatusBadRequest)
-		return
-	}
-
-	if event.ZoneID == "sofa" {
-		s.StateMutex.Lock()
-		s.UserOnSofa = (event.EventType == "enter")
-		s.StateMutex.Unlock()
-
-		if event.EventType == "enter" {
-			_ = s.BroadcastNotification(NotificationPayload{
-				Type:    "interaction",
-				Title:   "Phát hiện người",
-				Message: "Chào bạn! Chúc bạn xem TV vui vẻ.",
-				TTS:     false,
-			})
-		}
-	}
-
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	_ = json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
-}
-
 func (s *Server) handleAsk(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -226,7 +136,10 @@ func (s *Server) handleAsk(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req AskRequest
+	var req struct {
+		Text    string `json:"text"`
+		Session string `json:"session"`
+	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "bad json", http.StatusBadRequest)
 		return
@@ -238,20 +151,78 @@ func (s *Server) handleAsk(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// 1. Kiểm tra lệnh Home Assistant trước
 	if reply, handled := s.HAClient.HandleCommand(text); handled {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		_, _ = w.Write([]byte(reply))
 		return
 	}
 
+	// 2. Chuyển sang LLM Manager với cơ chế Fallback ưu tiên
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	flusher, canFlush := w.(http.Flusher)
 
-	_ = s.LLMEngine.StreamChat(text, func(chunk string) {
+	s.LLMManager.StreamChat(text, func(chunk string) {
 		_, _ = w.Write([]byte(chunk))
 		if canFlush {
 			flusher.Flush()
 		}
+	})
+}
+
+func (s *Server) handleConfigLLM(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+
+	if r.Method == http.MethodGet {
+		engines := s.LLMManager.ListEngines()
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"ok":      true,
+			"engines": engines,
+		})
+		return
+	}
+
+	if r.Method == http.MethodPost {
+		var payload struct {
+			PriorityOrder []string `json:"priority_order"`
+			GeminiKey     string   `json:"gemini_key"`
+			LocalLLMURL   string   `json:"local_llm_url"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			http.Error(w, "bad json", http.StatusBadRequest)
+			return
+		}
+
+		err := s.LLMManager.SaveConfig(payload.PriorityOrder, payload.GeminiKey, payload.LocalLLMURL)
+		if err != nil {
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{"ok": false, "error": err.Error()})
+			return
+		}
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{"ok": true, "message": "Đã lưu cài đặt AI Engines"})
+		return
+	}
+
+	http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+}
+
+func (s *Server) handleGenerateToken(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	bytes := make([]byte, 24)
+	if _, err := rand.Read(bytes); err != nil {
+		http.Error(w, "failed to generate random token", http.StatusInternalServerError)
+		return
+	}
+	newToken := hex.EncodeToString(bytes)
+
+	s.Token = newToken
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"ok":    true,
+		"token": newToken,
 	})
 }
 
@@ -266,24 +237,55 @@ func main() {
 			return
 		}
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		_, _ = w.Write(testWebPage)
+		_, _ = w.Write(webIndexPage)
 	})
-	mux.HandleFunc("/notify", server.handleNotify)
-	mux.HandleFunc("/api/arbitration/decide", server.handleArbitration)
-	mux.HandleFunc("/event", server.handleEvent)
+
 	mux.HandleFunc("/ask", server.handleAsk)
+	mux.HandleFunc("/api/llm/engines", server.handleConfigLLM)
+	mux.HandleFunc("/api/token/generate", server.handleGenerateToken)
+
+	mux.HandleFunc("/notify", func(w http.ResponseWriter, r *http.Request) {
+		var payload map[string]interface{}
+		_ = json.NewDecoder(r.Body).Decode(&payload)
+		_ = server.BroadcastNotification(payload)
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+	})
+
+	mux.HandleFunc("/event", func(w http.ResponseWriter, r *http.Request) {
+		var event struct {
+			ZoneID    string `json:"zone_id"`
+			EventType string `json:"event_type"`
+		}
+		_ = json.NewDecoder(r.Body).Decode(&event)
+		if event.ZoneID == "sofa" {
+			server.StateMutex.Lock()
+			server.UserOnSofa = (event.EventType == "enter")
+			server.StateMutex.Unlock()
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+	})
+
+	mux.HandleFunc("/api/arbitration/decide", func(w http.ResponseWriter, r *http.Request) {
+		var ctx arbitration.Context
+		_ = json.NewDecoder(r.Body).Decode(&ctx)
+		decision := server.Arbitrator.Arbitrate(ctx)
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(decision)
+	})
 
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"service": "sentinel-server-go",
 			"status":  "ok",
-			"service": "agent-server-go",
-			"uptime":  "running",
+			"token":   server.Token != "",
 		})
 	})
 
-	fmt.Printf("Home Sentinel Agent (Go) listening on :%d\n", server.Port)
+	fmt.Printf("Home Sentinel Server (Go) listening on :%d\n", server.Port)
 	if err := http.ListenAndServe(fmt.Sprintf(":%d", server.Port), mux); err != nil {
-		fmt.Printf("Agent server failed: %v\n", err)
+		fmt.Printf("Sentinel server failed: %v\n", err)
 	}
 }
