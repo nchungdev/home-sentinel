@@ -29,6 +29,33 @@ type Client struct {
 	HTTPClient *http.Client
 }
 
+func (c *Client) UpdateConfig(baseURL, token string) {
+	if baseURL != "" {
+		c.BaseURL = strings.TrimRight(baseURL, "/")
+	}
+	if token != "" {
+		c.Token = token
+	}
+}
+
+func (c *Client) TestConnection() (bool, string) {
+	if c.BaseURL == "" {
+		return false, "Chưa nhập URL Home Assistant"
+	}
+	if c.Token == "" {
+		return false, "Chưa nhập Long-Lived Access Token"
+	}
+	var res map[string]interface{}
+	err := c.RequestJSON("/api/", nil, &res)
+	if err != nil {
+		return false, fmt.Sprintf("Không kết nối được: %v", err)
+	}
+	if msg, ok := res["message"].(string); ok && msg == "API running." {
+		return true, "Kết nối Home Assistant thành công (API running)"
+	}
+	return true, "Kết nối Home Assistant thành công"
+}
+
 func NewClient(baseURL, token string) *Client {
 	if baseURL == "" {
 		baseURL = os.Getenv("AGENT_HA_URL")

@@ -206,14 +206,20 @@ func (m *Manager) ListEngines() []EngineInfo {
 }
 
 func (m *Manager) probeLocalLLM() (bool, string) {
-	client := http.Client{Timeout: 1500 * time.Millisecond}
-	resp, err := client.Get("http://127.0.0.1:9931/v1/models")
+	testURL := m.config.LocalLLMURL
+	if testURL == "" {
+		testURL = "http://127.0.0.1:9931/v1/chat/completions"
+	}
+	modelsURL := strings.Replace(testURL, "/chat/completions", "/models", 1)
+
+	client := http.Client{Timeout: 2000 * time.Millisecond}
+	resp, err := client.Get(modelsURL)
 	if err != nil {
-		return false, "Không kết nối được port 9931"
+		return false, fmt.Sprintf("Không kết nối được: %v", err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode == http.StatusOK {
-		return true, "Đang chạy mượt trên NAS (Llama.cpp)"
+		return true, "Đang chạy mượt (OpenAI / Llama.cpp)"
 	}
 	return false, fmt.Sprintf("HTTP status %d", resp.StatusCode)
 }
@@ -232,6 +238,41 @@ func (m *Manager) probeCLI(path string, arg string) (bool, string) {
 		return true, fmt.Sprintf("Sẵn sàng (%s)", ver)
 	}
 	return false, "Không tìm thấy hoặc chưa xác thực"
+}
+
+func (m *Manager) TestConnection(engineID string) (bool, string) {
+	m.config.mu.RLock()
+	defer m.config.mu.RUnlock()
+
+	switch engineID {
+	case "local_qwen":
+		return m.probeLocalLLM()
+	case "gemini":
+		if m.config.GeminiKey == "" {
+			return false, "Chưa nhập API Key"
+		}
+		client := http.Client{Timeout: 3500 * time.Millisecond}
+		url := fmt.Sprintf("https://generativelanguage.googleapis.com/v1beta/models?key=%s", m.config.GeminiKey)
+		resp, err := client.Get(url)
+		if err != nil {
+			return false, fmt.Sprintf("Lỗi kết nối Gemini API: %v", err)
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode == http.StatusOK {
+			return true, "Kết nối Gemini API thành công (Google GenAI)"
+		}
+		return false, fmt.Sprintf("Gemini API lỗi HTTP %d (Kiểm tra lại key)", resp.StatusCode)
+	case "agy":
+		return m.probeCLI(m.config.AgyPath, "--version")
+	case "codex":
+		return m.probeCLI(m.config.CodexPath, "--version")
+	case "claude":
+		return m.probeCLI(m.config.ClaudePath, "--version")
+	case "rule_fallback":
+		return true, "Rule Engine cục bộ luôn sẵn sàng"
+	default:
+		return false, "Không tìm thấy engine"
+	}
 }
 
 const SystemPrompt = `Bạn là trợ lý thông minh Home Sentinel trên TV và nhà thông minh.

@@ -61,7 +61,7 @@ func NewServer() *Server {
 
 	token := os.Getenv("AGENT_TOKEN")
 
-	return &Server{
+	server := &Server{
 		Token:          token,
 		Port:           port,
 		NotifyPort:     notifyPort,
@@ -73,6 +73,18 @@ func NewServer() *Server {
 		LLMManager:     llm.NewManager("sentinel_llm_config.json"),
 		RequestLimiter: make(chan struct{}, 4),
 	}
+
+	if data, err := os.ReadFile("sentinel_ha_config.json"); err == nil {
+		var haCfg struct {
+			URL   string `json:"url"`
+			Token string `json:"token"`
+		}
+		if json.Unmarshal(data, &haCfg) == nil {
+			server.HAClient.UpdateConfig(haCfg.URL, haCfg.Token)
+		}
+	}
+
+	return server
 }
 
 func (s *Server) BroadcastNotification(payload map[string]interface{}) error {
@@ -297,6 +309,70 @@ func (s *Server) handleCameraConfig(w http.ResponseWriter, r *http.Request) {
 	http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 }
 
+func (s *Server) handleHAConfig(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	configPath := "sentinel_ha_config.json"
+
+	if r.Method == http.MethodGet {
+		var cfg struct {
+			URL   string `json:"url"`
+			Token string `json:"token"`
+		}
+		if data, err := os.ReadFile(configPath); err == nil {
+			_ = json.Unmarshal(data, &cfg)
+		}
+		if cfg.URL == "" {
+			cfg.URL = s.HAClient.BaseURL
+		}
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"ok":     true,
+			"config": cfg,
+		})
+		return
+	}
+
+	if r.Method == http.MethodPost {
+		var cfg struct {
+			URL   string `json:"url"`
+			Token string `json:"token"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&cfg); err != nil {
+			http.Error(w, "bad request", http.StatusBadRequest)
+			return
+		}
+
+		s.HAClient.UpdateConfig(cfg.URL, cfg.Token)
+		data, _ := json.MarshalIndent(cfg, "", "  ")
+		_ = os.WriteFile(configPath, data, 0644)
+
+		ok, msg := s.HAClient.TestConnection()
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"ok":      ok,
+			"message": msg,
+		})
+		return
+	}
+
+	http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+}
+
+func (s *Server) handleLLMTest(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var req struct {
+		EngineID string `json:"engine_id"`
+	}
+	_ = json.NewDecoder(r.Body).Decode(&req)
+	ok, desc := s.LLMManager.TestConnection(req.EngineID)
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"ok":      ok,
+		"message": desc,
+	})
+}
+
 func main() {
 	server := NewServer()
 	server.StartDiscoveryResponder()
@@ -313,9 +389,11 @@ func main() {
 
 	mux.HandleFunc("/ask", server.handleAsk)
 	mux.HandleFunc("/api/llm/engines", server.handleConfigLLM)
+	mux.HandleFunc("/api/llm/test", server.handleLLMTest)
 	mux.HandleFunc("/api/token/generate", server.handleGenerateToken)
 	mux.HandleFunc("/api/camera/scan", server.handleScanCameras)
 	mux.HandleFunc("/api/camera/config", server.handleCameraConfig)
+	mux.HandleFunc("/api/ha/config", server.handleHAConfig)
 
 	mux.HandleFunc("/notify", func(w http.ResponseWriter, r *http.Request) {
 		var payload map[string]interface{}
