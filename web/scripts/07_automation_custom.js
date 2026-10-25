@@ -95,7 +95,7 @@
                 </div>
                 <div class="form-group">
                   <label>Sự kiện:</label>
-                  <select id="trig-type-${escapeHtml(rule.id)}-${idx}">
+                  <select id="trig-type-${escapeHtml(rule.id)}-${idx}" onchange="onTriggerTypeChange('${escapeHtml(rule.id)}', ${idx}, this.value)">
                     <option value="idle_room" ${trig.type === 'idle_room' ? 'selected' : ''}>💤 Vắng người liên tục trong phòng</option>
                     <option value="person_detected" ${trig.type === 'person_detected' ? 'selected' : ''}>👤 Camera phát hiện có người</option>
                     <option value="clap_sound" ${trig.type === 'clap_sound' ? 'selected' : ''}>👏 Ngồi Sofa + Tiếng vỗ tay</option>
@@ -141,7 +141,7 @@
                 </div>
                 <div class="form-group">
                   <label>Loại điều kiện:</label>
-                  <select id="cond-type-${escapeHtml(rule.id)}-${idx}">
+                  <select id="cond-type-${escapeHtml(rule.id)}-${idx}" onchange="onConditionTypeChange('${escapeHtml(rule.id)}', ${idx}, this.value)">
                     <option value="tv_state" ${cond.type === 'tv_state' ? 'selected' : ''}>Trạng thái Android TV</option>
                     <option value="time_range" ${cond.type === 'time_range' ? 'selected' : ''}>Giới hạn khung giờ (Từ - Đến)</option>
                   </select>
@@ -198,11 +198,11 @@
           <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:12px;">
             <div class="form-group">
               <label>Loại hành động:</label>
-              <select id="act-type-${escapeHtml(rule.id)}-${idx}">
+              <select id="act-type-${escapeHtml(rule.id)}-${idx}" onchange="onActionTypeChange('${escapeHtml(rule.id)}', ${idx}, this.value)">
                 <option value="entities" ${act.type === 'entities' ? 'selected' : ''}>💡 Thao tác thiết bị (Home Assistant)</option>
+                <option value="script" ${act.type === 'script' ? 'selected' : ''}>📜 Kích hoạt Script Home Assistant</option>
                 <option value="tv" ${act.type === 'tv' ? 'selected' : ''}>📺 Đánh thức Android TV (ADB)</option>
                 <option value="camera" ${act.type === 'camera' ? 'selected' : ''}>📷 Xoay Camera PTZ về Preset</option>
-                <option value="script" ${act.type === 'script' ? 'selected' : ''}>📜 Kích hoạt Script Home Assistant</option>
               </select>
             </div>
             ${act.type === 'entities' ? `

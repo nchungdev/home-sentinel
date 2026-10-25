@@ -13,13 +13,8 @@
         const cfgData = await cfgRes.json();
         const entData = await entRes.json();
 
-        if (cfgData.ok && cfgData.config) {
-          currentAutoCfg = cfgData.config;
-          ensureNormalizedRules();
-        }
-        if (entData.ok && Array.isArray(entData.entities)) {
-          haDevicesCache = entData.entities;
-        }
+        if (cfgData.ok && cfgData.config) { currentAutoCfg = cfgData.config; ensureNormalizedRules(); }
+        if (entData.ok && Array.isArray(entData.entities)) haDevicesCache = entData.entities;
         renderAllAutomationUI();
       } catch (e) {
         if (container) {
@@ -34,30 +29,20 @@
           {
             id: 'idle', name: 'Tắt đèn khi vắng người', icon: 'bedtime', enabled: true,
             description: 'Tự động tắt các thiết bị khi phòng khách không có người và TV tắt.',
-            triggers: [{ type: 'idle_room', idle_minutes: 1 }],
-            conditions: [{ type: 'tv_state', tv_state: 'off' }],
+            triggers: [{ type: 'idle_room', idle_minutes: 1 }], conditions: [{ type: 'tv_state', tv_state: 'off' }],
             actions: [{ type: 'entities', service: 'turn_off', target_entities: [] }]
           },
           {
             id: 'clap', name: 'Ngồi Sofa vỗ tay', icon: 'front_hand', enabled: true,
             description: 'Camera phát hiện người ở Sofa kết hợp tiếng vỗ tay sẽ bật thiết bị và mở TV.',
-            triggers: [{ type: 'clap_sound', preset: '1' }],
-            conditions: [],
-            actions: [
-              { type: 'entities', service: 'turn_on', target_entities: [] },
-              { type: 'tv', target_tv: '192.168.1.8' },
-              { type: 'camera', camera_preset: '1' }
-            ]
+            triggers: [{ type: 'clap_sound', preset: '1' }], conditions: [],
+            actions: [{ type: 'entities', service: 'turn_on', target_entities: [] }, { type: 'tv', target_tv: '192.168.1.8' }, { type: 'camera', camera_preset: '1' }]
           },
           {
             id: 'evening', name: 'Phát hiện người buổi tối', icon: 'wb_twilight', enabled: true,
             description: 'Phát hiện có người vào khung giờ buổi tối sẽ tự động bật đèn đón và quay camera.',
-            triggers: [{ type: 'person_detected', preset: '3' }],
-            conditions: [{ type: 'time_range', start_hour: 18, end_hour: 6 }],
-            actions: [
-              { type: 'entities', service: 'turn_on', target_entities: [] },
-              { type: 'camera', camera_preset: '3' }
-            ]
+            triggers: [{ type: 'person_detected', preset: '3' }], conditions: [{ type: 'time_range', start_hour: 18, end_hour: 6 }],
+            actions: [{ type: 'entities', service: 'turn_on', target_entities: [] }, { type: 'camera', camera_preset: '3' }]
           }
         ];
       }
@@ -229,6 +214,30 @@
       if (!rule || !Array.isArray(rule[stepType])) return;
       collectRuleFromDOM(rule);
       rule[stepType].splice(idx, 1);
+      renderAllAutomationUI(ruleId);
+    }
+
+    function onActionTypeChange(ruleId, idx, newType) {
+      const rule = (currentAutoCfg.rules || []).find(r => r.id === ruleId);
+      if (!rule || !Array.isArray(rule.actions) || !rule.actions[idx]) return;
+      collectRuleFromDOM(rule);
+      rule.actions[idx].type = newType;
+      renderAllAutomationUI(ruleId);
+    }
+
+    function onTriggerTypeChange(ruleId, idx, newType) {
+      const rule = (currentAutoCfg.rules || []).find(r => r.id === ruleId);
+      if (!rule || !Array.isArray(rule.triggers) || !rule.triggers[idx]) return;
+      collectRuleFromDOM(rule);
+      rule.triggers[idx].type = newType;
+      renderAllAutomationUI(ruleId);
+    }
+
+    function onConditionTypeChange(ruleId, idx, newType) {
+      const rule = (currentAutoCfg.rules || []).find(r => r.id === ruleId);
+      if (!rule || !Array.isArray(rule.conditions) || !rule.conditions[idx]) return;
+      collectRuleFromDOM(rule);
+      rule.conditions[idx].type = newType;
       renderAllAutomationUI(ruleId);
     }
 
