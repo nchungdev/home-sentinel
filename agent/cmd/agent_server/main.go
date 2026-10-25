@@ -867,7 +867,11 @@ func startCameraWakeWordListener(server *Server) {
 				continue
 			}
 
-			rtspURL := fmt.Sprintf("rtsp://%s:%s@%s:554/stream1", cfg.Username, cfg.Password, cfg.IP)
+			rtspPath := cfg.StreamPath
+			if rtspPath == "" {
+				rtspPath = "/stream2"
+			}
+			rtspURL := fmt.Sprintf("rtsp://%s:%s@%s:554%s", cfg.Username, cfg.Password, cfg.IP, rtspPath)
 			cmd := exec.Command("ffmpeg", "-rtsp_transport", "tcp", "-i", rtspURL, "-f", "s16le", "-ar", "16000", "-ac", "1", "-")
 			stdout, err := cmd.StdoutPipe()
 			if err != nil {
@@ -1075,7 +1079,11 @@ func recordAndTranscribe(cfg CameraConfigData, durationSec int) (string, error) 
 	tmpWav := fmt.Sprintf("/tmp/cam_rec_%d.wav", time.Now().UnixNano())
 	defer os.Remove(tmpWav)
 
-	rtspURL := fmt.Sprintf("rtsp://%s:%s@%s:554/stream1", cfg.Username, cfg.Password, cfg.IP)
+	rtspPath := cfg.StreamPath
+	if rtspPath == "" {
+		rtspPath = "/stream2"
+	}
+	rtspURL := fmt.Sprintf("rtsp://%s:%s@%s:554%s", cfg.Username, cfg.Password, cfg.IP, rtspPath)
 	// Thu âm từ RTSP microphone của Tapo C200
 	ffmpegCmd := exec.Command("ffmpeg", "-y", "-rtsp_transport", "tcp", "-i", rtspURL, "-t", strconv.Itoa(durationSec), "-vn", "-ar", "16000", "-ac", "1", tmpWav)
 	if err := ffmpegCmd.Run(); err != nil {
