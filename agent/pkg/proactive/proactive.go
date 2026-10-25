@@ -205,6 +205,27 @@ func timeContextSuggestion(hour int, nowEpochMs int64) *contracts.Suggestion {
 			ExpiresAt:   nowEpochMs + int64(2*time.Hour/time.Millisecond),
 			DedupeKey:   "time_noon_vlog",
 		}
+	case hour >= 14 && hour <= 18:
+		return &contracts.Suggestion{
+			ID:       "sug-time-afternoon-music",
+			Kind:     "time_context",
+			Title:    "Nhạc Chiều Thư Thái",
+			Message:  "Buổi chiều nhẹ nhàng! Mở nhạc acoustic thư giãn nhé?",
+			TargetID: "yt_afternoon_music",
+			Action: contracts.ActionStep{
+				StepID:       "step-afternoon-music",
+				ActionType:   "youtube.launch",
+				TargetID:     "yt_afternoon_music",
+				Parameters:   map[string]any{"query": "nhạc acoustic chiều nhẹ nhàng"},
+				RunsOn:       "tv_client",
+				TimeoutMs:    5000,
+				IsIdempotent: true,
+			},
+			Evidence:    map[string]any{"source": "time_of_day", "hour": hour},
+			GeneratedAt: nowEpochMs,
+			ExpiresAt:   nowEpochMs + int64(2*time.Hour/time.Millisecond),
+			DedupeKey:   "time_afternoon_music",
+		}
 	case hour >= 19 && hour <= 21:
 		return &contracts.Suggestion{
 			ID:       "sug-time-evening-show",
