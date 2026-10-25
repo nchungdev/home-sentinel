@@ -663,6 +663,95 @@ func (s *Server) handleCameraPrivacy(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (s *Server) handleCameraSpeak(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req struct {
+		Text  string `json:"text"`
+		Voice string `json:"voice"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
+
+	text := strings.TrimSpace(req.Text)
+	if text == "" {
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{"ok": false, "error": "Thiếu nội dung câu nói"})
+		return
+	}
+
+	configPath := "sentinel_camera_config.json"
+	var cfg CameraConfigData
+	if data, err := os.ReadFile(configPath); err == nil {
+		_ = json.Unmarshal(data, &cfg)
+	}
+
+	effectivePass := cfg.CloudPassword
+	if effectivePass == "" {
+		effectivePass = cfg.Password
+	}
+	if cfg.IP == "" || effectivePass == "" {
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"ok":    false,
+			"error": "Chưa cấu hình IP hoặc mật khẩu Camera",
+		})
+		return
+	}
+
+	// 1. Dùng edge-tts tạo âm thanh MP3
+	voice := "vi-VN-HoaiMyNeural"
+	if req.Voice == "male" {
+		voice = "vi-VN-NamMinhNeural"
+	}
+
+	tmpMp3 := fmt.Sprintf("/tmp/tts_%d.mp3", time.Now().UnixNano())
+	tmpWav := fmt.Sprintf("/tmp/tts_%d.wav", time.Now().UnixNano())
+	defer os.Remove(tmpMp3)
+	defer os.Remove(tmpWav)
+
+	ttsCmd := exec.Command("edge-tts", "--voice", voice, "--text", text, "--write-media", tmpMp3)
+	if err := ttsCmd.Run(); err != nil {
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"ok":    false,
+			"error": fmt.Sprintf("Lỗi tạo giọng nói (edge-tts): %v", err),
+		})
+		return
+	}
+
+	// 2. Chuyển đổi sang chuẩn Alaw 8000Hz PCM cho Tapo Speaker
+	ffmpegCmd := exec.Command("ffmpeg", "-y", "-i", tmpMp3, "-ar", "8000", "-ac", "1", "-c:a", "pcm_alaw", tmpWav)
+	if err := ffmpegCmd.Run(); err != nil {
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"ok":    false,
+			"error": fmt.Sprintf("Lỗi xử lý audio (ffmpeg): %v", err),
+		})
+		return
+	}
+
+	// 3. Gọi tapo_speaker phát trực tiếp lên loa camera port 8800
+	speakerBin := "/home/chungnh/home-sentinel/bin/tapo_speaker"
+	tapoURL := fmt.Sprintf("tapo://%s@%s:8800", effectivePass, cfg.IP)
+	spkCmd := exec.Command(speakerBin, tapoURL, tmpWav)
+	out, err := spkCmd.CombinedOutput()
+	if err != nil {
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"ok":    false,
+			"error": fmt.Sprintf("Lỗi phát loa Camera: %v (%s)", err, strings.TrimSpace(string(out))),
+		})
+		return
+	}
+
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"ok":      true,
+		"message": fmt.Sprintf("Đã phát giọng nói lên loa Camera thành công: \"%s\"", text),
+	})
+}
+
 func main() {
 	server := NewServer()
 	server.StartDiscoveryResponder()
@@ -687,6 +776,7 @@ func main() {
 	mux.HandleFunc("/api/camera/stream.mjpeg", server.handleStreamMjpeg)
 	mux.HandleFunc("/api/camera/ptz", server.handleCameraPTZ)
 	mux.HandleFunc("/api/camera/privacy", server.handleCameraPrivacy)
+	mux.HandleFunc("/api/camera/speak", server.handleCameraSpeak)
 	mux.HandleFunc("/api/ha/config", server.handleHAConfig)
 
 	mux.HandleFunc("/notify", func(w http.ResponseWriter, r *http.Request) {
