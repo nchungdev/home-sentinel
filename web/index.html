@@ -1962,7 +1962,7 @@
         es.onmessage = function(e) {
           if (!e.data || e.data === 'CONNECTED') return;
           const time = new Date().toLocaleTimeString();
-          log.textContent += `\n${e.data}`;
+          log.textContent = `${log.textContent}\n${e.data}`.split('\n').slice(-300).join('\n');
           log.scrollTop = log.scrollHeight;
         };
 

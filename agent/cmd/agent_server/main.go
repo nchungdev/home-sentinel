@@ -33,20 +33,20 @@ import (
 )
 
 type Server struct {
-	Token          string
-	Port           int
-	NotifyPort     int
-	DiscoveryPort  int
-	BroadcastIP    string
-	Arbitrator     *arbitration.AudioArbitrator
-	HAClient       *haclient.Client
-	MediaBridge    *mediabridge.Bridge
-	LLMManager     *llm.Manager
-	UserOnSofa     bool
-	StateMutex     sync.RWMutex
-	RequestLimiter chan struct{}
-	ClientLogs     []ClientLogEntry
-	LogsMutex      sync.RWMutex
+	Token            string
+	Port             int
+	NotifyPort       int
+	DiscoveryPort    int
+	BroadcastIP      string
+	Arbitrator       *arbitration.AudioArbitrator
+	HAClient         *haclient.Client
+	MediaBridge      *mediabridge.Bridge
+	LLMManager       *llm.Manager
+	UserOnSofa       bool
+	StateMutex       sync.RWMutex
+	RequestLimiter   chan struct{}
+	ClientLogs       []ClientLogEntry
+	LogsMutex        sync.RWMutex
 	eventSubscribers map[chan string]struct{}
 	eventSubMutex    sync.Mutex
 
@@ -815,6 +815,9 @@ func matchesWakeWord(text string) (bool, string) {
 		"du in ơi", "du in oi", "du in",
 		"du inh ơi", "du inh oi", "du inh",
 		"duy in ơi", "duy in oi", "duy in",
+		// Bổ sung các biến thể khi Whisper nhận diện âm thanh từ micro camera
+		"nui nui", "nui, nui", "nui", "lui", "nui ơi", "nui oi",
+		"đui in", "đui", "đui ơi",
 	}
 
 	for _, w := range wakeWords {
@@ -856,42 +859,62 @@ func askAgentQuery(server *Server, question string) string {
 
 // startCameraWakeWordListener lắng nghe âm thanh từ microphone của Camera Tapo trong nền
 func startCameraWakeWordListener(server *Server) {
+	logMic := func(format string, args ...interface{}) {
+		msg := fmt.Sprintf("[%s] 🎤 Mic Camera: %s", time.Now().Format("15:04:05"), fmt.Sprintf(format, args...))
+		fmt.Println(msg)
+		server.broadcastTerminal(msg)
+	}
 	go func() {
+		waitingForConfig := false
 		for {
 			var cfg CameraConfigData
 			if data, err := os.ReadFile("sentinel_camera_config.json"); err == nil {
 				_ = json.Unmarshal(data, &cfg)
 			}
 			if cfg.IP == "" || cfg.Password == "" {
+				if !waitingForConfig {
+					logMic("Chưa có cấu hình camera (IP/mật khẩu); chưa thể thu âm.")
+					waitingForConfig = true
+				}
 				time.Sleep(10 * time.Second)
 				continue
 			}
 
+			waitingForConfig = false
 			rtspPath := cfg.StreamPath
 			if rtspPath == "" {
 				rtspPath = "/stream2"
 			}
 			rtspURL := fmt.Sprintf("rtsp://%s:%s@%s:554%s", cfg.Username, cfg.Password, cfg.IP, rtspPath)
-			cmd := exec.Command("ffmpeg", "-rtsp_transport", "tcp", "-i", rtspURL, "-f", "s16le", "-ar", "16000", "-ac", "1", "-")
+			// Thêm bộ lọc âm thanh:
+			// highpass=f=200: cắt tiếng ù nền tần số thấp
+			// lowpass=f=3400: giữ dải tần số giọng nói con người (giảm tiếng rít)
+			// volume=2.5: khuếch đại âm lượng mic lên 2.5 lần để bù cho mic camera ở xa
+			cmd := exec.Command("ffmpeg", "-rtsp_transport", "tcp", "-i", rtspURL, "-af", "highpass=f=200,lowpass=f=3400,volume=2.5", "-f", "s16le", "-ar", "16000", "-ac", "1", "-")
 			stdout, err := cmd.StdoutPipe()
 			if err != nil {
+				logMic("Không tạo được luồng PCM; thử lại sau 5 giây.")
 				time.Sleep(5 * time.Second)
 				continue
 			}
 			if err := cmd.Start(); err != nil {
+				logMic("Không khởi động được FFmpeg; kiểm tra cài đặt/quyền chạy. Thử lại sau 5 giây.")
 				time.Sleep(5 * time.Second)
 				continue
 			}
 
-			fmt.Println("[WakeWord] Bắt đầu giám sát từ khóa 'Duinch ơi / Đu in...' qua Mic Camera Tapo C200...")
+			logMic("Đã khởi động FFmpeg; đang chờ PCM 16 kHz mono từ camera.")
 
 			buf := make([]byte, 3200) // 100ms
 			var speechBuffer []byte
 			silenceChunks := 0
 			isSpeaking := false
+			lastLevelLog := time.Time{}
+			var windowSum float64
+			var windowSamples, windowPeak int
 
 			for {
-				n, err := stdout.Read(buf)
+				n, err := io.ReadFull(stdout, buf)
 				if err != nil || n < 2 {
 					break
 				}
@@ -902,12 +925,38 @@ func startCameraWakeWordListener(server *Server) {
 				for i := 0; i < samples; i++ {
 					val := int16(buf[2*i]) | (int16(buf[2*i+1]) << 8)
 					sum += float64(val) * float64(val)
+					peak := int(val)
+					if peak < 0 {
+						peak = -peak
+					}
+					if peak > windowPeak {
+						windowPeak = peak
+					}
 				}
 				rms := math.Sqrt(sum / float64(samples))
+				windowSum += sum
+				windowSamples += samples
+				if time.Since(lastLevelLog) >= time.Second {
+					level := math.Sqrt(windowSum / float64(windowSamples))
+					db := -96.0
+					if level > 0 {
+						db = 20 * math.Log10(level/32768)
+					}
+					state := "dưới ngưỡng"
+					if rms > 80 {
+						state = "vượt ngưỡng âm thanh (chưa xác nhận giọng nói)"
+					}
+					logMic("PCM nhận được | RMS=%.1f | peak=%d | %.1f dBFS | ngưỡng=80 | %s | đoạn thu=%.1fs", level, windowPeak, db, state, float64(len(speechBuffer))/32000)
+					lastLevelLog = time.Now()
+					windowSum, windowSamples, windowPeak = 0, 0, 0
+				}
 
 				// Ngưỡng phát hiện tiếng nói (Voice Activity Threshold)
 				// Đặt ở 80.0 để loại bỏ tiếng ồn nền / quạt / điều hòa (tránh Whisper bị ảo giác câu YouTube)
 				if rms > 80.0 {
+					if !isSpeaking {
+						logMic("Bắt đầu đoạn âm thanh vượt ngưỡng.")
+					}
 					isSpeaking = true
 					silenceChunks = 0
 					speechBuffer = append(speechBuffer, buf[:n]...)
@@ -922,11 +971,18 @@ func startCameraWakeWordListener(server *Server) {
 							audioToTranscribe := speechBuffer
 							speechBuffer = nil
 
+							logMic("Gửi %.1fs âm thanh sang Whisper...", float64(len(audioToTranscribe))/32000)
 							go func(rawPCM []byte) {
 								text, terr := transcribePCM(rawPCM)
-								if terr != nil || text == "" {
+								if terr != nil {
+									logMic("Whisper lỗi: %v", terr)
 									return
 								}
+								if text == "" {
+									logMic("Whisper trả về văn bản rỗng.")
+									return
+								}
+								logMic("Whisper nghe được (trước bộ lọc/từ đánh thức): %q", text)
 								// Lọc bỏ các câu ảo giác (hallucination) kinh điển của Whisper khi gặp khoảng lặng
 								lowerT := strings.ToLower(text)
 								if strings.Contains(lowerT, "subscribe") ||
@@ -980,6 +1036,7 @@ func startCameraWakeWordListener(server *Server) {
 								}
 							}(audioToTranscribe)
 						} else {
+							logMic("Bỏ đoạn âm thanh quá ngắn: %.2fs.", float64(len(speechBuffer))/32000)
 							speechBuffer = nil
 						}
 					}
@@ -987,6 +1044,8 @@ func startCameraWakeWordListener(server *Server) {
 			}
 
 			_ = cmd.Process.Kill()
+			_ = cmd.Wait()
+			logMic("Luồng PCM đã ngắt/chưa nhận được âm thanh; kết nối lại sau 3 giây.")
 			time.Sleep(3 * time.Second)
 		}
 	}()
@@ -999,6 +1058,9 @@ func transcribePCM(pcm []byte) (string, error) {
 		return "", err
 	}
 	defer conn.Close()
+	if err := conn.SetDeadline(time.Now().Add(60 * time.Second)); err != nil {
+		return "", err
+	}
 
 	tData, _ := json.Marshal(map[string]interface{}{"name": "base-int8", "language": "vi"})
 	tHeader, _ := json.Marshal(map[string]interface{}{"type": "transcribe", "version": "1.10.2", "data_length": len(tData)})
@@ -1030,7 +1092,7 @@ func transcribePCM(pcm []byte) (string, error) {
 	for {
 		line, err := reader.ReadBytes('\n')
 		if err != nil {
-			break
+			return "", fmt.Errorf("read Whisper response: %w", err)
 		}
 		var h struct {
 			Type          string `json:"type"`
