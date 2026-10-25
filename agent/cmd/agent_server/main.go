@@ -902,8 +902,8 @@ func startCameraWakeWordListener(server *Server) {
 				rms := math.Sqrt(sum / float64(samples))
 
 				// Ngưỡng phát hiện tiếng nói (Voice Activity Threshold)
-				// Hạ ngưỡng xuống 35.0 để bắt được giọng nói bình thường hoặc từ khoảng cách vài mét
-				if rms > 35.0 {
+				// Đặt ở 80.0 để loại bỏ tiếng ồn nền / quạt / điều hòa (tránh Whisper bị ảo giác câu YouTube)
+				if rms > 80.0 {
 					isSpeaking = true
 					silenceChunks = 0
 					speechBuffer = append(speechBuffer, buf[:n]...)
@@ -914,13 +914,23 @@ func startCameraWakeWordListener(server *Server) {
 					// Khi người nói dứt câu (ngừng nói ~700ms)
 					if silenceChunks > 7 {
 						isSpeaking = false
-						if len(speechBuffer) >= 16000*2*6/10 { // Ít nhất 0.6 giây âm thanh
+						if len(speechBuffer) >= 16000*2*8/10 { // Ít nhất 0.8 giây âm thanh
 							audioToTranscribe := speechBuffer
 							speechBuffer = nil
 
 							go func(rawPCM []byte) {
 								text, terr := transcribePCM(rawPCM)
 								if terr != nil || text == "" {
+									return
+								}
+								// Lọc bỏ các câu ảo giác (hallucination) kinh điển của Whisper khi gặp khoảng lặng
+								lowerT := strings.ToLower(text)
+								if strings.Contains(lowerT, "subscribe") ||
+									strings.Contains(lowerT, "đăng ký kênh") ||
+									strings.Contains(lowerT, "ghiền mì gõ") ||
+									strings.Contains(lowerT, "video hấp dẫn") ||
+									strings.Contains(lowerT, "nói nơi") ||
+									strings.Contains(lowerT, "cảm ơn các bạn đã theo dõi") {
 									return
 								}
 								tNow := time.Now().Format("15:04:05")
