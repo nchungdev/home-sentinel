@@ -22,7 +22,8 @@ class AgentFailureTest(unittest.TestCase):
             script.chmod(0o700)
             pieces = []
             with patch.object(server, "COMMAND", str(script)), \
-                    patch.object(server, "TIMEOUT_SECONDS", timeout):
+                    patch.object(server, "TIMEOUT_SECONDS", timeout), \
+                    patch.object(server, "system_overloaded", return_value=False):
                 server.run_cli("hello", "", pieces.append)
             return "".join(pieces)
 
