@@ -164,12 +164,8 @@ func startCameraWakeWordListener(server *Server) {
 							server.transcribeWorkers++
 							server.transcribeLock.Unlock()
 
-							targetSTT := "Groq Whisper Large-v3"
-							if server.Transcriber == nil || !server.Transcriber.HasGroqKey() {
-								targetSTT = "Local Wyoming Whisper"
-							}
-							logMic("🗣️ [Phát hiện Lời Nói] Gửi %.1fs âm thanh sang %s (RMS=%.0f, ZCR=%.3f)...",
-								float64(len(audioToTranscribe))/32000, targetSTT, audioFeatures.RMS, audioFeatures.ZeroCrossing)
+							logMic("🗣️ [Âm Thanh Phòng Khách] Quét từ khóa nội bộ Local Whisper (%.1fs, RMS=%.0f, ZCR=%.3f)...",
+								float64(len(audioToTranscribe))/32000, audioFeatures.RMS, audioFeatures.ZeroCrossing)
 
 							go func(rawPCM []byte, cfg CameraConfigData) {
 								defer func() {
@@ -178,39 +174,28 @@ func startCameraWakeWordListener(server *Server) {
 									server.transcribeLock.Unlock()
 								}()
 
-								var text, engine string
+								var text string
 								var terr error
 								if server.Transcriber != nil {
-									text, engine, terr = server.Transcriber.Transcribe(rawPCM)
+									text, _, terr = server.Transcriber.TranscribeLocal(rawPCM)
 								} else {
 									text, terr = speech.TranscribeLocalPCM(rawPCM, "tiny-int8")
-									engine = "local_whisper"
 								}
-								if terr != nil {
-									logMic("STT [%s] lỗi: %v", engine, terr)
-									return
-								}
-								if text == "" {
-									logMic("STT [%s] trả về văn bản rỗng.", engine)
+								if terr != nil || text == "" {
 									return
 								}
 								lowerT := strings.ToLower(text)
 								if isWhisperHallucination(lowerT) {
-									logMic("Bỏ qua ảo giác Whisper: %q", text)
 									return
 								}
-								// Chuẩn hóa & đoán ý theo context nhà thông minh (vd: "tắt đầy/tắt này" -> "tắt đèn")
+								// Chuẩn hóa & đoán ý theo context nhà thông minh
 								normalizedText := NormalizeSmartHomeQuery(text)
 								if normalizedText != text {
 									logMic("Đoán ý thông minh: %q -> %q", text, normalizedText)
 									text = normalizedText
 								}
-								logMic("STT [%s] nghe được: %q", engine, text)
 
 								tNow := time.Now().Format("15:04:05")
-								fmt.Printf("[Mic Camera Heard]: \"%s\"\n", text)
-								server.broadcastTerminal(fmt.Sprintf("[%s] 🎤 Camera Mic thu được: \"%s\"", tNow, text))
-
 								if server.AutomationMgr != nil {
 									server.AutomationMgr.RecordActivity("tiếng nói / âm thanh phòng khách")
 									if server.AutomationMgr.MatchesDoorSound(text) {
@@ -219,9 +204,16 @@ func startCameraWakeWordListener(server *Server) {
 								}
 
 								matched, query := matchesWakeWord(text)
-								if matched {
-									server.handleWakeWordQuery(query, cfg, tNow)
+								if !matched {
+									// Người trong phòng đang nói chuyện phiếm hoặc xem TV mà không gọi Duinch -> Bỏ qua, KHÔNG gửi Groq!
+									return
 								}
+
+								logMic("🎯 [WakeWord Hợp Lệ] Đã phát hiện từ khóa gọi Duinch! Query: %q", query)
+								fmt.Printf("[Mic Camera Heard]: \"%s\"\n", text)
+								server.broadcastTerminal(fmt.Sprintf("[%s] 🎤 Camera Mic thu được: \"%s\"", tNow, text))
+
+								server.handleWakeWordQuery(query, cfg, tNow)
 							}(audioToTranscribe, cfg)
 						} else {
 							logMic("Bỏ đoạn âm thanh quá ngắn: %.2fs.", float64(len(speechBuffer))/32000)
@@ -247,7 +239,8 @@ func (s *Server) handleWakeWordQuery(query string, cfg CameraConfigData, tNow st
 		s.broadcastTerminal(fmt.Sprintf("[%s] 🗣️ Duinch Camera phản hồi: \"Dạ, em nghe đây ạ!\"", tNow))
 		_ = s.speakOnCamera("Dạ, em nghe đây ạ!", "female")
 		time.Sleep(2 * time.Second)
-		followUp, ferr := recordAndTranscribe(cfg, 4)
+		// Thu âm câu lệnh tiếp theo và gửi sang Groq Whisper Large-v3 để nhận diện siêu chính xác
+		followUp, ferr := s.recordAndTranscribeCloud(cfg, 4)
 		if ferr == nil && followUp != "" {
 			query = followUp
 			s.broadcastTerminal(fmt.Sprintf("[%s] 🎤 User nói tiếp: \"%s\"", time.Now().Format("15:04:05"), query))
@@ -293,8 +286,4 @@ func askAgentQuery(server *Server, question string) string {
 	}
 
 	return pres.SpeechText
-}
-
-func transcribePCM(pcm []byte) (string, error) {
-	return speech.TranscribeLocalPCM(pcm, "tiny-int8")
 }

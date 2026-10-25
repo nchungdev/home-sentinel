@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/nchungdev/home-sentinel/agent/pkg/camstream"
+	"github.com/nchungdev/home-sentinel/agent/pkg/speech"
 )
 
 func (s *Server) speakOnCamera(text string, voice string) error {
@@ -139,6 +140,38 @@ func turnOnTV(tvHost string) error {
 	return nil
 }
 
+func (s *Server) recordAndTranscribeCloud(cfg CameraConfigData, durationSec int) (string, error) {
+	if cfg.IP == "" {
+		return "", fmt.Errorf("chưa cấu hình IP camera")
+	}
+	tmpWav := fmt.Sprintf("/tmp/cam_rec_%d.wav", time.Now().UnixNano())
+	defer os.Remove(tmpWav)
+
+	rtspPath := cfg.StreamPath
+	if rtspPath == "" {
+		rtspPath = "/stream2"
+	}
+	rtspURL := fmt.Sprintf("rtsp://%s:%s@%s:554%s", cfg.Username, cfg.Password, cfg.IP, rtspPath)
+	ffmpegCmd := exec.Command("ffmpeg", "-y", "-rtsp_transport", "tcp", "-i", rtspURL, "-t", strconv.Itoa(durationSec), "-vn", "-ar", "16000", "-ac", "1", tmpWav)
+	if err := ffmpegCmd.Run(); err != nil {
+		return "", fmt.Errorf("lỗi ffmpeg: %w", err)
+	}
+
+	pcmData, err := os.ReadFile(tmpWav)
+	if err != nil {
+		return "", fmt.Errorf("lỗi đọc file wav: %w", err)
+	}
+	if len(pcmData) > 44 {
+		pcmData = pcmData[44:]
+	}
+
+	if s.Transcriber != nil {
+		text, _, err := s.Transcriber.TranscribeCloud(pcmData)
+		return text, err
+	}
+	return speech.TranscribeLocalPCM(pcmData, "tiny-int8")
+}
+
 func recordAndTranscribe(cfg CameraConfigData, durationSec int) (string, error) {
 	if cfg.IP == "" {
 		return "", fmt.Errorf("chưa cấu hình IP camera")
@@ -164,5 +197,5 @@ func recordAndTranscribe(cfg CameraConfigData, durationSec int) (string, error) 
 		pcmData = pcmData[44:]
 	}
 
-	return transcribePCM(pcmData)
+	return speech.TranscribeLocalPCM(pcmData, "tiny-int8")
 }
