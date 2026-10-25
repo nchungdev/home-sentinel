@@ -1238,22 +1238,29 @@
       <!-- CỘT 1: CAMERA STREAM + TERMINAL LOG -->
       <div class="camera-col">
         <div class="camera-screen">
-          <div class="stream-feed">
-            <div class="camera-live-badge">
+          <div class="stream-feed" style="position:relative; cursor:pointer;" onclick="toggleCameraPlayback()">
+            <div class="camera-live-badge" id="camLiveBadge" style="display:none;">
               <span class="rec-dot"></span>
               <span id="camFeedBadgeText">LIVE STREAM</span>
             </div>
-            <img id="mjpegFeed" src="/api/camera/stream.mjpeg" alt="Camera Stream" onerror="handleStreamError()" onload="handleStreamLoaded()">
+            <img id="mjpegFeed" src="" alt="Camera Stream" style="display:none;" onerror="handleStreamError()" onload="handleStreamLoaded()">
+            <div class="unconfigured-overlay" id="camPlaceholderOverlay" style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px;">
+              <div style="width: 56px; height: 56px; border-radius: 50%; background: rgba(99, 102, 241, 0.2); border: 2px solid rgba(99, 102, 241, 0.6); display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 0 20px rgba(99, 102, 241, 0.4);">
+                ▶
+              </div>
+              <h4 style="margin: 4px 0 0; font-size: 14px; font-weight: 600; color: var(--text-bright);">Bấm để xem trực tiếp</h4>
+              <p style="margin: 0; font-size: 11.5px; color: var(--text-muted);">Tối ưu băng thông mạng &amp; CPU máy chủ</p>
+            </div>
             <div class="unconfigured-overlay" id="unconfiguredOverlay" style="display:none;">
               <div style="font-size: 38px;">📷</div>
               <h4 id="overlayTitle">Chưa kết nối Camera</h4>
               <p id="overlayDesc">Hệ thống chưa tìm thấy cấu hình Camera hoặc luồng RTSP bị ngắt quãng. Hãy vào Cài Đặt để chọn thiết bị hoặc bấm thử kết nối.</p>
-              <button class="btn-shortcut" onclick="jumpToConfig('camera-cfg')">⚙️ Cấu Hình Camera Ngay</button>
+              <button class="btn-shortcut" onclick="jumpToConfig('camera-cfg'); event.stopPropagation();">⚙️ Cấu Hình Camera Ngay</button>
             </div>
           </div>
           <div class="camera-meta">
             <span id="camMetaLabel">Camera IP (RTSP TCP)</span>
-            <span style="color: #10b981; font-weight:600;" id="feedStatusLabel">Đang truyền trực tiếp</span>
+            <span style="color: var(--text-muted); font-weight:600;" id="feedStatusLabel">Đang tạm dừng (Bấm để xem)</span>
           </div>
         </div>
 
@@ -1634,15 +1641,48 @@
   </main>
 
   <script>
+    let isCameraStreaming = false;
+
+    function toggleCameraPlayback() {
+      const img = document.getElementById('mjpegFeed');
+      const placeholder = document.getElementById('camPlaceholderOverlay');
+      const badge = document.getElementById('camLiveBadge');
+      const label = document.getElementById('feedStatusLabel');
+
+      if (!isCameraStreaming) {
+        // Bắt đầu phát
+        isCameraStreaming = true;
+        img.src = '/api/camera/stream.mjpeg?t=' + Date.now();
+        img.style.display = 'block';
+        placeholder.style.display = 'none';
+        badge.style.display = 'flex';
+        label.textContent = 'Đang kết nối luồng...';
+        label.style.color = '#38bdf8';
+      } else {
+        // Tắt phát (dừng luồng RTSP giải phóng CPU)
+        isCameraStreaming = false;
+        img.src = '';
+        img.style.display = 'none';
+        placeholder.style.display = 'flex';
+        badge.style.display = 'none';
+        label.textContent = 'Đang tạm dừng (Bấm để xem)';
+        label.style.color = 'var(--text-muted)';
+      }
+    }
+
     function handleStreamLoaded() {
+      if (!isCameraStreaming) return;
       document.getElementById('mjpegFeed').style.display = 'block';
+      document.getElementById('camPlaceholderOverlay').style.display = 'none';
       document.getElementById('unconfiguredOverlay').style.display = 'none';
       document.getElementById('feedStatusLabel').textContent = 'Đang truyền trực tiếp (12 FPS)';
       document.getElementById('feedStatusLabel').style.color = '#10b981';
     }
 
     function handleStreamError() {
+      if (!isCameraStreaming) return;
       document.getElementById('mjpegFeed').style.display = 'none';
+      document.getElementById('camPlaceholderOverlay').style.display = 'none';
       document.getElementById('unconfiguredOverlay').style.display = 'flex';
       document.getElementById('feedStatusLabel').textContent = 'Chưa kết nối';
       document.getElementById('feedStatusLabel').style.color = '#ef4444';
