@@ -881,6 +881,19 @@ func (s *Server) broadcastTerminal(msg string) {
 
 // matchesWakeWord kiểm tra xem văn bản STT có chứa từ khóa đánh thức Duinch hay không
 // Bao gồm cả tiếng Anh lẫn các biến thể phát âm / ghi nhận tiếng Việt (đu in, đu inh, đuyn,...)
+func isWhisperHallucination(s string) bool {
+	return strings.Contains(s, "subscribe") ||
+		strings.Contains(s, "đăng ký") ||
+		strings.Contains(s, "ghiền mì gõ") ||
+		strings.Contains(s, "mì gõ") ||
+		strings.Contains(s, "video hấp dẫn") ||
+		strings.Contains(s, "nói nơi") ||
+		strings.Contains(s, "cảm ơn các bạn đã theo dõi") ||
+		strings.Contains(s, "hẹn gặp lại") ||
+		strings.Contains(s, "chúc các bạn") ||
+		strings.Contains(s, "like và chia sẻ")
+}
+
 func matchesWakeWord(text string) (bool, string) {
 	lower := strings.ToLower(text)
 	wakeWords := []string{
@@ -1086,17 +1099,12 @@ func startCameraWakeWordListener(server *Server) {
 									logMic("STT [%s] trả về văn bản rỗng.", engine)
 									return
 								}
-								logMic("STT [%s] nghe được: %q", engine, text)
 								// Lọc bỏ các câu ảo giác (hallucination) kinh điển của Whisper khi gặp khoảng lặng
 								lowerT := strings.ToLower(text)
-								if strings.Contains(lowerT, "subscribe") ||
-									strings.Contains(lowerT, "đăng ký kênh") ||
-									strings.Contains(lowerT, "ghiền mì gõ") ||
-									strings.Contains(lowerT, "video hấp dẫn") ||
-									strings.Contains(lowerT, "nói nơi") ||
-									strings.Contains(lowerT, "cảm ơn các bạn đã theo dõi") {
+								if isWhisperHallucination(lowerT) {
 									return
 								}
+								logMic("STT [%s] nghe được: %q", engine, text)
 								tNow := time.Now().Format("15:04:05")
 								fmt.Printf("[Mic Camera Heard]: \"%s\"\n", text)
 								server.broadcastTerminal(fmt.Sprintf("[%s] 🎤 Camera Mic thu được: \"%s\"", tNow, text))

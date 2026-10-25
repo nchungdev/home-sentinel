@@ -52,8 +52,7 @@ func (c *GroqClient) TranscribePCM(pcm []byte) (string, error) {
 	_ = writer.WriteField("model", "whisper-large-v3")
 	_ = writer.WriteField("language", "vi")
 	_ = writer.WriteField("response_format", "json")
-	// Prompt mớm từ khóa để Whisper bắt chuẩn xác tên Duinch và lệnh TV/đèn
-	_ = writer.WriteField("prompt", "Duinch, Duinch ơi, Đu in, mở TV, tắt TV, bật đèn, tắt đèn, phòng khách, cửa chính")
+	_ = writer.WriteField("temperature", "0.0")
 
 	if err := writer.Close(); err != nil {
 		return "", err
