@@ -22,10 +22,8 @@ import (
 	"github.com/nchungdev/home-sentinel/agent/pkg/llm"
 	"github.com/nchungdev/home-sentinel/agent/pkg/mediabridge"
 	"github.com/nchungdev/home-sentinel/agent/pkg/onvifscan"
+	"github.com/nchungdev/home-sentinel/web"
 )
-
-//go:embed web/index.html
-var webIndexPage []byte
 
 type Server struct {
 	Token          string
@@ -891,7 +889,7 @@ func main() {
 			return
 		}
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		_, _ = w.Write(webIndexPage)
+		_, _ = w.Write(web.GetIndexHTML())
 	})
 
 	mux.HandleFunc("/ask", server.handleAsk)

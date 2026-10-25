@@ -1,25 +1,22 @@
 # Agent server for the AI Agent card
 
-The launcher's **AI Agent** card listens on the TV and sends what it heard to `agent_server.py`. Run that on any
-machine the TV can reach: a home server, a NAS, a mini PC, a VPS. All it needs is Python 3 and a CLI that is
-logged in (`claude` by default). The server runs the CLI for each request and streams the answer back; a follow-up in
-the same popup continues the conversation. Nothing ties it to one machine: the TV only needs the right address.
+The launcher's **AI Agent** card listens on the TV and sends what it heard to the Sentinel Go backend (`bin/sentinel_server`).
+Run that on any machine the TV can reach: a home server, a NAS, a mini PC, a VPS.
 
 ## Set up on the server
 
-As the user the CLI runs under:
+As the user the agent runs under:
 
 ```bash
-mkdir -p ~/tv-agent ~/.config/systemd/user
-cp agent_server.py ~/tv-agent/
+mkdir -p ~/.config/systemd/user
 cp tv-agent.service ~/.config/systemd/user/
 umask 077
-printf 'AGENT_TOKEN=%s\nAGENT_PORT=8788\nAGENT_CMD=%s\nAGENT_WORKDIR=%s\n' \
-  "$(openssl rand -hex 24)" "$(command -v claude)" "$HOME" > ~/.config/tv-agent.env
+printf 'AGENT_TOKEN=%s\nAGENT_PORT=8788\n' \
+  "$(openssl rand -hex 24)" > ~/.config/tv-agent.env
 systemctl --user daemon-reload && systemctl --user enable --now tv-agent
 ```
 
-Without systemd, run `AGENT_TOKEN=... python3 agent_server.py` (it reads the same variables).
+Without systemd, run `AGENT_TOKEN=... ./bin/sentinel_server` (it reads the same variables).
 Set `AGENT_ALLOW` in `~/.config/tv-agent.env` to the TV's and your phone's IPs to refuse every other client.
 `AGENT_WORKDIR` is the directory the CLI works in: point it at a folder you are happy for the agent to touch.
 `AGENT_CMD` can be another CLI as long as it takes `-p` and the stream-json flags used in `run_cli`.
