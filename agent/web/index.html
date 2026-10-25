@@ -517,30 +517,38 @@
       box-shadow: 0 6px 18px rgba(79, 70, 229, 0.45);
     }
 
-    /* PRIVACY TOGGLE BUTTON */
-    .btn-privacy {
+    /* PRIVACY & DETECTION TOGGLE BUTTONS (UI/UX PRO MAX) */
+    .detection-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
       width: 100%;
-      padding: 12px 18px;
-      border-radius: 12px;
-      background: var(--surface);
+    }
+    .btn-toggle-row {
+      width: 100%;
+      padding: 10px 14px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.02);
       border: 1px solid var(--border);
       color: var(--text-bright);
-      font-size: 13px;
+      font-size: 12.5px;
       font-weight: 500;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: space-between;
       transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
     }
-    .btn-privacy:hover {
-      background: var(--surface-hover);
+    .btn-toggle-row:hover {
+      background: rgba(255, 255, 255, 0.05);
       border-color: rgba(99, 102, 241, 0.4);
     }
-    .privacy-switch {
-      width: 38px;
-      height: 22px;
+    .btn-toggle-row.full-width {
+      grid-column: span 2;
+    }
+    .toggle-switch-sm {
+      width: 32px;
+      height: 18px;
       background: #1e2433;
       border: 1px solid rgba(255, 255, 255, 0.15);
       border-radius: 20px;
@@ -548,29 +556,44 @@
       transition: all 0.2s ease;
       flex-shrink: 0;
     }
-    .privacy-switch::after {
+    .toggle-switch-sm::after {
       content: '';
       position: absolute;
-      width: 16px;
-      height: 16px;
+      width: 12px;
+      height: 12px;
       background: #6b7280;
       border-radius: 50%;
       top: 2px;
       left: 2px;
       transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     }
-    .btn-privacy.active {
-      border-color: rgba(239, 68, 68, 0.5);
-      background: rgba(239, 68, 68, 0.08);
+    .btn-toggle-row.active {
+      background: rgba(99, 102, 241, 0.08);
+      border-color: rgba(99, 102, 241, 0.5);
     }
-    .btn-privacy.active .privacy-switch {
+    .btn-toggle-row.active .toggle-switch-sm {
+      background: #4f46e5;
+      border-color: #6366f1;
+      box-shadow: 0 0 8px rgba(99, 102, 241, 0.4);
+    }
+    .btn-toggle-row.active .toggle-switch-sm::after {
+      background: #ffffff;
+      transform: translateX(14px);
+    }
+
+    /* Privacy mode active alert */
+    .btn-toggle-row.privacy.active {
+      background: rgba(239, 68, 68, 0.08);
+      border-color: rgba(239, 68, 68, 0.5);
+    }
+    .btn-toggle-row.privacy.active .toggle-switch-sm {
       background: #ef4444;
       border-color: #ef4444;
-      box-shadow: 0 0 10px rgba(239, 68, 68, 0.4);
+      box-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
     }
-    .btn-privacy.active .privacy-switch::after {
+    .btn-toggle-row.privacy.active .toggle-switch-sm::after {
       background: #ffffff;
-      transform: translateX(16px);
+      transform: translateX(14px);
     }
 
     /* COMPACT VOICE / CALL BAR CHO CAMERA (UI/UX PRO MAX DESIGN) */
@@ -1264,13 +1287,53 @@
             </div>
           </div>
 
-          <button class="btn-privacy" id="btnPrivacyToggle" onclick="togglePrivacy()">
-            <div style="display:flex; align-items:center; gap:10px;">
-              <span id="privacyIcon" style="font-size:18px;">👁️</span>
-              <span style="font-weight:600;" id="privacyTitle">Chế độ riêng tư</span>
-            </div>
-            <div class="privacy-switch" id="privacySwitch"></div>
-          </button>
+          <!-- CỤM TÍNH NĂNG SMART DETECTION & PRIVACY (UI/UX PRO MAX) -->
+          <div class="detection-grid">
+            <!-- Chế độ riêng tư (Full width) -->
+            <button class="btn-toggle-row privacy full-width" id="btnPrivacyToggle" onclick="togglePrivacy()">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span id="privacyIcon" style="font-size:16px;">👁️</span>
+                <span style="font-weight:600;" id="privacyTitle">Chế độ riêng tư (Tắt ghi hình)</span>
+              </div>
+              <div class="toggle-switch-sm" id="privacySwitch"></div>
+            </button>
+
+            <!-- 1. Motion Detection -->
+            <button class="btn-toggle-row" id="btnToggleMotion" onclick="toggleDetection('motion')">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span>🏃</span>
+                <span>Phát hiện C.Động</span>
+              </div>
+              <div class="toggle-switch-sm" id="switchMotion"></div>
+            </button>
+
+            <!-- 2. Motion Tracking -->
+            <button class="btn-toggle-row" id="btnToggleTracking" onclick="toggleDetection('tracking')">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span>🎯</span>
+                <span>Bám theo C.Động</span>
+              </div>
+              <div class="toggle-switch-sm" id="switchTracking"></div>
+            </button>
+
+            <!-- 3. Person AI Detection -->
+            <button class="btn-toggle-row" id="btnTogglePerson" onclick="toggleDetection('person')">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span>👤</span>
+                <span>Nhận diện Người</span>
+              </div>
+              <div class="toggle-switch-sm" id="switchPerson"></div>
+            </button>
+
+            <!-- 4. Baby Crying Sound -->
+            <button class="btn-toggle-row" id="btnToggleBabyCry" onclick="toggleDetection('baby_cry')">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span>👶</span>
+                <span>Tiếng em bé khóc</span>
+              </div>
+              <div class="toggle-switch-sm" id="switchBabyCry"></div>
+            </button>
+          </div>
         </div>
 
         <!-- PHẦN DƯỚI: CHAT BOX DUY NHẤT: VOICE / CALL / TEXT CHO CAMERA (UI/UX PRO MAX DESIGN) -->
@@ -2111,8 +2174,56 @@
       input.focus();
     }
 
-    // PRIVACY TOGGLE
-    let isPrivacyOn = false;
+    // SMART DETECTION TOGGLE STATES
+    const detectionStates = {
+      motion: false,
+      tracking: false,
+      person: false,
+      baby_cry: false
+    };
+
+    async function toggleDetection(feature) {
+      const btnMap = {
+        motion: 'btnToggleMotion',
+        tracking: 'btnToggleTracking',
+        person: 'btnTogglePerson',
+        baby_cry: 'btnToggleBabyCry'
+      };
+      const btn = document.getElementById(btnMap[feature]);
+      if (!btn) return;
+
+      const newState = !detectionStates[feature];
+      btn.disabled = true;
+
+      const log = document.getElementById('termLog');
+      const time = new Date().toLocaleTimeString();
+      log.textContent += `\n[${time}] Cập nhật Detection [${feature}]: ${newState ? 'BẬT' : 'TẮT'}...`;
+
+      try {
+        const res = await fetch('/api/camera/detection', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ feature: feature, enabled: newState })
+        });
+        const data = await res.json();
+        if (data.ok) {
+          detectionStates[feature] = newState;
+          if (newState) {
+            btn.classList.add('active');
+          } else {
+            btn.classList.remove('active');
+          }
+          log.textContent += `\n ➔ Thành công: ${data.message}`;
+        } else {
+          log.textContent += `\n ➔ Thất bại: ${data.error}`;
+        }
+      } catch (e) {
+        log.textContent += `\n ➔ Lỗi kết nối: ${e.message}`;
+      } finally {
+        btn.disabled = false;
+        log.scrollTop = log.scrollHeight;
+      }
+    }
     async function togglePrivacy() {
       const btn = document.getElementById('btnPrivacyToggle');
       const icon = document.getElementById('privacyIcon');

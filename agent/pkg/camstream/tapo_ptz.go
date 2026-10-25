@@ -454,6 +454,58 @@ func (session *TapoControlSession) SetPrivacyMode(enabled bool) error {
 	return sendErr
 }
 
+func (session *TapoControlSession) SetDetectionFeature(feature string, enabled bool) error {
+	enabledString := "off"
+	if enabled {
+		enabledString = "on"
+	}
+
+	var payload map[string]interface{}
+	switch feature {
+	case "motion":
+		payload = map[string]interface{}{
+			"method": "setDetectionConfig",
+			"motion_detection": map[string]interface{}{
+				"motion_det": map[string]interface{}{
+					"enabled": enabledString,
+				},
+			},
+		}
+	case "tracking":
+		payload = map[string]interface{}{
+			"method": "setTargetTrackConfig",
+			"target_track": map[string]interface{}{
+				"target_track_info": map[string]interface{}{
+					"enabled": enabledString,
+				},
+			},
+		}
+	case "person":
+		payload = map[string]interface{}{
+			"method": "setPersonDetectionConfig",
+			"people_detection": map[string]interface{}{
+				"detection": map[string]interface{}{
+					"enabled": enabledString,
+				},
+			},
+		}
+	case "baby_cry":
+		payload = map[string]interface{}{
+			"method": "setBCDConfig",
+			"sound_detection": map[string]interface{}{
+				"bcd": map[string]interface{}{
+					"enabled": enabledString,
+				},
+			},
+		}
+	default:
+		return fmt.Errorf("tính năng không hợp lệ: %s", feature)
+	}
+
+	_, sendErr := session.SendSecure(payload)
+	return sendErr
+}
+
 func (session *TapoControlSession) GetPrivacyMode() bool {
 	return session.privacyEnabled
 }

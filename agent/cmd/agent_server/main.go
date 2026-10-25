@@ -734,6 +734,53 @@ func (s *Server) handleCameraPrivacy(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (s *Server) handleCameraDetection(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	configPath := "sentinel_camera_config.json"
+	var cfg CameraConfigData
+	if data, err := os.ReadFile(configPath); err == nil {
+		_ = json.Unmarshal(data, &cfg)
+	}
+
+	var req struct {
+		Feature string `json:"feature"`
+		Enabled bool   `json:"enabled"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
+
+	effectivePass := cfg.CloudPassword
+	if effectivePass == "" {
+		effectivePass = cfg.Password
+	}
+
+	if cfg.IP == "" || effectivePass == "" {
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"ok":    false,
+			"error": "Chưa cấu hình IP hoặc mật khẩu Camera",
+		})
+		return
+	}
+
+	session := camstream.GetTapoSession(cfg.IP, cfg.Username, effectivePass)
+	err := session.SetDetectionFeature(req.Feature, req.Enabled)
+	if err != nil {
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{"ok": false, "error": err.Error()})
+		return
+	}
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"ok":      true,
+		"message": fmt.Sprintf("Đã cập nhật chế độ %s = %v", req.Feature, req.Enabled),
+	})
+}
+
 func (s *Server) handleCameraSpeak(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	if r.Method != http.MethodPost {
@@ -893,6 +940,7 @@ func main() {
 	mux.HandleFunc("/api/camera/stream.mjpeg", server.handleStreamMjpeg)
 	mux.HandleFunc("/api/camera/ptz", server.handleCameraPTZ)
 	mux.HandleFunc("/api/camera/privacy", server.handleCameraPrivacy)
+	mux.HandleFunc("/api/camera/detection", server.handleCameraDetection)
 	mux.HandleFunc("/api/camera/speak", server.handleCameraSpeak)
 	mux.HandleFunc("/api/ha/config", server.handleHAConfig)
 
