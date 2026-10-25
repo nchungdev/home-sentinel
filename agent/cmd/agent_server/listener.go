@@ -131,6 +131,21 @@ func startCameraWakeWordListener(server *Server) {
 							audioToTranscribe := speechBuffer
 							speechBuffer = nil
 
+							audioFeatures := speech.AnalyzeAudioSegment(audioToTranscribe)
+							tNow := time.Now().Format("15:04:05")
+
+							if audioFeatures.Category == speech.CategoryNoise {
+								logMic("🔊 [Phát hiện Tiếng Động Cơ Học] RMS=%.0f, Peak=%d, ZCR=%.3f, Dur=%.1fs (Không gửi Whisper)",
+									audioFeatures.RMS, audioFeatures.Peak, audioFeatures.ZeroCrossing, audioFeatures.DurationSec)
+								server.broadcastTerminal(fmt.Sprintf("[%s] 🔊 Camera ghi nhận tiếng động/va quẹt (RMS: %.0f, Peak: %d)",
+									tNow, audioFeatures.RMS, audioFeatures.Peak))
+								if server.AutomationMgr != nil {
+									server.AutomationMgr.RecordActivity("tiếng động cơ học / va quẹt cửa")
+									go server.AutomationMgr.HandleEveningArrival("tiếng động cạch cửa / bước chân")
+								}
+								continue
+							}
+
 							server.transcribeLock.Lock()
 							if server.isTranscribing {
 								server.transcribeLock.Unlock()
@@ -144,7 +159,8 @@ func startCameraWakeWordListener(server *Server) {
 							if server.Transcriber == nil || !server.Transcriber.HasGroqKey() {
 								targetSTT = "Local Wyoming Whisper"
 							}
-							logMic("Gửi %.1fs âm thanh sang %s...", float64(len(audioToTranscribe))/32000, targetSTT)
+							logMic("🗣️ [Phát hiện Lời Nói] Gửi %.1fs âm thanh sang %s (RMS=%.0f, ZCR=%.3f)...",
+								float64(len(audioToTranscribe))/32000, targetSTT, audioFeatures.RMS, audioFeatures.ZeroCrossing)
 
 							go func(rawPCM []byte, cfg CameraConfigData) {
 								defer func() {
