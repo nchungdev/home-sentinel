@@ -82,6 +82,7 @@ func (m *Manager) turnOffLivingRoom(rule IdleLivingRoomRule, lights []string, id
 
 	m.activityMutex.Lock()
 	m.lastActivityTime = time.Now()
+	m.roomOccupied = false
 	m.activityMutex.Unlock()
 }
 

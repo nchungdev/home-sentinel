@@ -140,12 +140,14 @@ func startCameraWakeWordListener(server *Server) {
 								logMic("👏 [Phát Hiện Tiếng Vỗ Tay] %s (Peaks=%d, Max=%d)", audioFeatures.Description, audioFeatures.ClapCount, audioFeatures.Peak)
 								server.broadcastTerminal(fmt.Sprintf("[%s] 👏 Camera: %s", tNow, audioFeatures.Description))
 								if server.AutomationMgr != nil {
-									server.AutomationMgr.RecordActivity("tiếng vỗ tay")
 									server.StateMutex.RLock()
 									userOnSofa := server.UserOnSofa
 									server.StateMutex.RUnlock()
 									if userOnSofa {
+										server.AutomationMgr.RecordActivity("tiếng vỗ tay trên sofa")
 										server.AutomationMgr.HandleClapOnSofa(userOnSofa)
+									} else {
+										server.AutomationMgr.HandleAudioActivity("tiếng vỗ tay khi chưa thấy người")
 									}
 								}
 								continue
@@ -160,12 +162,11 @@ func startCameraWakeWordListener(server *Server) {
 								continue
 							}
 
-							// Bỏ hoàn toàn Groq Whisper / STT - Chỉ ghi nhận hoạt động âm thanh để reset idle timer và kích hoạt automation
+							// Phối hợp Camera + Âm thanh:
+							// - Nếu phòng đã có người (Camera xác nhận trước đó) -> gia hạn bộ đếm tắt đèn.
+							// - Nếu phòng đang trống -> xoay Camera về phòng khách kiểm tra xem có người thật không (không tự bật đèn/giữ đèn nhầm).
 							if server.AutomationMgr != nil {
-								server.AutomationMgr.RecordActivity("âm thanh phòng khách: " + audioFeatures.Description)
-								if audioFeatures.Category == speech.CategoryNoise {
-									server.AutomationMgr.HandleEveningArrival("tiếng động cạch cửa / bước chân")
-								}
+								server.AutomationMgr.HandleAudioActivity("âm thanh: " + audioFeatures.Description)
 							}
 						} else {
 							logMic("Bỏ đoạn âm thanh quá ngắn: %.2fs.", float64(len(speechBuffer))/32000)

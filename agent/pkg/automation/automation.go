@@ -23,9 +23,12 @@ type Manager struct {
 	store *ConfigStore
 
 	lastActivityTime time.Time
+	lastPersonTime   time.Time
+	lastAudioPatrol  time.Time
 	lastDoorTrigger  time.Time
 	lastTVPromptTime time.Time
 	lastFanTrigger   time.Time
+	roomOccupied     bool
 	activityMutex    sync.Mutex
 	stopChan         chan struct{}
 }
@@ -69,4 +72,32 @@ func (m *Manager) RecordActivity(reason string) {
 	m.activityMutex.Lock()
 	m.lastActivityTime = time.Now()
 	m.activityMutex.Unlock()
+}
+
+func (m *Manager) RecordPersonPresence() {
+	m.activityMutex.Lock()
+	now := time.Now()
+	m.lastActivityTime = now
+	m.lastPersonTime = now
+	m.roomOccupied = true
+	m.activityMutex.Unlock()
+}
+
+func (m *Manager) HandleAudioActivity(reason string) {
+	m.activityMutex.Lock()
+	occupied := m.roomOccupied && time.Since(m.lastPersonTime) < 10*time.Minute
+	if occupied {
+		m.lastActivityTime = time.Now()
+		m.activityMutex.Unlock()
+		return
+	}
+	canPatrol := time.Since(m.lastAudioPatrol) > 30*time.Second
+	if canPatrol {
+		m.lastAudioPatrol = time.Now()
+	}
+	m.activityMutex.Unlock()
+
+	if canPatrol {
+		m.pointCameraToPreset("1")
+	}
 }

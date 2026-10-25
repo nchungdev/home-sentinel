@@ -105,18 +105,16 @@ func (s *Server) handleNotify(w http.ResponseWriter, r *http.Request) {
 		terminalLogMsg = fmt.Sprintf("[%s] 🚨 CẢNH BÁO: %s - Phát hiện người/chuyển động! (trạng thái: %s)", nowStr, fn, st)
 
 		isPerson := strings.Contains(eid, "person") || et == "person_detected"
-		isMotionOnly := strings.Contains(eid, "motion") || strings.Contains(eid, "pet")
+		isPetOrMotion := strings.Contains(eid, "motion") || strings.Contains(eid, "pet")
 
 		if isPerson && st == "on" {
 			if s.AutomationMgr != nil {
-				s.AutomationMgr.RecordActivity("phát hiện người trong phòng khách")
+				s.AutomationMgr.RecordPersonPresence()
 				go s.AutomationMgr.HandleEveningArrival("phát hiện người")
 			}
 			go s.handleProactiveSofaPrompt()
-		} else if isMotionOnly && st == "on" {
-			if s.AutomationMgr != nil {
-				s.AutomationMgr.RecordActivity("phát hiện chuyển động chung (vật nuôi/môi trường)")
-			}
+		} else if isPetOrMotion && st == "on" {
+			terminalLogMsg = fmt.Sprintf("[%s] 🐾 Camera: %s - Bỏ qua chuyển động vật nuôi/môi trường (%s)", nowStr, fn, eid)
 		}
 	} else if ev, ok := payload["event"].(string); ok {
 		summary = fmt.Sprintf("📡 Event: %s", ev)
