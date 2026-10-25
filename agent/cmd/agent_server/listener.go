@@ -161,7 +161,6 @@ func startCameraWakeWordListener(server *Server) {
 								continue
 							}
 
-							// Worker pool xử lý STT bất đồng bộ (tối đa 2 worker đồng thời) thay vì block hoàn toàn luồng thu
 							server.transcribeLock.Lock()
 							if server.transcribeWorkers >= 2 {
 								server.transcribeLock.Unlock()
@@ -171,7 +170,7 @@ func startCameraWakeWordListener(server *Server) {
 							server.transcribeWorkers++
 							server.transcribeLock.Unlock()
 
-							logMic("🗣️ [Âm Thanh Phòng Khách] Quét từ khóa nội bộ Local Whisper (%.1fs, RMS=%.0f, ZCR=%.3f)...",
+							logMic("🗣️ [Gửi Groq Whisper Cloud] %.1fs âm thanh (RMS=%.0f, ZCR=%.3f)...",
 								float64(len(audioToTranscribe))/32000, audioFeatures.RMS, audioFeatures.ZeroCrossing)
 
 							go func(rawPCM []byte, cfg CameraConfigData) {
@@ -183,26 +182,25 @@ func startCameraWakeWordListener(server *Server) {
 
 								var text string
 								var terr error
-								if server.Transcriber != nil {
-									text, _, terr = server.Transcriber.TranscribeLocal(rawPCM)
+								if server.Transcriber != nil && server.Transcriber.HasGroqKey() {
+									text, _, terr = server.Transcriber.TranscribeCloud(rawPCM)
 								} else {
-									text, terr = speech.TranscribeLocalPCM(rawPCM, "tiny-int8")
+									text, terr = speech.TranscribeLocalPCM(rawPCM, "base-int8")
 								}
 								if terr != nil || text == "" {
 									return
 								}
-								logMic("Local Whisper nhận: %q", text)
 								lowerT := strings.ToLower(text)
 								if isWhisperHallucination(lowerT) {
 									return
 								}
-								// Chuẩn hóa & đoán ý theo context nhà thông minh
 								normalizedText := NormalizeSmartHomeQuery(text)
 								if normalizedText != text {
 									logMic("Đoán ý thông minh: %q -> %q", text, normalizedText)
 									text = normalizedText
 								}
 
+								logMic("Groq Whisper nhận: %q", text)
 								tNow := time.Now().Format("15:04:05")
 								if server.AutomationMgr != nil {
 									server.AutomationMgr.RecordActivity("âm thanh phòng khách")
@@ -213,7 +211,6 @@ func startCameraWakeWordListener(server *Server) {
 
 								matched, query := matchesWakeWord(text)
 								if !matched {
-									// Người trong phòng đang nói chuyện phiếm hoặc xem TV mà không gọi Duinch -> Bỏ qua, KHÔNG gửi Groq!
 									return
 								}
 
@@ -248,7 +245,6 @@ func (s *Server) handleWakeWordQuery(query string, rawPCM []byte, cfg CameraConf
 		s.broadcastTerminal(fmt.Sprintf("[%s] 🗣️ Duinch Camera phản hồi: \"Dạ, em nghe đây ạ!\"", tNow))
 		_ = s.speakOnCamera("Dạ, em nghe đây ạ!", "female")
 		time.Sleep(1500 * time.Millisecond)
-		// Thu âm câu lệnh tiếp theo và gửi sang Groq Whisper Large-v3 để nhận diện siêu chính xác
 		followUp, ferr := s.recordAndTranscribeCloud(cfg, 4)
 		if ferr == nil && followUp != "" {
 			query = NormalizeSmartHomeQuery(followUp)
@@ -256,20 +252,7 @@ func (s *Server) handleWakeWordQuery(query string, rawPCM []byte, cfg CameraConf
 		}
 	} else {
 		// TRƯỜNG HỢP 2: User nói liền mạch luôn (vd: "Duinch ơi bật đèn")
-		// Gửi ngay toàn bộ rawPCM đoạn này sang Groq Whisper Large-v3 để giải mã nguyên vẹn câu lệnh
-		if s.Transcriber != nil && s.Transcriber.HasGroqKey() {
-			cloudText, _, err := s.Transcriber.TranscribeCloud(rawPCM)
-			if err == nil && cloudText != "" {
-				s.broadcastTerminal(fmt.Sprintf("[%s] ☁️ Groq Whisper nhận diện chính xác: \"%s\"", tNow, cloudText))
-				_, cloudQuery := matchesWakeWord(cloudText)
-				if cloudQuery != "" {
-					query = cloudQuery
-				} else {
-					query = cloudText
-				}
-				query = NormalizeSmartHomeQuery(query)
-			}
-		}
+		query = NormalizeSmartHomeQuery(query)
 	}
 
 	if query != "" {
