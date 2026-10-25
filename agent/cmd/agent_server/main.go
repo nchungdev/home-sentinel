@@ -27,6 +27,7 @@ import (
 	"github.com/nchungdev/home-sentinel/agent/pkg/llm"
 	"github.com/nchungdev/home-sentinel/agent/pkg/mediabridge"
 	"github.com/nchungdev/home-sentinel/agent/pkg/onvifscan"
+	"github.com/nchungdev/home-sentinel/agent/pkg/automation"
 	"github.com/nchungdev/home-sentinel/agent/pkg/proactive"
 	"github.com/nchungdev/home-sentinel/agent/pkg/transport"
 	"github.com/nchungdev/home-sentinel/web"
@@ -50,11 +51,10 @@ type Server struct {
 	eventSubscribers map[chan string]struct{}
 	eventSubMutex    sync.Mutex
 
+	AutomationMgr *automation.Manager
+
 	lastTVPromptTime time.Time
 	promptMutex      sync.Mutex
-
-	lastDoorLightTrigger time.Time
-	doorLightMutex       sync.Mutex
 }
 
 type ClientLogEntry struct {
@@ -120,6 +120,25 @@ func NewServer() *Server {
 			server.HAClient.UpdateConfig(haCfg.URL, haCfg.Token)
 		}
 	}
+
+	server.AutomationMgr = automation.NewManager(
+		server.HAClient,
+		func() automation.CameraConfig {
+			var cfg CameraConfigData
+			if d, err := os.ReadFile("sentinel_camera_config.json"); err == nil {
+				_ = json.Unmarshal(d, &cfg)
+			}
+			return automation.CameraConfig{
+				IP:            cfg.IP,
+				Username:      cfg.Username,
+				Password:      cfg.Password,
+				CloudPassword: cfg.CloudPassword,
+			}
+		},
+		server.broadcastTerminal,
+		"192.168.1.8",
+		15*time.Minute,
+	)
 
 	return server
 }
@@ -940,25 +959,28 @@ func startCameraWakeWordListener(server *Server) {
 				windowSum += sum
 				windowSamples += samples
 				if time.Since(lastLevelLog) >= time.Second {
-					level := math.Sqrt(windowSum / float64(windowSamples))
-					db := -96.0
-					if level > 0 {
-						db = 20 * math.Log10(level/32768)
+					// Chỉ log khi có âm thanh vượt ngưỡng hoặc đang trong đoạn thu âm để tránh spam terminal khi phòng yên tĩnh
+					if rms > 120.0 || isSpeaking || len(speechBuffer) > 0 {
+						level := math.Sqrt(windowSum / float64(windowSamples))
+						db := -96.0
+						if level > 0 {
+							db = 20 * math.Log10(level/32768)
+						}
+						state := "dưới ngưỡng"
+						if rms > 120.0 {
+							state = "vượt ngưỡng âm thanh (chưa xác nhận giọng nói)"
+						}
+						logMic("PCM nhận được | RMS=%.1f | peak=%d | %.1f dBFS | ngưỡng=120 | %s | đoạn thu=%.1fs", level, windowPeak, db, state, float64(len(speechBuffer))/32000)
+						lastLevelLog = time.Now()
 					}
-					state := "dưới ngưỡng"
-					if rms > 80 {
-						state = "vượt ngưỡng âm thanh (chưa xác nhận giọng nói)"
-					}
-					logMic("PCM nhận được | RMS=%.1f | peak=%d | %.1f dBFS | ngưỡng=80 | %s | đoạn thu=%.1fs", level, windowPeak, db, state, float64(len(speechBuffer))/32000)
-					lastLevelLog = time.Now()
 					windowSum, windowSamples, windowPeak = 0, 0, 0
 				}
 
 				// Ngưỡng phát hiện tiếng nói (Voice Activity Threshold)
-				// Đặt ở 80.0 để loại bỏ tiếng ồn nền / quạt / điều hòa (tránh Whisper bị ảo giác câu YouTube)
-				if rms > 80.0 {
+				// Đặt ở 120.0 để loại bỏ tiếng ồn nền / quạt / điều hòa (tránh Whisper bị ảo giác câu YouTube)
+				if rms > 120.0 {
 					if !isSpeaking {
-						logMic("Bắt đầu đoạn âm thanh vượt ngưỡng.")
+						logMic("Bắt đầu đoạn âm thanh vượt ngưỡng (RMS=%.1f).", rms)
 					}
 					isSpeaking = true
 					silenceChunks = 0
@@ -1000,6 +1022,11 @@ func startCameraWakeWordListener(server *Server) {
 								fmt.Printf("[Mic Camera Heard]: \"%s\"\n", text)
 								server.broadcastTerminal(fmt.Sprintf("[%s] 🎤 Camera Mic thu được: \"%s\"", tNow, text))
 
+								// Ghi nhận hoạt động âm thanh để reset timer vắng người phòng khách
+								if server.AutomationMgr != nil {
+									server.AutomationMgr.RecordActivity("tiếng nói / âm thanh phòng khách")
+								}
+
 								// Tự động kiểm tra âm thanh/câu nói liên quan mở cửa, về nhà vào buổi tối
 								isDoorOrHomeSound := strings.Contains(lowerT, "mở cửa") ||
 									strings.Contains(lowerT, "về rồi") ||
@@ -1010,8 +1037,8 @@ func startCameraWakeWordListener(server *Server) {
 									strings.Contains(lowerT, "hello") ||
 									strings.Contains(lowerT, "chào")
 
-								if isDoorOrHomeSound {
-									go server.triggerEveningArrivalAutomation("âm thanh mở cửa / lời chào về nhà")
+								if isDoorOrHomeSound && server.AutomationMgr != nil {
+									go server.AutomationMgr.HandleEveningArrival("âm thanh mở cửa / lời chào về nhà")
 								}
 
 								matched, query := matchesWakeWord(text)
@@ -1364,10 +1391,13 @@ func main() {
 			}
 			terminalLogMsg = fmt.Sprintf("[%s] 🚨 CẢNH BÁO: %s - Phát hiện người/chuyển động! (trạng thái: %s)", nowStr, fn, st)
 
-			// Tự động kiểm tra chuyển động vào buổi tối để bật Đèn trần cửa chính
+			// Ghi nhận hoạt động có người/chuyển động để reset timer vắng người phòng khách
 			isPersonOrMotion := strings.Contains(eid, "person") || strings.Contains(eid, "motion") || et == "person_detected"
 			if isPersonOrMotion && st == "on" {
-				go server.triggerEveningArrivalAutomation("phát hiện chuyển động / người")
+				if server.AutomationMgr != nil {
+					server.AutomationMgr.RecordActivity("phát hiện chuyển động phòng khách")
+					go server.AutomationMgr.HandleEveningArrival("phát hiện chuyển động / người")
+				}
 			}
 
 			// Logic Proactive (Cách 2): Khi có người di chuyển trong phòng khách & TV đang TẮT
@@ -1549,79 +1579,4 @@ func main() {
 	}
 }
 
-// triggerEveningArrivalAutomation tự động bật Đèn trần cửa chính khi trời tối & có chuyển động hoặc âm thanh mở cửa
-func (s *Server) triggerEveningArrivalAutomation(triggerReason string) {
-	// 1. Kiểm tra điều kiện buổi tối (18:00 - 06:00 hoặc sun.sun == below_horizon)
-	hour := time.Now().Hour()
-	isEvening := hour >= 18 || hour < 6
 
-	if s.HAClient != nil && s.HAClient.BaseURL != "" {
-		var sunState struct {
-			State string `json:"state"`
-		}
-		if err := s.HAClient.RequestJSON("/api/states/sun.sun", nil, &sunState); err == nil {
-			if sunState.State == "below_horizon" {
-				isEvening = true
-			}
-		}
-	}
-
-	if !isEvening {
-		return
-	}
-
-	// 2. Cooldown 5 phút để tránh bật/tắt liên tục
-	s.doorLightMutex.Lock()
-	if time.Since(s.lastDoorLightTrigger) < 5*time.Minute {
-		s.doorLightMutex.Unlock()
-		return
-	}
-
-	// 3. Kiểm tra trạng thái hiện tại của đèn cửa chính
-	targetEntity := "light.dqsmart_020119140c_1"
-	if s.HAClient != nil && s.HAClient.BaseURL != "" {
-		var lightState struct {
-			State string `json:"state"`
-		}
-		if err := s.HAClient.RequestJSON("/api/states/"+targetEntity, nil, &lightState); err == nil {
-			if lightState.State == "on" {
-				// Đèn đã bật sẵn rồi, không cần thao tác thêm
-				s.doorLightMutex.Unlock()
-				return
-			}
-		}
-	}
-
-	s.lastDoorLightTrigger = time.Now()
-	s.doorLightMutex.Unlock()
-
-	// 4. Bật đèn cửa chính qua Home Assistant API
-	tNow := time.Now().Format("15:04:05")
-	if s.HAClient != nil && s.HAClient.BaseURL != "" {
-		payload := map[string]interface{}{
-			"entity_id": targetEntity,
-		}
-		err := s.HAClient.RequestJSON("/api/services/light/turn_on", payload, nil)
-		if err == nil {
-			logMsg := fmt.Sprintf("[%s] 💡 [Tự động buổi tối] Nhận diện %s: Đã bật Đèn trần cửa chính!", tNow, triggerReason)
-			s.broadcastTerminal(logMsg)
-			fmt.Println(logMsg)
-		} else {
-			fmt.Printf("[%s] ❌ Lỗi bật đèn cửa chính: %v\n", tNow, err)
-		}
-	}
-
-	// 5. Quay Camera nhẹ về hướng Cửa chính (Preset 3) để đón người về
-	var cfg CameraConfigData
-	if data, err := os.ReadFile("sentinel_camera_config.json"); err == nil {
-		_ = json.Unmarshal(data, &cfg)
-	}
-	effectivePass := cfg.CloudPassword
-	if effectivePass == "" {
-		effectivePass = cfg.Password
-	}
-	if cfg.IP != "" && effectivePass != "" {
-		session := camstream.GetTapoSession(cfg.IP, cfg.Username, effectivePass)
-		_ = session.GotoPreset("3") // Preset 3 = Cửa chính
-	}
-}
