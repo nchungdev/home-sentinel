@@ -552,6 +552,7 @@ func (s *Server) handleCameraPTZ(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Direction string `json:"direction"`
 		Step      int    `json:"step"`
+		Preset    string `json:"preset"`
 	}
 	_ = json.NewDecoder(r.Body).Decode(&req)
 
@@ -570,10 +571,12 @@ func (s *Server) handleCameraPTZ(w http.ResponseWriter, r *http.Request) {
 
 	session := camstream.GetTapoSession(cfg.IP, cfg.Username, effectivePass)
 	var err error
-	if req.Direction != "" {
+	if req.Preset != "" {
+		err = session.GotoPreset(req.Preset)
+	} else if req.Direction != "" {
 		err = session.MoveDirection(req.Direction, req.Step)
 	} else {
-		err = fmt.Errorf("thiếu hướng xoay")
+		err = fmt.Errorf("thiếu hướng xoay hoặc preset")
 	}
 
 	if err != nil {
