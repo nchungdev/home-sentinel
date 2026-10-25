@@ -291,9 +291,17 @@
       gap: 24px;
       width: 100%;
       align-items: flex-start;
+      justify-content: flex-start;
+    }
+    .camera-left-col {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      width: 680px;
+      max-width: 100%;
     }
     .camera-screen {
-      flex: 2;
+      width: 100%;
       background: #000;
       border: 1px solid var(--border);
       border-radius: var(--radius);
@@ -304,7 +312,7 @@
     }
     .stream-feed {
       width: 100%;
-      height: 520px;
+      height: 400px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -318,17 +326,17 @@
     }
     .camera-live-badge {
       position: absolute;
-      top: 16px;
-      left: 16px;
+      top: 14px;
+      left: 14px;
       background: rgba(15, 17, 24, 0.75);
       backdrop-filter: blur(8px);
       border: 1px solid rgba(255, 255, 255, 0.1);
-      padding: 6px 14px;
+      padding: 5px 12px;
       border-radius: 20px;
       display: flex;
       align-items: center;
       gap: 8px;
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 600;
       color: #fff;
       z-index: 5;
@@ -391,7 +399,7 @@
     }
 
     .camera-meta {
-      padding: 14px 20px;
+      padding: 12px 18px;
       background: var(--surface);
       display: flex;
       justify-content: space-between;
@@ -400,12 +408,11 @@
       border-top: 1px solid var(--border);
     }
     .camera-side-panel {
-      flex: 1;
-      min-width: 320px;
-      max-width: 380px;
+      width: 320px;
       display: flex;
       flex-direction: column;
       gap: 16px;
+      flex-shrink: 0;
     }
 
     /* REMOTE CONTROL D-PAD */
@@ -653,26 +660,39 @@
 
     <!-- 2. CAMERA VIEW -->
     <div id="view-camera" class="view-content camera-view">
-      <div class="camera-screen">
-        <div class="stream-feed">
-          <div class="camera-live-badge">
-            <span class="rec-dot"></span>
-            <span id="camFeedBadgeText">LIVE STREAM</span>
+      <!-- CỘT TRÁI: CAMERA + LOG BÊN DƯỚI -->
+      <div class="camera-left-col">
+        <div class="camera-screen">
+          <div class="stream-feed">
+            <div class="camera-live-badge">
+              <span class="rec-dot"></span>
+              <span id="camFeedBadgeText">LIVE STREAM</span>
+            </div>
+            <img id="mjpegFeed" src="/api/camera/stream.mjpeg" alt="Camera Stream" onerror="handleStreamError()" onload="handleStreamLoaded()">
+            <div class="unconfigured-overlay" id="unconfiguredOverlay" style="display:none;">
+              <div style="font-size: 38px;">📷</div>
+              <h4 id="overlayTitle">Chưa kết nối Camera</h4>
+              <p id="overlayDesc">Hệ thống chưa tìm thấy cấu hình Camera hoặc luồng RTSP bị ngắt quãng. Hãy vào Cài Đặt để chọn thiết bị hoặc bấm thử kết nối.</p>
+              <button class="btn-shortcut" onclick="jumpToConfig('camera-cfg')">⚙️ Cấu Hình Camera Ngay</button>
+            </div>
           </div>
-          <img id="mjpegFeed" src="/api/camera/stream.mjpeg" alt="Camera Stream" onerror="handleStreamError()" onload="handleStreamLoaded()">
-          <div class="unconfigured-overlay" id="unconfiguredOverlay" style="display:none;">
-            <div style="font-size: 38px;">📷</div>
-            <h4 id="overlayTitle">Chưa kết nối Camera</h4>
-            <p id="overlayDesc">Hệ thống chưa tìm thấy cấu hình Camera hoặc luồng RTSP bị ngắt quãng. Hãy vào Cài Đặt để chọn thiết bị hoặc bấm thử kết nối.</p>
-            <button class="btn-shortcut" onclick="jumpToConfig('camera-cfg')">⚙️ Cấu Hình Camera Ngay</button>
+          <div class="camera-meta">
+            <span id="camMetaLabel">Camera IP (RTSP TCP)</span>
+            <span style="color: #10b981; font-size: 12px; font-weight:600;" id="feedStatusLabel">Đang truyền trực tiếp</span>
           </div>
         </div>
-        <div class="camera-meta">
-          <span id="camMetaLabel">Camera IP (RTSP TCP)</span>
-          <span style="color: #10b981; font-size: 12px; font-weight:600;" id="feedStatusLabel">Đang truyền trực tiếp</span>
+
+        <!-- CONSOLE TERMINAL NẰM DƯỚI CAMERA -->
+        <div class="card" style="padding: 12px 16px; gap: 8px;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div class="card-title" style="font-size: 11px;">Terminal Log</div>
+            <span style="font-size:10px; color:var(--text-muted); cursor:pointer;" onclick="document.getElementById('termLog').textContent='[Cleared]';">Xóa log</span>
+          </div>
+          <div class="log-terminal" id="termLog">[Ready] Sentinel Camera Streaming sẵn sàng.</div>
         </div>
       </div>
 
+      <!-- CỘT PHẢI: REMOTE PTZ + PHÁT GIỌNG NÓI TTS -->
       <div class="camera-side-panel">
         <!-- REMOTE D-PAD CONTROL -->
         <div class="card" style="align-items: center; text-align: center;">
@@ -688,10 +708,10 @@
             </div>
           </div>
 
-          <div style="display:flex; gap:10px; width:100%; margin-top:4px;">
-            <button class="btn-action" style="flex:1" onclick="callCamera('privacy', {enabled: true})">🔒 Privacy Bật</button>
-            <button class="btn-action" style="flex:1" onclick="callCamera('privacy', {enabled: false})">👁️ Privacy Tắt</button>
-          </div>
+          <!-- NÚT PRIVACY TOGGLE DUY NHẤT -->
+          <button class="btn-action" id="btnPrivacyToggle" style="width:100%; margin-top:4px;" onclick="togglePrivacy()">
+            👁️ Chế độ riêng tư: Đang TẮT (Bấm để Bật)
+          </button>
         </div>
 
         <!-- VOICE BROADCAST TO CAMERA -->
@@ -704,15 +724,6 @@
             <input type="text" id="camVoiceInput" placeholder="Ví dụ: Xin chào, mời bạn vào nhà..." style="flex:1; background:var(--bg); border:1px solid var(--border); color:var(--text-bright); padding:8px 12px; border-radius:8px; font-size:13px; outline:none;">
             <button class="btn-action" id="btnCamSpeak" style="background:var(--primary); color:#fff; font-weight:600; padding:8px 14px; flex-shrink:0;" onclick="sendCameraSpeech()">📢 Phát Loa</button>
           </div>
-        </div>
-
-        <!-- CONSOLE TERMINAL -->
-        <div class="card">
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <div class="card-title">Terminal Log</div>
-            <span style="font-size:10px; color:var(--text-muted); cursor:pointer;" onclick="document.getElementById('termLog').textContent='[Cleared]';">Xóa log</span>
-          </div>
-          <div class="log-terminal" id="termLog">[Ready] Sentinel Camera Streaming sẵn sàng.</div>
         </div>
       </div>
     </div>
@@ -1034,6 +1045,27 @@
         btn.disabled = false;
         btn.textContent = '📢 Phát Loa';
         log.scrollTop = log.scrollHeight;
+      }
+    }
+
+    // PRIVACY TOGGLE
+    let isPrivacyOn = false;
+    async function togglePrivacy() {
+      const btn = document.getElementById('btnPrivacyToggle');
+      const newState = !isPrivacyOn;
+      btn.disabled = true;
+      btn.textContent = '⏳ Đang chuyển chế độ...';
+
+      await callCamera('privacy', { enabled: newState });
+
+      isPrivacyOn = newState;
+      btn.disabled = false;
+      if (isPrivacyOn) {
+        btn.innerHTML = '🔒 Chế độ riêng tư: <b style="color:#ef4444;">Đang BẬT</b> (Bấm để Tắt)';
+        btn.style.borderColor = '#ef4444';
+      } else {
+        btn.innerHTML = '👁️ Chế độ riêng tư: <b style="color:#10b981;">Đang TẮT</b> (Bấm để Bật)';
+        btn.style.borderColor = 'var(--border)';
       }
     }
 
