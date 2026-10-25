@@ -81,6 +81,7 @@ func (m *Manager) RecordPersonPresence() {
 	m.lastPersonTime = now
 	m.roomOccupied = true
 	m.activityMutex.Unlock()
+	go m.EvaluateCustomRules("person_detected")
 }
 
 func (m *Manager) HandleAudioActivity(reason string) {

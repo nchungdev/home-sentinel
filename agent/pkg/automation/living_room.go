@@ -15,6 +15,7 @@ func (m *Manager) runInactivityLoop() {
 			return
 		case <-ticker.C:
 			m.checkLivingRoomInactivity()
+			m.EvaluateCustomRules("idle_room")
 		}
 	}
 }

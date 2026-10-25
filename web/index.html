@@ -124,7 +124,7 @@
     .nav-item.active {
       background: rgba(99, 102, 241, 0.12);
       color: var(--accent);
-      font-weight: 600;
+      font-weight: 500;
     }
 
     /* MAIN VIEW */
@@ -531,17 +531,16 @@
     .btn-modern:hover {
       background: var(--surface-hover);
       border-color: rgba(99, 102, 241, 0.4);
-      transform: translateY(-1px);
       box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
     }
     .btn-modern:active {
-      transform: translateY(0);
+      opacity: 0.9;
     }
     .btn-modern.primary {
       background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
-      border: none;
+      border: 1px solid transparent;
       color: #fff;
-      font-weight: 600;
+      font-weight: 500;
       box-shadow: 0 4px 14px rgba(79, 70, 229, 0.35);
     }
     .btn-modern.primary:hover {
@@ -1110,7 +1109,30 @@
       background: rgba(99, 102, 241, 0.15);
       border-color: rgba(99, 102, 241, 0.4);
       color: var(--accent);
-      font-weight: 600;
+      font-weight: 500;
+    }
+    .subtab-btn:focus, .nav-item:focus, .btn-modern:focus, .btn-action:focus, .btn-save:focus {
+      outline: none;
+    }
+    .btn-add-tab {
+      background: rgba(99, 102, 241, 0.08);
+      border: 1px dashed rgba(99, 102, 241, 0.45);
+      color: var(--accent);
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+      white-space: nowrap;
+    }
+    .btn-add-tab:hover {
+      background: rgba(99, 102, 241, 0.18);
+      border-color: var(--accent);
+      color: #fff;
     }
     .subtab-panel {
       display: none !important;
@@ -1509,7 +1531,7 @@
     <!-- 2.5. AUTOMATION VIEW (KỊCH BẢN TỰ ĐỘNG HÓA & THIẾT BỊ THẬT - CHIA TAB TỪNG KỊCH BẢN) -->
     <div id="view-automation" class="view-content setting-view">
       <div class="subtabs-bar" style="justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
-        <div style="display:flex; gap:10px; overflow-x:auto;">
+        <div style="display:flex; align-items:center; gap:10px; overflow-x:auto; flex-wrap:wrap;">
           <button class="subtab-btn auto-tab-btn active" id="btn-autotab-idle" onclick="switchAutoTab('idle', this)">
             <span class="mi">bedtime</span> Kịch bản 1: Tắt đèn khi vắng người
           </button>
@@ -1518,6 +1540,10 @@
           </button>
           <button class="subtab-btn auto-tab-btn" id="btn-autotab-evening" onclick="switchAutoTab('evening', this)">
             <span class="mi">wb_twilight</span> Kịch bản 3: Đèn đón buổi tối
+          </button>
+          <div id="customAutoTabsBar" style="display:contents;"></div>
+          <button class="btn-add-tab" onclick="addNewAutomationRule()" title="Thêm kịch bản tự động hóa mới">
+            <span class="mi" style="font-size:16px;">add</span> Thêm kịch bản
           </button>
         </div>
         <div style="display:flex; align-items:center; gap:10px; flex-shrink:0;">
@@ -1538,7 +1564,7 @@
             <div class="card-title" style="font-size:15px; display:flex; align-items:center; gap:8px;">
               <span class="mi" style="color:var(--accent);">bedtime</span> Kịch bản 1: Tự động tắt đèn khi vắng người
             </div>
-            <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#10b981; cursor:pointer; font-weight:600; background:rgba(16,185,129,0.1); padding:6px 12px; border-radius:8px; border:1px solid rgba(16,185,129,0.25);">
+            <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#10b981; cursor:pointer; font-weight:500; background:rgba(16,185,129,0.1); padding:6px 12px; border-radius:8px; border:1px solid rgba(16,185,129,0.25);">
               <input type="checkbox" id="autoIdleEnabled" checked> Bật kịch bản này
             </label>
           </div>
@@ -1580,7 +1606,7 @@
             <div class="card-title" style="font-size:15px; display:flex; align-items:center; gap:8px;">
               <span class="mi" style="color:var(--accent);">front_hand</span> Kịch bản 2: Ngồi Sofa vỗ tay ➔ Mở TV &amp; Quạt
             </div>
-            <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#10b981; cursor:pointer; font-weight:600; background:rgba(16,185,129,0.1); padding:6px 12px; border-radius:8px; border:1px solid rgba(16,185,129,0.25);">
+            <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#10b981; cursor:pointer; font-weight:500; background:rgba(16,185,129,0.1); padding:6px 12px; border-radius:8px; border:1px solid rgba(16,185,129,0.25);">
               <input type="checkbox" id="autoClapEnabled" checked> Bật kịch bản này
             </label>
           </div>
@@ -1613,7 +1639,7 @@
             <div class="card-title" style="font-size:15px; display:flex; align-items:center; gap:8px;">
               <span class="mi" style="color:var(--accent);">wb_twilight</span> Kịch bản 3: Phát hiện người buổi tối ➔ Bật đèn đón
             </div>
-            <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#10b981; cursor:pointer; font-weight:600; background:rgba(16,185,129,0.1); padding:6px 12px; border-radius:8px; border:1px solid rgba(16,185,129,0.25);">
+            <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#10b981; cursor:pointer; font-weight:500; background:rgba(16,185,129,0.1); padding:6px 12px; border-radius:8px; border:1px solid rgba(16,185,129,0.25);">
               <input type="checkbox" id="autoEveningEnabled" checked> Bật kịch bản này
             </label>
           </div>
@@ -1646,6 +1672,9 @@
           </div>
         </div>
       </div>
+
+      <!-- CÁC TAB KỊCH BẢN TÙY CHỈNH (CUSTOM RULES) -->
+      <div id="customAutoPanelsContainer"></div>
     </div>
 
     <!-- 3. SETTINGS VIEW (CONTAINING SUB-TABS) -->
@@ -3040,12 +3069,199 @@
       const eveLightSel = document.getElementById('autoEveningLight');
       eveLightSel.innerHTML = `<option value="">-- Chọn đèn bật đón --</option>` +
         lights.map(l => `<option value="${escapeHtml(l.entity_id)}" ${eve.target_light === l.entity_id ? 'selected' : ''}>${escapeHtml(l.name)} (${escapeHtml(l.entity_id)})</option>`).join('');
+
+      // 5. Render Custom Rules Tabs & Panels
+      renderCustomRulesUI();
+    }
+
+    function renderCustomRulesUI(focusTabId) {
+      const tabsBar = document.getElementById('customAutoTabsBar');
+      const panelsContainer = document.getElementById('customAutoPanelsContainer');
+      if (!tabsBar || !panelsContainer) return;
+
+      const customRules = (currentAutoCfg && Array.isArray(currentAutoCfg.custom_rules)) ? currentAutoCfg.custom_rules : [];
+      const controllableDevices = haDevicesCache.filter(d => d.domain === 'light' || d.domain === 'fan' || d.domain === 'switch');
+
+      tabsBar.innerHTML = customRules.map((rule, idx) => {
+        const tabId = 'custom-' + rule.id;
+        const label = rule.name || `Kịch bản ${idx + 4}`;
+        return `
+          <button class="subtab-btn auto-tab-btn" id="btn-autotab-${escapeHtml(tabId)}" onclick="switchAutoTab('${escapeHtml(tabId)}', this)">
+            <span class="mi">auto_awesome</span> <span id="tab-title-${escapeHtml(rule.id)}">${escapeHtml(label)}</span>
+          </button>
+        `;
+      }).join('');
+
+      panelsContainer.innerHTML = customRules.map((rule, idx) => {
+        const tabId = 'custom-' + rule.id;
+        const selectedSet = new Set(rule.target_entities || []);
+        const devicesHtml = controllableDevices.length === 0
+          ? `<div style="font-size:12px; color:var(--text-muted);">Chưa tải được danh sách thiết bị từ Home Assistant.</div>`
+          : controllableDevices.map(d => {
+              const checked = selectedSet.has(d.entity_id) ? 'checked' : '';
+              const stateColor = d.state === 'on' ? '#10b981' : '#64748b';
+              const stateText = d.state === 'on' ? 'ĐANG BẬT' : 'TẮT';
+              return `
+                <label style="display:flex; align-items:center; justify-content:space-between; gap:6px; padding:6px 8px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:6px; cursor:pointer; font-size:12px; color:var(--text-bright);">
+                  <span style="display:flex; align-items:center; gap:6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                    <input type="checkbox" class="custom-rule-entity-${escapeHtml(rule.id)}" value="${escapeHtml(d.entity_id)}" ${checked}>
+                    <span title="${escapeHtml(d.entity_id)}">${escapeHtml(d.name)}</span>
+                  </span>
+                  <span style="font-size:10px; color:${stateColor}; font-weight:500; flex-shrink:0;">${stateText}</span>
+                </label>
+              `;
+            }).join('');
+
+        return `
+          <div id="autotab-${escapeHtml(tabId)}" class="subtab-panel auto-tab-panel" data-rule-id="${escapeHtml(rule.id)}">
+            <div class="card" style="max-width:1020px; padding:22px 24px; gap:16px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
+                <div class="card-title" style="font-size:15px; display:flex; align-items:center; gap:8px;">
+                  <span class="mi" style="color:var(--accent);">auto_awesome</span>
+                  <span>Thiết lập kịch bản tùy chỉnh #${idx + 4}</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:10px;">
+                  <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#10b981; cursor:pointer; font-weight:500; background:rgba(16,185,129,0.1); padding:6px 12px; border-radius:8px; border:1px solid rgba(16,185,129,0.25);">
+                    <input type="checkbox" id="customEnabled-${escapeHtml(rule.id)}" ${rule.enabled !== false ? 'checked' : ''}> Bật kịch bản này
+                  </label>
+                  <button class="btn-action" style="padding:6px 12px; font-size:12px; background:rgba(239,68,68,0.12); color:#ef4444; border-color:rgba(239,68,68,0.3);" onclick="deleteCustomRule('${escapeHtml(rule.id)}')">
+                    <span class="mi" style="font-size:15px;">delete</span> Xóa kịch bản
+                  </button>
+                </div>
+              </div>
+
+              <div style="display:grid; grid-template-columns:1.4fr 1fr 1fr; gap:16px;">
+                <div class="form-group">
+                  <label>Tên kịch bản hiển thị trên Tab:</label>
+                  <input type="text" id="customName-${escapeHtml(rule.id)}" value="${escapeHtml(rule.name || '')}" placeholder="VD: Kịch bản 4: Tắt điện ban đêm" oninput="updateCustomTabTitle('${escapeHtml(rule.id)}', this.value)">
+                </div>
+                <div class="form-group">
+                  <label>Sự kiện kích hoạt (Trigger):</label>
+                  <select id="customTrigger-${escapeHtml(rule.id)}">
+                    <option value="idle_room" ${rule.trigger_type === 'idle_room' ? 'selected' : ''}>Phòng vắng người quá X phút</option>
+                    <option value="person_detected" ${rule.trigger_type === 'person_detected' ? 'selected' : ''}>Camera phát hiện có người (Person)</option>
+                    <option value="clap_detected" ${rule.trigger_type === 'clap_detected' ? 'selected' : ''}>Thu được tiếng vỗ tay (Clapping)</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Hành động thực thi (Action):</label>
+                  <select id="customAction-${escapeHtml(rule.id)}">
+                    <option value="turn_off" ${rule.action_type !== 'turn_on' ? 'selected' : ''}>Tắt các thiết bị được chọn</option>
+                    <option value="turn_on" ${rule.action_type === 'turn_on' ? 'selected' : ''}>Bật các thiết bị được chọn</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr 1fr; gap:14px;">
+                <div class="form-group">
+                  <label>Phút chờ vắng người:</label>
+                  <input type="number" id="customIdleMin-${escapeHtml(rule.id)}" value="${rule.idle_minutes || 5}" min="1" max="240">
+                </div>
+                <div class="form-group">
+                  <label>Từ giờ (0-23):</label>
+                  <input type="number" id="customStartHour-${escapeHtml(rule.id)}" value="${rule.start_hour ?? 0}" min="0" max="23">
+                </div>
+                <div class="form-group">
+                  <label>Đến giờ (0-23):</label>
+                  <input type="number" id="customEndHour-${escapeHtml(rule.id)}" value="${rule.end_hour ?? 0}" min="0" max="23">
+                </div>
+                <div class="form-group">
+                  <label>Kiểm tra TV:</label>
+                  <select id="customCheckTV-${escapeHtml(rule.id)}">
+                    <option value="false" ${!rule.check_tv_off ? 'selected' : ''}>Không kiểm tra TV</option>
+                    <option value="true" ${rule.check_tv_off ? 'selected' : ''}>Chỉ chạy khi TV đang TẮT</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Xoay Camera Preset:</label>
+                  <select id="customPreset-${escapeHtml(rule.id)}">
+                    <option value="" ${!rule.camera_preset ? 'selected' : ''}>-- Không xoay --</option>
+                    <option value="1" ${rule.camera_preset === '1' ? 'selected' : ''}>Preset 1 (Sofa)</option>
+                    <option value="2" ${rule.camera_preset === '2' ? 'selected' : ''}>Preset 2 (Bàn ăn)</option>
+                    <option value="3" ${rule.camera_preset === '3' ? 'selected' : ''}>Preset 3 (Cửa chính)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label style="margin-bottom:4px;">Chọn các thiết bị áp dụng (Đèn / Quạt / Công tắc Home Assistant):</label>
+                <div style="max-height:360px; overflow-y:auto; background:rgba(0,0,0,0.25); border:1px solid var(--border); border-radius:10px; padding:12px; display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:10px;">
+                  ${devicesHtml}
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      if (focusTabId) {
+        const btn = document.getElementById('btn-autotab-' + focusTabId);
+        if (btn) switchAutoTab(focusTabId, btn);
+      }
+    }
+
+    function updateCustomTabTitle(ruleId, newTitle) {
+      const span = document.getElementById('tab-title-' + ruleId);
+      if (span) {
+        span.textContent = newTitle.trim() || 'Kịch bản mới';
+      }
+    }
+
+    function collectCustomRulesFromDOM() {
+      if (!currentAutoCfg || !Array.isArray(currentAutoCfg.custom_rules)) return [];
+      return currentAutoCfg.custom_rules.map(rule => {
+        const id = rule.id;
+        const nameEl = document.getElementById('customName-' + id);
+        if (!nameEl) return rule;
+        const checkedEntities = Array.from(document.querySelectorAll('.custom-rule-entity-' + id + ':checked')).map(el => el.value);
+        return {
+          id: id,
+          name: nameEl.value.trim() || rule.name,
+          enabled: document.getElementById('customEnabled-' + id)?.checked !== false,
+          trigger_type: document.getElementById('customTrigger-' + id)?.value || 'idle_room',
+          action_type: document.getElementById('customAction-' + id)?.value || 'turn_off',
+          idle_minutes: parseInt(document.getElementById('customIdleMin-' + id)?.value, 10) || 5,
+          start_hour: parseInt(document.getElementById('customStartHour-' + id)?.value, 10) || 0,
+          end_hour: parseInt(document.getElementById('customEndHour-' + id)?.value, 10) || 0,
+          check_tv_off: document.getElementById('customCheckTV-' + id)?.value === 'true',
+          camera_preset: document.getElementById('customPreset-' + id)?.value || '',
+          target_entities: checkedEntities
+        };
+      });
+    }
+
+    function addNewAutomationRule() {
+      if (!currentAutoCfg) currentAutoCfg = {};
+      currentAutoCfg.custom_rules = collectCustomRulesFromDOM();
+      const nextNum = currentAutoCfg.custom_rules.length + 4;
+      const newId = 'rule_' + Date.now();
+      currentAutoCfg.custom_rules.push({
+        id: newId,
+        name: `Kịch bản ${nextNum}: Kịch bản mới`,
+        enabled: true,
+        trigger_type: 'idle_room',
+        action_type: 'turn_off',
+        idle_minutes: 10,
+        start_hour: 0,
+        end_hour: 0,
+        check_tv_off: true,
+        camera_preset: '',
+        target_entities: []
+      });
+      renderCustomRulesUI('custom-' + newId);
+    }
+
+    function deleteCustomRule(ruleId) {
+      if (!currentAutoCfg || !Array.isArray(currentAutoCfg.custom_rules)) return;
+      currentAutoCfg.custom_rules = collectCustomRulesFromDOM().filter(r => r.id !== ruleId);
+      renderCustomRulesUI('idle');
     }
 
     async function saveAutomationConfigUI() {
       const btn = document.getElementById('btnSaveAutomation');
       const statusEl = document.getElementById('autoSaveStatus');
       const checkedLights = Array.from(document.querySelectorAll('.auto-light-item:checked')).map(el => el.value);
+      const customRules = collectCustomRulesFromDOM();
 
       const payload = {
         config: {
@@ -3070,7 +3286,8 @@
             start_hour: parseInt(document.getElementById('autoEveningStart').value, 10) || 18,
             end_hour: parseInt(document.getElementById('autoEveningEnd').value, 10) || 6,
             sound_keywords: (currentAutoCfg && currentAutoCfg.evening_arrival && currentAutoCfg.evening_arrival.sound_keywords) || []
-          }
+          },
+          custom_rules: customRules
         }
       };
 

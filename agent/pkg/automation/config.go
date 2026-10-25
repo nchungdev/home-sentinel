@@ -11,6 +11,21 @@ type Config struct {
 	EveningArrival EveningArrivalRule `json:"evening_arrival"`
 	IdleLivingRoom IdleLivingRoomRule `json:"idle_living_room"`
 	SofaClapAction SofaClapRule       `json:"sofa_clap_action"`
+	CustomRules    []CustomRule       `json:"custom_rules"`
+}
+
+type CustomRule struct {
+	ID             string   `json:"id"`
+	Name           string   `json:"name"`
+	Enabled        bool     `json:"enabled"`
+	TriggerType    string   `json:"trigger_type"`
+	IdleMinutes    int      `json:"idle_minutes"`
+	StartHour      int      `json:"start_hour"`
+	EndHour        int      `json:"end_hour"`
+	ActionType     string   `json:"action_type"`
+	TargetEntities []string `json:"target_entities"`
+	CameraPreset   string   `json:"camera_preset"`
+	CheckTVOff     bool     `json:"check_tv_off"`
 }
 
 type SofaClapRule struct {
