@@ -98,10 +98,10 @@ func startCameraWakeWordListener(server *Server) {
 				windowSum += sum
 				windowSamples += samples
 				if time.Since(lastLevelLog) >= time.Second {
-					if rms > 300.0 || isSpeaking || len(speechBuffer) > 0 {
+					if rms > 450.0 || isSpeaking || len(speechBuffer) > 0 {
 						level := math.Sqrt(windowSum / float64(windowSamples))
 						state := "dưới ngưỡng"
-						if rms > 300.0 {
+						if rms > 450.0 {
 							state = "vượt ngưỡng"
 						}
 						logMic("PCM: RMS=%.0f, peak=%d, %s, thu=%.1fs", level, windowPeak, state, float64(len(speechBuffer))/32000)
@@ -110,7 +110,7 @@ func startCameraWakeWordListener(server *Server) {
 					windowSum, windowSamples, windowPeak = 0, 0, 0
 				}
 
-				if rms > 300.0 {
+				if rms > 450.0 {
 					if !isSpeaking {
 						logMic("Bắt đầu đoạn âm thanh vượt ngưỡng (RMS=%.1f).", rms)
 					}
