@@ -793,8 +793,8 @@ func (s *Server) handleCameraSpeak(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 2. Chuyển đổi sang chuẩn Alaw 8000Hz PCM cho Tapo Speaker
-	ffmpegCmd := exec.Command("ffmpeg", "-y", "-i", tmpMp3, "-ar", "8000", "-ac", "1", "-c:a", "pcm_alaw", tmpWav)
+	// 2. Chuyển đổi sang chuẩn Alaw 8000Hz PCM cho Tapo Speaker, chèn 300ms khoảng lặng ở đầu để tránh mất chữ đầu
+	ffmpegCmd := exec.Command("ffmpeg", "-y", "-i", tmpMp3, "-af", "adelay=300|300", "-ar", "8000", "-ac", "1", "-c:a", "pcm_alaw", tmpWav)
 	if err := ffmpegCmd.Run(); err != nil {
 		_ = json.NewEncoder(w).Encode(map[string]interface{}{
 			"ok":    false,
