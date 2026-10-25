@@ -1,17 +1,14 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"math"
 	"os"
 	"os/exec"
-	"strings"
 	"time"
 
-	"github.com/nchungdev/home-sentinel/agent/pkg/contracts"
 	"github.com/nchungdev/home-sentinel/agent/pkg/speech"
 )
 
@@ -163,69 +160,13 @@ func startCameraWakeWordListener(server *Server) {
 								continue
 							}
 
-							if audioFeatures.Category != speech.CategorySpeech {
-								continue
+							// Bỏ hoàn toàn Groq Whisper / STT - Chỉ ghi nhận hoạt động âm thanh để reset idle timer và kích hoạt automation
+							if server.AutomationMgr != nil {
+								server.AutomationMgr.RecordActivity("âm thanh phòng khách: " + audioFeatures.Description)
+								if audioFeatures.Category == speech.CategoryNoise {
+									server.AutomationMgr.HandleEveningArrival("tiếng động cạch cửa / bước chân")
+								}
 							}
-
-							server.transcribeLock.Lock()
-							if server.transcribeWorkers >= 2 {
-								server.transcribeLock.Unlock()
-								logMic("Hệ thống STT đang xử lý 2 câu liên tiếp, bỏ qua đoạn này để giải phóng tải.")
-								continue
-							}
-							server.transcribeWorkers++
-							server.transcribeLock.Unlock()
-
-							logMic("🗣️ [Gửi Groq Whisper Cloud] %.1fs âm thanh (RMS=%.0f, ZCR=%.3f)...",
-								float64(len(audioToTranscribe))/32000, audioFeatures.RMS, audioFeatures.ZeroCrossing)
-
-							go func(rawPCM []byte, cfg CameraConfigData) {
-								defer func() {
-									server.transcribeLock.Lock()
-									server.transcribeWorkers--
-									server.transcribeLock.Unlock()
-								}()
-
-								var text string
-								var terr error
-								if server.Transcriber != nil && server.Transcriber.HasGroqKey() {
-									text, _, terr = server.Transcriber.TranscribeCloud(rawPCM)
-								} else {
-									text, terr = speech.TranscribeLocalPCM(rawPCM, "base-int8")
-								}
-								if terr != nil || text == "" {
-									return
-								}
-								lowerT := strings.ToLower(text)
-								if isWhisperHallucination(lowerT) {
-									return
-								}
-								normalizedText := NormalizeSmartHomeQuery(text)
-								if normalizedText != text {
-									logMic("Đoán ý thông minh: %q -> %q", text, normalizedText)
-									text = normalizedText
-								}
-
-								logMic("Groq Whisper nhận: %q", text)
-								tNow := time.Now().Format("15:04:05")
-								if server.AutomationMgr != nil {
-									server.AutomationMgr.RecordActivity("âm thanh phòng khách")
-									if server.AutomationMgr.MatchesDoorSound(text) {
-										go server.AutomationMgr.HandleEveningArrival("âm thanh mở cửa / lời chào về nhà")
-									}
-								}
-
-								matched, query := matchesWakeWord(text)
-								if !matched {
-									return
-								}
-
-								logMic("🎯 [WakeWord Hợp Lệ] Đã phát hiện từ khóa gọi Duinch! Query: %q", query)
-								fmt.Printf("[Mic Camera Heard]: \"%s\"\n", text)
-								server.broadcastTerminal(fmt.Sprintf("[%s] 🎤 Camera Mic thu được: \"%s\"", tNow, text))
-
-								server.handleWakeWordQuery(query, rawPCM, cfg, tNow)
-							}(audioToTranscribe, cfg)
 						} else {
 							logMic("Bỏ đoạn âm thanh quá ngắn: %.2fs.", float64(len(speechBuffer))/32000)
 							speechBuffer = nil
@@ -240,50 +181,4 @@ func startCameraWakeWordListener(server *Server) {
 			time.Sleep(3 * time.Second)
 		}
 	}()
-}
-
-func (s *Server) handleWakeWordQuery(query string, rawPCM []byte, cfg CameraConfigData, tNow string) {
-	fmt.Printf("🎯 [WakeWord Triggered] Duinch! Query: \"%s\"\n", query)
-	s.broadcastTerminal(fmt.Sprintf("[%s] 🎯 Duinch đã nhận diện từ khóa đánh thức!", tNow))
-
-	// TRƯỜNG HỢP 1: User chỉ gọi "Duinch ơi" rồi dừng lại
-	if query == "" {
-		s.broadcastTerminal(fmt.Sprintf("[%s] 🗣️ Duinch Camera phản hồi: \"Dạ, em nghe đây ạ!\"", tNow))
-		_ = s.speakOnCamera("Dạ, em nghe đây ạ!", "female")
-		time.Sleep(1500 * time.Millisecond)
-		followUp, ferr := s.recordAndTranscribeCloud(cfg, 4)
-		if ferr == nil && followUp != "" {
-			query = NormalizeSmartHomeQuery(followUp)
-			s.broadcastTerminal(fmt.Sprintf("[%s] 🎤 User nói tiếp: \"%s\"", time.Now().Format("15:04:05"), query))
-		}
-	} else {
-		// TRƯỜNG HỢP 2: User nói liền mạch luôn (vd: "Duinch ơi bật đèn")
-		query = NormalizeSmartHomeQuery(query)
-	}
-
-	if query != "" {
-		s.executeSmartHomeAction(query, tNow)
-	}
-}
-
-func askAgentQuery(server *Server, question string) string {
-	orch := buildServerOrchestrator(server)
-	reqID := fmt.Sprintf("cam-%d", time.Now().UnixNano())
-	inputEv := &contracts.InputEvent{
-		RequestID: reqID,
-		SessionID: "camera_intercom",
-		Text:      question,
-		Locale:    "vi-VN",
-		InputType: "voice",
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	pres, err := orch.Process(ctx, inputEv, nil)
-	if err != nil || pres == nil || pres.SpeechText == "" {
-		return "Em đây ạ, anh cần giúp gì thế anh?"
-	}
-
-	return pres.SpeechText
 }

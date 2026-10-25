@@ -60,10 +60,6 @@ func (s *Server) executeSmartHomeAction(query string, tNow string) {
 		_ = s.speakOnCamera("Dạ, em tắt TV đây ạ!", "female")
 		adbBin := "/home/chungnh/bin/adb"
 		_ = exec.Command(adbBin, "-s", "192.168.1.8:5555", "shell", "input keyevent 26").Run()
-	} else {
-		reply := askAgentQuery(s, query)
-		s.broadcastTerminal(fmt.Sprintf("[%s] 🤖 Duinch Camera trả lời: \"%s\"", tNow, reply))
-		_ = s.speakOnCamera(reply, "female")
 	}
 }
 
