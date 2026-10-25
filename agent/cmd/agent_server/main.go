@@ -1,11 +1,13 @@
 package main
 
 import (
+	"bufio"
 	"crypto/rand"
 	_ "embed"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"net/url"
@@ -784,6 +786,111 @@ func isTVScreenOn(tvHost string) bool {
 	return strings.Contains(string(out), "mWakefulness=Awake")
 }
 
+func turnOnTV(tvHost string) error {
+	adbBin := "/home/chungnh/bin/adb"
+	if _, err := os.Stat(adbBin); err != nil {
+		adbBin = "adb"
+	}
+	target := tvHost
+	if !strings.Contains(target, ":") {
+		target = target + ":5555"
+	}
+
+	// 224: KEYCODE_WAKEUP, 3: KEYCODE_HOME
+	cmd := exec.Command(adbBin, "-s", target, "shell", "input keyevent 224 && sleep 0.5 && input keyevent 3")
+	return cmd.Run()
+}
+
+func recordAndTranscribe(cfg CameraConfigData, durationSec int) (string, error) {
+	tmpWav := fmt.Sprintf("/tmp/cam_rec_%d.wav", time.Now().UnixNano())
+	defer os.Remove(tmpWav)
+
+	rtspURL := fmt.Sprintf("rtsp://%s:%s@%s:554/stream1", cfg.Username, cfg.Password, cfg.IP)
+	// Thu âm từ RTSP microphone của Tapo C200
+	ffmpegCmd := exec.Command("ffmpeg", "-y", "-rtsp_transport", "tcp", "-i", rtspURL, "-t", strconv.Itoa(durationSec), "-vn", "-ar", "16000", "-ac", "1", tmpWav)
+	if err := ffmpegCmd.Run(); err != nil {
+		return "", fmt.Errorf("ffmpeg capture failed: %v", err)
+	}
+
+	raw, err := os.ReadFile(tmpWav)
+	if err != nil || len(raw) <= 44 {
+		return "", fmt.Errorf("empty audio file")
+	}
+
+	// Gửi sang Wyoming Faster-Whisper trên cổng :10300
+	conn, err := net.DialTimeout("tcp", "127.0.0.1:10300", 3*time.Second)
+	if err != nil {
+		return "", fmt.Errorf("connect to whisper failed: %v", err)
+	}
+	defer conn.Close()
+
+	// 1. transcribe
+	tData, _ := json.Marshal(map[string]interface{}{"name": "base-int8", "language": "vi"})
+	tHeader, _ := json.Marshal(map[string]interface{}{"type": "transcribe", "version": "1.10.2", "data_length": len(tData)})
+	conn.Write(append(tHeader, '\n'))
+	conn.Write(tData)
+
+	// 2. audio-start
+	sData, _ := json.Marshal(map[string]interface{}{"rate": 16000, "width": 2, "channels": 1})
+	sHeader, _ := json.Marshal(map[string]interface{}{"type": "audio-start", "version": "1.10.2", "data_length": len(sData)})
+	conn.Write(append(sHeader, '\n'))
+	conn.Write(sData)
+
+	// 3. audio chunks
+	pcm := raw[44:]
+	chunkSize := 2048
+	for i := 0; i < len(pcm); i += chunkSize {
+		end := i + chunkSize
+		if end > len(pcm) {
+			end = len(pcm)
+		}
+		cData, _ := json.Marshal(map[string]interface{}{"rate": 16000, "width": 2, "channels": 1})
+		cHeader, _ := json.Marshal(map[string]interface{}{"type": "audio-chunk", "version": "1.10.2", "data_length": len(cData), "payload_length": end - i})
+		conn.Write(append(cHeader, '\n'))
+		conn.Write(cData)
+		conn.Write(pcm[i:end])
+	}
+
+	// 4. audio-stop
+	stopHeader, _ := json.Marshal(map[string]interface{}{"type": "audio-stop", "version": "1.10.2"})
+	conn.Write(append(stopHeader, '\n'))
+
+	// Read transcript response
+	reader := bufio.NewReader(conn)
+	for {
+		line, err := reader.ReadBytes('\n')
+		if err != nil {
+			break
+		}
+		var h struct {
+			Type          string `json:"type"`
+			DataLength    int    `json:"data_length,omitempty"`
+			PayloadLength int    `json:"payload_length,omitempty"`
+		}
+		_ = json.Unmarshal(line, &h)
+
+		var dataBytes []byte
+		if h.DataLength > 0 {
+			dataBytes = make([]byte, h.DataLength)
+			_, _ = io.ReadFull(reader, dataBytes)
+		}
+		if h.PayloadLength > 0 {
+			pBytes := make([]byte, h.PayloadLength)
+			_, _ = io.ReadFull(reader, pBytes)
+		}
+
+		if h.Type == "transcript" {
+			var res struct {
+				Text string `json:"text"`
+			}
+			_ = json.Unmarshal(dataBytes, &res)
+			return strings.TrimSpace(res.Text), nil
+		}
+	}
+
+	return "", fmt.Errorf("no transcript received")
+}
+
 func (s *Server) handleCameraSpeak(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	if r.Method != http.MethodPost {
@@ -940,6 +1047,31 @@ func main() {
 					// 3. Loa camera Tapo cất giọng hỏi thăm
 					promptText := "Anh có muốn xem TV không? Em mở giúp anh nhé"
 					_ = server.speakOnCamera(promptText, "female")
+
+					// 4. LẮNG NGHE PHẢN HỒI QUA MIC CAMERA TAPO (3-4 giây)
+					time.Sleep(3 * time.Second) // Chờ loa phát xong câu hỏi
+					reply, err := recordAndTranscribe(cfg, 3)
+					if err == nil && reply != "" {
+						lowerReply := strings.ToLower(reply)
+						fmt.Printf("[Camera Conversation] Nhận diện câu trả lời: \"%s\"\n", reply)
+
+						// 5. Phân tích ý định người dùng (OK / Mở đi / Có / Bật / Xem / Ừ / Yes)
+						positiveIntent := strings.Contains(lowerReply, "ok") ||
+							strings.Contains(lowerReply, "mở") ||
+							strings.Contains(lowerReply, "bật") ||
+							strings.Contains(lowerReply, "có") ||
+							strings.Contains(lowerReply, "ừ") ||
+							strings.Contains(lowerReply, "xem") ||
+							strings.Contains(lowerReply, "yes") ||
+							strings.Contains(lowerReply, "được")
+
+						if positiveIntent {
+							// Phản hồi xác nhận qua loa Camera
+							_ = server.speakOnCamera("Dạ, em mở TV ngay đây ạ!", "female")
+							// Gửi lệnh bật TV qua ADB
+							_ = turnOnTV(tvHost)
+						}
+					}
 				}()
 			}
 		} else if ev, ok := payload["event"].(string); ok {
