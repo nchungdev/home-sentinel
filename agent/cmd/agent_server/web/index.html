@@ -724,9 +724,10 @@
             <input type="text" id="cfgCamStreamPath" value="/stream1" placeholder="/stream1, /ch0/main, /live/ch0...">
           </div>
           <div style="display:flex; gap:12px; margin-top:8px;">
-            <button class="btn-save" onclick="saveCameraConfig()">💾 Lưu Cấu Hình Camera</button>
-            <button class="btn-action" style="padding:10px 18px;" onclick="testCameraConnection()">⚡ Thử Kết Nối</button>
+            <button class="btn-save" id="btnSaveCam" onclick="saveCameraConfig()">💾 Lưu Cấu Hình Camera</button>
+            <button class="btn-action" id="btnTestCam" style="padding:10px 18px;" onclick="testCameraConnection()">⚡ Thử Kết Nối</button>
           </div>
+          <div id="camTestResult" style="font-size:12px; margin-top:10px; line-height:1.4;"></div>
         </div>
       </div>
 
@@ -946,9 +947,11 @@
       const order = enginesList.map(e => e.id);
       const gemini = document.getElementById('geminiKeyInput').value.trim();
       const localUrl = document.getElementById('localUrlInput').value.trim();
+      const resDiv = document.getElementById('aiTestResult');
       const btn = document.getElementById('btnSaveAI');
       btn.disabled = true;
-      btn.textContent = '⏳ Đang lưu & kiểm tra...';
+      btn.textContent = '⏳ Đang lưu...';
+      resDiv.innerHTML = '<span style="color:var(--text-muted);">Đang lưu cấu hình AI Engines...</span>';
 
       try {
         const res = await fetch('/api/llm/engines', {
@@ -958,9 +961,9 @@
         });
         const data = await res.json();
         await loadEngines();
-        alert(data.message || 'Đã lưu cấu hình AI Engines!');
+        resDiv.innerHTML = `<span style="color:#10b981;">✅ ${data.message || 'Đã lưu cấu hình AI Engines!'}</span>`;
       } catch (e) {
-        alert('Lỗi lưu cấu hình: ' + e.message);
+        resDiv.innerHTML = `<span style="color:#ef4444;">❌ Lỗi lưu cấu hình: ${e.message}</span>`;
       } finally {
         btn.disabled = false;
         btn.textContent = '💾 Lưu Cấu Hình';
@@ -1019,7 +1022,7 @@
       const btn = document.getElementById('btnSaveHA');
 
       if (!url) {
-        alert('Vui lòng nhập URL Home Assistant!');
+        resDiv.innerHTML = '<span style="color:#ef4444;">❌ Vui lòng nhập URL Home Assistant!</span>';
         return;
       }
 
@@ -1036,14 +1039,11 @@
         const data = await res.json();
         if (data.ok) {
           resDiv.innerHTML = `<span style="color:#10b981;">✅ ${data.message}</span>`;
-          alert('✅ ' + data.message);
         } else {
           resDiv.innerHTML = `<span style="color:#ef4444;">❌ Kết nối thất bại: ${data.message}</span>`;
-          alert('❌ Lưu thành công nhưng kết nối thất bại: ' + data.message);
         }
       } catch (e) {
         resDiv.innerHTML = `<span style="color:#ef4444;">❌ Lỗi: ${e.message}</span>`;
-        alert('Lỗi: ' + e.message);
       } finally {
         btn.disabled = false;
         btn.textContent = '💾 Kiểm Tra & Lưu Cấu Hình';
@@ -1126,7 +1126,8 @@
         document.getElementById('cfgCamStreamPath').value = '/h264Preview_01_main';
       }
 
-      alert(`Đã chọn thiết bị ${name} (${ip}). Vui lòng nhập tài khoản/mật khẩu camera rồi bấm Lưu.`);
+      const resDiv = document.getElementById('camTestResult');
+      resDiv.innerHTML = `<span style="color:#10b981;">👉 Đã chọn thiết bị <b>${name} (${ip})</b>. Nhập tài khoản/mật khẩu rồi bấm Lưu hoặc Thử Kết Nối.</span>`;
     }
 
     async function loadSavedCameraConfig() {
@@ -1147,6 +1148,7 @@
     }
 
     async function saveCameraConfig() {
+      const resDiv = document.getElementById('camTestResult');
       const payload = {
         ip: document.getElementById('cfgCamIp').value.trim(),
         brand: document.getElementById('cfgCamBrand').value,
@@ -1158,10 +1160,11 @@
       };
 
       if (!payload.ip) {
-        alert('Vui lòng nhập IP camera!');
+        resDiv.innerHTML = '<span style="color:#ef4444;">❌ Vui lòng nhập địa chỉ IP camera!</span>';
         return;
       }
 
+      resDiv.innerHTML = '<span style="color:var(--text-muted);">Đang lưu cấu hình camera...</span>';
       try {
         const res = await fetch('/api/camera/config', {
           method: 'POST',
@@ -1169,9 +1172,9 @@
           body: JSON.stringify(payload)
         });
         const data = await res.json();
-        alert(data.message || 'Đã lưu cấu hình camera!');
+        resDiv.innerHTML = `<span style="color:#10b981;">✅ ${data.message || 'Đã lưu cấu hình camera!'}</span>`;
       } catch (e) {
-        alert('Lỗi lưu cấu hình: ' + e.message);
+        resDiv.innerHTML = `<span style="color:#ef4444;">❌ Lỗi lưu cấu hình: ${e.message}</span>`;
       }
     }
 
@@ -1180,13 +1183,18 @@
       const user = document.getElementById('cfgCamUser').value.trim();
       const pass = document.getElementById('cfgCamPass').value.trim();
       const path = document.getElementById('cfgCamStreamPath').value.trim();
+      const resDiv = document.getElementById('camTestResult');
+      const btn = document.getElementById('btnTestCam');
 
       if (!ip) {
-        alert('Vui lòng nhập địa chỉ IP!');
+        resDiv.innerHTML = '<span style="color:#ef4444;">❌ Vui lòng nhập địa chỉ IP!</span>';
         return;
       }
 
-      alert(`Đang kiểm tra kết nối tới RTSP rtsp://${ip}:554${path}...`);
+      btn.disabled = true;
+      btn.textContent = '⏳ Đang thử RTSP...';
+      resDiv.innerHTML = `<span style="color:var(--text-muted);">Đang kết nối RTSP rtsp://${ip}:554${path}...</span>`;
+
       try {
         const res = await fetch('http://192.168.1.37:8792/api/test-camera', {
           method: 'POST',
@@ -1195,12 +1203,15 @@
         });
         const data = await res.json();
         if (data.success) {
-          alert('✅ Kết nối thành công! ' + data.message);
+          resDiv.innerHTML = `<span style="color:#10b981;">✅ Kết nối thành công! ${data.message}</span>`;
         } else {
-          alert('❌ Kết nối thất bại: ' + (data.message || 'Không thể liên lạc'));
+          resDiv.innerHTML = `<span style="color:#ef4444;">❌ Kết nối thất bại: ${data.message || 'Không thể liên lạc'}</span>`;
         }
       } catch (e) {
-        alert('Lỗi gửi yêu cầu kiểm tra (Camera Center :8792): ' + e.message);
+        resDiv.innerHTML = `<span style="color:#ef4444;">❌ Lỗi kiểm tra (Camera Center :8792): ${e.message}</span>`;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '⚡ Thử Kết Nối';
       }
     }
 
