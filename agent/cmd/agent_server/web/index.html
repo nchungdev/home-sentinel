@@ -1972,20 +1972,6 @@
       }
     }
 
-      liveCallRecognition.onend = () => {
-        // Tự khởi động lại nếu vẫn đang trong cuộc gọi
-        if (isCalling && liveCallRecognition) {
-          try { liveCallRecognition.start(); } catch (e) {}
-        }
-      };
-
-      try {
-        liveCallRecognition.start();
-      } catch (e) {
-        console.warn('Call recognition start error:', e);
-      }
-    }
-
     function stopContinuousCallAudio() {
       if (liveCallRecognition) {
         try { liveCallRecognition.stop(); } catch (e) {}
