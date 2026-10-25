@@ -3,9 +3,13 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
   <title>Home Sentinel</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400,0,0" />
   <style>
     :root {
+      color-scheme: dark;
+      accent-color: #6366f1;
       --bg: #090a0f;
       --sidebar-bg: #0f1118;
       --surface: #141722;
@@ -20,6 +24,26 @@
       --accent: #818cf8;
       --user-bubble: #1e1b4b;
       --radius: 12px;
+      scrollbar-color: #334155 #0f1118;
+      scrollbar-width: thin;
+    }
+    .mi {
+      font-family: 'Material Symbols Rounded';
+      font-weight: normal;
+      font-style: normal;
+      font-size: 18px;
+      line-height: 1;
+      letter-spacing: normal;
+      text-transform: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      white-space: nowrap;
+      word-wrap: normal;
+      direction: ltr;
+      -webkit-font-smoothing: antialiased;
+      vertical-align: middle;
+      user-select: none;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -1127,18 +1151,56 @@
     }
     .form-group input:focus { border-color: var(--border-focus); }
     .btn-save {
-      background: var(--primary);
+      background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
       color: #fff;
       border: none;
       padding: 10px 20px;
-      border-radius: 8px;
+      border-radius: 10px;
       font-size: 13px;
       font-weight: 600;
       cursor: pointer;
-      align-self: flex-start;
-      margin-top: 6px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 4px 14px rgba(79, 70, 229, 0.35);
     }
-    .btn-save:hover { background: var(--primary-hover); }
+    .btn-save:hover {
+      background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 18px rgba(79, 70, 229, 0.45);
+    }
+    .btn-action {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border);
+      color: var(--text-bright);
+      padding: 10px 16px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    }
+    .btn-action:hover {
+      background: var(--surface-hover);
+      border-color: rgba(99, 102, 241, 0.45);
+      color: #fff;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
+    }
+    .btn-action:active, .btn-save:active {
+      transform: translateY(0);
+    }
+    .setting-view .card {
+      padding: 20px 22px;
+      gap: 14px;
+    }
     .engine-row {
       display: flex;
       align-items: center;
@@ -1174,18 +1236,18 @@
   <aside class="sidebar">
     <div>
       <div class="brand">
-        <div class="brand-icon">🛡️</div>
+        <div class="brand-icon"><span class="mi" style="font-size:20px;">shield</span></div>
         <h2>Home Sentinel</h2>
       </div>
       <div class="nav-list">
         <div class="nav-item active" id="nav-agent" onclick="switchNav('agent', this)">
-          <span>💬</span> Agent Chat
+          <span class="mi">chat</span> Agent Chat
         </div>
         <div class="nav-item" id="nav-camera" onclick="switchNav('camera', this)">
-          <span>📹</span> Camera
+          <span class="mi">videocam</span> Camera
         </div>
         <div class="nav-item" id="nav-automation" onclick="switchNav('automation', this)">
-          <span>⚡</span> Kịch Bản
+          <span class="mi">bolt</span> Kịch Bản
         </div>
       </div>
     </div>
@@ -1193,7 +1255,7 @@
     <!-- SETTING BOTTOM -->
     <div class="nav-bottom">
       <div class="nav-item" id="nav-setting" onclick="switchNav('setting', this)">
-        <span>⚙️</span> Settings
+        <span class="mi">settings</span> Settings
       </div>
     </div>
   </aside>
@@ -1212,13 +1274,13 @@
     <div id="view-agent" class="view-content agent-view active">
       <div class="chips-bar" style="justify-content: space-between;">
         <div style="display:flex; gap:8px; overflow-x:auto;">
-          <div class="chip" onclick="quickSend('trạng thái nhà')">🏠 Trạng thái nhà</div>
-          <div class="chip" onclick="quickSend('bật đèn phòng khách')">💡 Bật đèn PK</div>
-          <div class="chip" onclick="quickSend('tắt đèn phòng khách')">💡 Tắt đèn PK</div>
-          <div class="chip" onclick="quickSend('bật quạt phòng ngủ')">🌀 Bật quạt</div>
-          <div class="chip" onclick="quickSend('tìm phim avatar')">🎬 Tìm phim</div>
+          <div class="chip" onclick="quickSend('trạng thái nhà')"><span class="mi" style="font-size:15px;">home</span> Trạng thái nhà</div>
+          <div class="chip" onclick="quickSend('bật đèn phòng khách')"><span class="mi" style="font-size:15px;">lightbulb</span> Bật đèn PK</div>
+          <div class="chip" onclick="quickSend('tắt đèn phòng khách')"><span class="mi" style="font-size:15px;">flashlight_off</span> Tắt đèn PK</div>
+          <div class="chip" onclick="quickSend('bật quạt phòng ngủ')"><span class="mi" style="font-size:15px;">mode_fan</span> Bật quạt</div>
+          <div class="chip" onclick="quickSend('tìm phim avatar')"><span class="mi" style="font-size:15px;">movie</span> Tìm phim</div>
         </div>
-        <div class="chip" style="color:var(--text-muted); flex-shrink:0;" onclick="clearChatHistory()">🗑️ Xóa lịch sử</div>
+        <div class="chip" style="color:var(--text-muted); flex-shrink:0;" onclick="clearChatHistory()"><span class="mi" style="font-size:15px;">delete</span> Xóa lịch sử</div>
       </div>
 
       <div class="chat-messages" id="chatList">
@@ -1231,7 +1293,7 @@
       <div class="chat-input-wrapper">
         <div class="input-pill">
           <textarea id="promptInput" rows="1" placeholder="Hỏi điều gì đó hoặc ra lệnh điều khiển nhà..."></textarea>
-          <button class="btn-send-round" onclick="sendChat()">➤</button>
+          <button class="btn-send-round" onclick="sendChat()"><span class="mi">send</span></button>
         </div>
       </div>
     </div>
@@ -1249,16 +1311,16 @@
             <img id="mjpegFeed" src="" alt="Camera Stream" style="display:none;" onerror="handleStreamError()" onload="handleStreamLoaded()">
             <div class="unconfigured-overlay" id="camPlaceholderOverlay" style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px;">
               <div style="width: 56px; height: 56px; border-radius: 50%; background: rgba(99, 102, 241, 0.2); border: 2px solid rgba(99, 102, 241, 0.6); display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 0 20px rgba(99, 102, 241, 0.4);">
-                ▶
+                <span class="mi" style="font-size:32px; color:#fff;">play_arrow</span>
               </div>
               <h4 style="margin: 4px 0 0; font-size: 14px; font-weight: 600; color: var(--text-bright);">Bấm để xem trực tiếp</h4>
               <p style="margin: 0; font-size: 11.5px; color: var(--text-muted);">Tối ưu băng thông mạng &amp; CPU máy chủ</p>
             </div>
             <div class="unconfigured-overlay" id="unconfiguredOverlay" style="display:none;">
-              <div style="font-size: 38px;">📷</div>
+              <span class="mi" style="font-size:42px; color:var(--accent);">videocam_off</span>
               <h4 id="overlayTitle">Chưa kết nối Camera</h4>
               <p id="overlayDesc">Hệ thống chưa tìm thấy cấu hình Camera hoặc luồng RTSP bị ngắt quãng. Hãy vào Cài Đặt để chọn thiết bị hoặc bấm thử kết nối.</p>
-              <button class="btn-shortcut" onclick="jumpToConfig('camera-cfg'); event.stopPropagation();">⚙️ Cấu Hình Camera Ngay</button>
+              <button class="btn-shortcut" onclick="jumpToConfig('camera-cfg'); event.stopPropagation();"><span class="mi">settings</span> Cấu Hình Camera Ngay</button>
             </div>
           </div>
           <div class="camera-meta">
@@ -1280,7 +1342,7 @@
               <span class="terminal-badge">LIVE</span>
             </div>
             <span class="terminal-action" onclick="document.getElementById('termLog').textContent='[Cleared]';">
-              <svg style="width:12px; height:12px; fill:currentColor;" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+              <span class="mi" style="font-size:14px;">close</span>
               Xóa log
             </span>
           </div>
@@ -1296,24 +1358,24 @@
           
           <div class="remote-container">
             <div class="dpad-circle">
-              <button class="dpad-btn dpad-up" onclick="callCamera('ptz', {direction: 'up'})" title="Lên">▲</button>
-              <button class="dpad-btn dpad-left" onclick="callCamera('ptz', {direction: 'left'})" title="Trái">◀</button>
+              <button class="dpad-btn dpad-up" onclick="callCamera('ptz', {direction: 'up'})" title="Lên"><span class="mi">keyboard_arrow_up</span></button>
+              <button class="dpad-btn dpad-left" onclick="callCamera('ptz', {direction: 'left'})" title="Trái"><span class="mi">keyboard_arrow_left</span></button>
               <div class="dpad-center">PTZ</div>
-              <button class="dpad-btn dpad-right" onclick="callCamera('ptz', {direction: 'right'})" title="Phải">▶</button>
-              <button class="dpad-btn dpad-down" onclick="callCamera('ptz', {direction: 'down'})" title="Xuống">▼</button>
+              <button class="dpad-btn dpad-right" onclick="callCamera('ptz', {direction: 'right'})" title="Phải"><span class="mi">keyboard_arrow_right</span></button>
+              <button class="dpad-btn dpad-down" onclick="callCamera('ptz', {direction: 'down'})" title="Xuống"><span class="mi">keyboard_arrow_down</span></button>
             </div>
           </div>
 
           <!-- NHÓM PHÍM GỌI PRESET VỊ TRÍ GÓC QUAY (SOFA / BÀN ĂN / CỬA CHÍNH) -->
           <div style="display: flex; gap: 8px; width: 100%; margin-top: -4px;">
-            <button class="btn-modern" style="flex: 1; padding: 7px 4px; font-size: 11.5px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 4px;" onclick="callCamera('ptz', {preset: '1'})" title="Xoay về Sofa">
-              <span>🛋️</span> Sofa
+            <button class="btn-modern" style="flex: 1; padding: 7px 4px; font-size: 11.5px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 5px;" onclick="callCamera('ptz', {preset: '1'})" title="Xoay về Sofa">
+              <span class="mi" style="font-size:16px;">chair</span> Sofa
             </button>
-            <button class="btn-modern" style="flex: 1; padding: 7px 4px; font-size: 11.5px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 4px;" onclick="callCamera('ptz', {preset: '2'})" title="Xoay về Bàn ăn">
-              <span>🍽️</span> Bàn ăn
+            <button class="btn-modern" style="flex: 1; padding: 7px 4px; font-size: 11.5px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 5px;" onclick="callCamera('ptz', {preset: '2'})" title="Xoay về Bàn ăn">
+              <span class="mi" style="font-size:16px;">restaurant</span> Bàn ăn
             </button>
-            <button class="btn-modern" style="flex: 1; padding: 7px 4px; font-size: 11.5px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 4px;" onclick="callCamera('ptz', {preset: '3'})" title="Xoay về Cửa chính">
-              <span>🚪</span> Cửa chính
+            <button class="btn-modern" style="flex: 1; padding: 7px 4px; font-size: 11.5px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 5px;" onclick="callCamera('ptz', {preset: '3'})" title="Xoay về Cửa chính">
+              <span class="mi" style="font-size:16px;">door_front</span> Cửa chính
             </button>
           </div>
 
@@ -1322,7 +1384,7 @@
             <!-- Chế độ riêng tư (Full width) -->
             <div class="status-card-row full-width" id="rowPrivacy">
               <div style="display:flex; align-items:center; gap:8px;">
-                <span id="privacyIcon" style="font-size:15px;">👁️</span>
+                <span class="mi" id="privacyIcon" style="font-size:16px;">visibility</span>
                 <span style="font-weight:600;" id="privacyTitle">Chế độ riêng tư (Tắt ghi hình)</span>
               </div>
               <span class="status-badge-val off" id="statusPrivacy">TẮT</span>
@@ -1331,7 +1393,7 @@
             <!-- 1. Motion Detection -->
             <div class="status-card-row" id="rowMotion">
               <div style="display:flex; align-items:center; gap:8px;">
-                <span>🏃</span>
+                <span class="mi" style="font-size:16px;">directions_run</span>
                 <span>Phát hiện C.Động</span>
               </div>
               <span class="status-badge-val off" id="statusMotion">...</span>
@@ -1340,7 +1402,7 @@
             <!-- 2. Motion Tracking -->
             <div class="status-card-row" id="rowTracking">
               <div style="display:flex; align-items:center; gap:8px;">
-                <span>🎯</span>
+                <span class="mi" style="font-size:16px;">my_location</span>
                 <span>Bám theo C.Động</span>
               </div>
               <span class="status-badge-val off" id="statusTracking">...</span>
@@ -1349,7 +1411,7 @@
             <!-- 3. Person AI Detection -->
             <div class="status-card-row" id="rowPerson">
               <div style="display:flex; align-items:center; gap:8px;">
-                <span>👤</span>
+                <span class="mi" style="font-size:16px;">person</span>
                 <span>Nhận diện Người</span>
               </div>
               <span class="status-badge-val off" id="statusPerson">...</span>
@@ -1358,7 +1420,7 @@
             <!-- 4. Baby Crying Sound -->
             <div class="status-card-row" id="rowBabyCry">
               <div style="display:flex; align-items:center; gap:8px;">
-                <span>👶</span>
+                <span class="mi" style="font-size:16px;">child_care</span>
                 <span>Tiếng em bé khóc</span>
               </div>
               <span class="status-badge-val off" id="statusBabyCry">...</span>
@@ -1370,7 +1432,7 @@
         <div class="cam-chat-box">
           <div class="cam-chat-header">
             <div class="cam-chat-title">
-              <span>🎙️</span>
+              <span class="mi" style="font-size:18px; color:var(--accent);">mic</span>
               <span>Đàm Thoại & Loa Camera</span>
             </div>
             <div class="cam-chat-badge" id="callStatusBadge">
@@ -1383,7 +1445,7 @@
           <div class="cam-intercom-display" id="intercomDisplay">
             <!-- Trạng thái chờ Idle -->
             <div class="intercom-idle" id="intercomIdle">
-              <div class="intercom-idle-icon">🔊</div>
+              <div class="intercom-idle-icon"><span class="mi" style="font-size:22px;">volume_up</span></div>
               <div style="font-size:12px; font-weight:500; color:var(--text-bright);">Loa 2 Chiều Sẵn Sàng</div>
               <div style="font-size:11px; max-width:240px; line-height:1.4;">Gõ văn bản để phát thông báo, chạm mic để nói hoặc bấm nút gọi để đàm thoại trực tiếp.</div>
             </div>
@@ -1406,10 +1468,10 @@
 
           <!-- Gợi ý thông báo nhanh -->
           <div class="cam-quick-chips">
-            <span class="cam-quick-chip" onclick="fillVoiceText('Xin chào quý khách!')">👋 Chào khách</span>
-            <span class="cam-quick-chip" onclick="fillVoiceText('Bạn cần tìm ai ạ?')">❓ Hỏi thăm</span>
-            <span class="cam-quick-chip" onclick="fillVoiceText('Mời bạn vào nhà ngồi chơi!')">🍵 Mời vào</span>
-            <span class="cam-quick-chip" onclick="fillVoiceText('Cảnh báo: Khu vực có ghi hình an ninh!')">⚠️ Cảnh báo</span>
+            <span class="cam-quick-chip" onclick="fillVoiceText('Xin chào quý khách!')"><span class="mi" style="font-size:14px;">waving_hand</span> Chào khách</span>
+            <span class="cam-quick-chip" onclick="fillVoiceText('Bạn cần tìm ai ạ?')"><span class="mi" style="font-size:14px;">help</span> Hỏi thăm</span>
+            <span class="cam-quick-chip" onclick="fillVoiceText('Mời bạn vào nhà ngồi chơi!')"><span class="mi" style="font-size:14px;">emoji_food_beverage</span> Mời vào</span>
+            <span class="cam-quick-chip" onclick="fillVoiceText('Cảnh báo: Khu vực có ghi hình an ninh!')"><span class="mi" style="font-size:14px;">warning</span> Cảnh báo</span>
           </div>
 
           <!-- Input Row tích hợp text + voice + call + send (Unified Design System) -->
@@ -1450,8 +1512,10 @@
         <!-- Card 1: Tắt đèn khi vắng người -->
         <div class="card" style="padding:18px; gap:14px;">
           <div style="display:flex; justify-content:space-between; align-items:center;">
-            <div class="card-title" style="font-size:14px;">🌙 Kịch bản 1: Tự động tắt đèn khi vắng người</div>
-            <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:#10b981; cursor:pointer;">
+            <div class="card-title" style="font-size:14px; display:flex; align-items:center; gap:8px;">
+              <span class="mi" style="color:var(--accent);">bedtime</span> Kịch bản 1: Tự động tắt đèn khi vắng người
+            </div>
+            <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:#10b981; cursor:pointer; font-weight:600;">
               <input type="checkbox" id="autoIdleEnabled" checked> Bật kịch bản
             </label>
           </div>
@@ -1474,7 +1538,9 @@
           <div class="form-group">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
               <label>Chọn các đèn cần tắt (Lấy trực tiếp từ Home Assistant):</label>
-              <button class="btn-modern" style="padding:4px 10px; font-size:11px;" onclick="loadAutomationConfigAndDevices()">🔄 Tải lại thiết bị</button>
+              <button class="btn-modern" style="padding:5px 10px; font-size:11.5px;" onclick="loadAutomationConfigAndDevices()">
+                <span class="mi" style="font-size:15px;">refresh</span> Tải lại thiết bị
+              </button>
             </div>
             <div id="autoIdleLightsChecklist" style="max-height:260px; overflow-y:auto; background:rgba(0,0,0,0.25); border:1px solid var(--border); border-radius:8px; padding:10px; display:grid; grid-template-columns:1fr 1fr; gap:8px;">
               <div style="font-size:12px; color:var(--text-muted);">Đang tải danh sách thiết bị từ Home Assistant...</div>
@@ -1493,8 +1559,10 @@
           <!-- Ngồi Sofa Vỗ tay -->
           <div class="card" style="padding:18px; gap:12px;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
-              <div class="card-title" style="font-size:14px;">👏 Kịch bản 2: Ngồi Sofa vỗ tay ➔ Mở TV & Quạt</div>
-              <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:#10b981; cursor:pointer;">
+              <div class="card-title" style="font-size:14px; display:flex; align-items:center; gap:8px;">
+                <span class="mi" style="color:var(--accent);">front_hand</span> Kịch bản 2: Ngồi Sofa vỗ tay ➔ Mở TV & Quạt
+              </div>
+              <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:#10b981; cursor:pointer; font-weight:600;">
                 <input type="checkbox" id="autoClapEnabled" checked> Bật kịch bản
               </label>
             </div>
@@ -1522,8 +1590,10 @@
           <!-- Đi làm về buổi tối -->
           <div class="card" style="padding:18px; gap:12px;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
-              <div class="card-title" style="font-size:14px;">🌆 Kịch bản 3: Phát hiện người buổi tối ➔ Bật đèn đón</div>
-              <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:#10b981; cursor:pointer;">
+              <div class="card-title" style="font-size:14px; display:flex; align-items:center; gap:8px;">
+                <span class="mi" style="color:var(--accent);">wb_twilight</span> Kịch bản 3: Phát hiện người buổi tối ➔ Bật đèn đón
+              </div>
+              <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:#10b981; cursor:pointer; font-weight:600;">
                 <input type="checkbox" id="autoEveningEnabled" checked> Bật kịch bản
               </label>
             </div>
@@ -1559,7 +1629,7 @@
               <div style="font-size:13px; font-weight:600; color:var(--text-bright);">Lưu vào configs/automation.json</div>
               <div id="autoSaveStatus" style="font-size:12px; color:var(--text-muted); margin-top:2px;">Áp dụng ngay lập tức mà không cần khởi động lại server.</div>
             </div>
-            <button class="btn-modern primary" id="btnSaveAutomation" onclick="saveAutomationConfigUI()">💾 Lưu Kịch Bản</button>
+            <button class="btn-modern primary" id="btnSaveAutomation" onclick="saveAutomationConfigUI()"><span class="mi">save</span> Lưu Kịch Bản</button>
           </div>
         </div>
       </div>
@@ -1569,19 +1639,19 @@
     <div id="view-setting" class="view-content setting-view">
       <div class="subtabs-bar">
         <button class="subtab-btn active" id="btn-subtab-agent-cfg" onclick="switchSubTab('agent-cfg', this)">
-          <span>🧠</span> AI Engines
+          <span class="mi">psychology</span> AI Engines
         </button>
         <button class="subtab-btn" id="btn-subtab-camera-cfg" onclick="switchSubTab('camera-cfg', this)">
-          <span>📷</span> Camera Config
+          <span class="mi">photo_camera</span> Camera Config
         </button>
         <button class="subtab-btn" id="btn-subtab-ha-cfg" onclick="switchSubTab('ha-cfg', this)">
-          <span>🏠</span> Home Assistant
+          <span class="mi">home_iot_device</span> Home Assistant
         </button>
         <button class="subtab-btn" id="btn-subtab-auth-cfg" onclick="switchSubTab('auth-cfg', this)">
-          <span>🔑</span> Bearer Token
+          <span class="mi">key</span> Bearer Token
         </button>
         <button class="subtab-btn" id="btn-subtab-logs" onclick="switchSubTab('logs', this)">
-          <span>📋</span> Client Logs
+          <span class="mi">terminal</span> Client Logs
         </button>
       </div>
 
@@ -1591,7 +1661,7 @@
         <div class="card">
           <div style="display:flex; justify-content:space-between; align-items:center;">
             <div class="card-title">Thứ tự ưu tiên AI Engine (Tự động chuyển khi lỗi/hết token)</div>
-            <button class="btn-action" style="padding:4px 10px; font-size:11px;" onclick="loadEngines()">🔄 Cập nhật</button>
+            <button class="btn-action" style="padding:6px 12px; font-size:12px;" onclick="loadEngines()"><span class="mi" style="font-size:15px;">refresh</span> Cập nhật</button>
           </div>
           <p style="font-size:12px; color:var(--text-muted); margin: 0 0 10px 0;">
             Sentinel tự động failover giữa các AI Engine khả dụng trên NAS. Bạn có thể sắp xếp mức độ ưu tiên theo nhu cầu.
@@ -1603,8 +1673,8 @@
         <div class="card">
           <div style="display:flex; justify-content:space-between; align-items:center;">
             <div class="card-title">Tài Khoản CLI & API Tokens</div>
-            <a href="http://192.168.1.37:8000/#settings" target="_blank" class="btn-action" style="padding:6px 12px; font-size:11px; text-decoration:none; display:inline-flex; align-items:center; gap:6px; color:#818cf8; border-color:rgba(99,102,241,0.4);">
-              <span>⚡ Mở Agent Bridge</span> ↗
+            <a href="http://192.168.1.37:8000/#settings" target="_blank" class="btn-action" style="padding:6px 12px; font-size:12px; text-decoration:none; color:#818cf8; border-color:rgba(99,102,241,0.4);">
+              <span class="mi" style="font-size:15px;">open_in_new</span> Mở Agent Bridge
             </a>
           </div>
           <p style="font-size:12px; color:var(--text-muted); margin: 4px 0 12px 0; line-height:1.5;">
@@ -1628,9 +1698,9 @@
               <label>Local LLM URL (NAS):</label>
               <input type="text" id="localUrlInput" value="http://127.0.0.1:9931/v1/chat/completions">
             </div>
-            <div style="display:flex; gap:12px; margin-top:12px;">
-              <button class="btn-save" id="btnSaveAI" onclick="saveAIConfig()">💾 Lưu Cấu Hình</button>
-              <button class="btn-action" style="padding:10px 18px;" onclick="testAIConnection()">⚡ Kiểm Tra Kết Nối</button>
+            <div style="display:flex; gap:12px; margin-top:14px;">
+              <button class="btn-save" id="btnSaveAI" onclick="saveAIConfig()"><span class="mi">save</span> Lưu Cấu Hình</button>
+              <button class="btn-action" onclick="testAIConnection()"><span class="mi">bolt</span> Kiểm Tra Kết Nối</button>
             </div>
             <div id="aiTestResult" style="font-size:12px; margin-top:8px; line-height:1.4;"></div>
           </div>
@@ -1643,14 +1713,14 @@
         <div class="card">
           <div style="display:flex; justify-content:space-between; align-items:center;">
             <div class="card-title">Dò Tìm Thiết Bị Camera Mạng (ONVIF Scan)</div>
-            <button class="btn-action" id="btnScanCam" onclick="scanNetworkCameras()">🔍 Quét Mạng LAN</button>
+            <button class="btn-action" id="btnScanCam" onclick="scanNetworkCameras()"><span class="mi">radar</span> Quét Mạng LAN</button>
           </div>
           <p style="font-size:12px; color:var(--text-muted); margin-bottom:12px;">
             Hỗ trợ tự động phát hiện mọi dòng Camera IP (Tapo, Imou, EZVIZ, Hikvision, Dahua, Generic ONVIF) trong mạng cục bộ.
           </p>
           <div id="scanResultList" style="display:flex; flex-direction:column; gap:8px;">
             <div style="padding:14px; text-align:center; color:var(--text-muted); font-size:13px; border:1px dashed var(--border); border-radius:8px;">
-              Bấm nút <strong>"🔍 Quét Mạng LAN"</strong> để tự động tìm camera khả dụng.
+              Bấm nút <strong>"Quét Mạng LAN"</strong> để tự động tìm camera khả dụng.
             </div>
           </div>
         </div>
@@ -1700,8 +1770,8 @@
             <input type="text" id="cfgCamStreamPath" value="/stream1" placeholder="/stream1, /ch0/main, /live/ch0...">
           </div>
           <div style="display:flex; gap:12px; margin-top:8px;">
-            <button class="btn-save" id="btnSaveCam" onclick="saveCameraConfig()">💾 Lưu Cấu Hình Camera</button>
-            <button class="btn-action" id="btnTestCam" style="padding:10px 18px;" onclick="testCameraConnection()">⚡ Thử Kết Nối</button>
+            <button class="btn-save" id="btnSaveCam" onclick="saveCameraConfig()"><span class="mi">save</span> Lưu Cấu Hình Camera</button>
+            <button class="btn-action" id="btnTestCam" onclick="testCameraConnection()"><span class="mi">bolt</span> Thử Kết Nối</button>
           </div>
           <div id="camTestResult" style="font-size:12px; margin-top:10px; line-height:1.4;"></div>
         </div>
@@ -1723,8 +1793,8 @@
             <input type="password" id="cfgHaToken" placeholder="Nhập token tạo từ Profile Home Assistant...">
           </div>
           <div style="display:flex; gap:12px; margin-top:8px;">
-            <button class="btn-save" id="btnSaveHA" onclick="saveHAConfig()">💾 Kiểm Tra & Lưu Cấu Hình</button>
-            <button class="btn-action" style="padding:10px 18px;" onclick="testHAConnection()">⚡ Kiểm Tra Kết Nối</button>
+            <button class="btn-save" id="btnSaveHA" onclick="saveHAConfig()"><span class="mi">save</span> Kiểm Tra & Lưu Cấu Hình</button>
+            <button class="btn-action" onclick="testHAConnection()"><span class="mi">bolt</span> Kiểm Tra Kết Nối</button>
           </div>
           <div id="haTestResult" style="font-size:12px; margin-top:8px; line-height:1.4;"></div>
         </div>
@@ -1737,7 +1807,7 @@
           <p style="font-size: 13px; color: var(--text-muted); line-height: 1.5;">
             Tạo mã Token bảo mật để cài đặt trên TV Launcher. Khi kích hoạt token, chỉ các thiết bị có mã này mới được gửi yêu cầu tới Agent.
           </p>
-          <button class="btn-save" style="background:#6366f1" onclick="generateToken()">⚡ Tạo Token Mới</button>
+          <button class="btn-save" onclick="generateToken()"><span class="mi">key</span> Tạo Token Mới</button>
           <div id="tokenOutput" style="font-family:monospace; color:#10b981; font-size:13px; margin-top:8px;"></div>
         </div>
       </div>
@@ -1752,8 +1822,8 @@
             </p>
           </div>
           <div style="display:flex; gap:10px;">
-            <button class="btn-action" style="padding:8px 14px; font-size:12px;" onclick="loadClientLogs()">🔄 Làm mới</button>
-            <button class="btn-action" style="padding:8px 14px; font-size:12px; background:rgba(239,68,68,0.15); color:#ef4444;" onclick="clearServerClientLogs()">🗑️ Xóa logs</button>
+            <button class="btn-action" style="padding:8px 14px; font-size:12px;" onclick="loadClientLogs()"><span class="mi" style="font-size:15px;">refresh</span> Làm mới</button>
+            <button class="btn-action" style="padding:8px 14px; font-size:12px; background:rgba(239,68,68,0.15); color:#ef4444; border-color:rgba(239,68,68,0.3);" onclick="clearServerClientLogs()"><span class="mi" style="font-size:15px;">delete</span> Xóa logs</button>
           </div>
         </div>
 
@@ -2049,8 +2119,8 @@
                 <span style="color:#9ca3af;">IP: ${escapeHtml(item.client_ip || 'unknown')}</span>
                 <span style="color:#6b7280;">Session: ${escapeHtml(item.session || 'none')}</span>
               </div>
-              <div class="client-log-prompt">💬 ${escapeHtml(item.text || '')}</div>
-              <div class="client-log-resp">🤖 ${escapeHtml(item.response || '(đang phản hồi hoặc trống)')}</div>
+              <div class="client-log-prompt"><span class="mi" style="font-size:14px; color:var(--accent);">chat_bubble</span> ${escapeHtml(item.text || '')}</div>
+              <div class="client-log-resp"><span class="mi" style="font-size:14px; color:#10b981;">smart_toy</span> ${escapeHtml(item.response || '(đang phản hồi hoặc trống)')}</div>
             </div>
           `;
         });
@@ -2474,11 +2544,11 @@
                 if (v) {
                   pBadge.className = 'status-badge-val privacy-on';
                   pBadge.textContent = 'BẬT';
-                  if (pIcon) pIcon.textContent = '🔒';
+                  if (pIcon) pIcon.textContent = 'lock';
                 } else {
                   pBadge.className = 'status-badge-val off';
                   pBadge.textContent = 'TẮT';
-                  if (pIcon) pIcon.textContent = '👁️';
+                  if (pIcon) pIcon.textContent = 'visibility';
                 }
               }
             }
@@ -2534,7 +2604,7 @@
               const activeDot = acc.active ? '<span style="color:#10b981; font-size:10px;">● Đang dùng</span>' : '<span style="color:var(--text-muted); font-size:10px;">(Hồ sơ phụ)</span>';
               html += `
                 <div style="font-size:11px; display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.2); padding:5px 8px; border-radius:6px;">
-                  <span style="color:#d1d5db;">👤 <b>${escapeHtml(acc.label)}</b>: ${escapeHtml(acc.detail || 'Đã đăng nhập')}</span>
+                  <span style="color:#d1d5db; display:inline-flex; align-items:center; gap:5px;"><span class="mi" style="font-size:14px; color:var(--accent);">person</span> <b>${escapeHtml(acc.label)}</b>: ${escapeHtml(acc.detail || 'Đã đăng nhập')}</span>
                   <span>${activeDot}</span>
                 </div>
               `;
@@ -2566,9 +2636,9 @@
             <h4>${e.name || e.id} ${e.available ? '<span style="color:var(--accent);">●</span>' : '<span style="color:var(--text-muted);">○</span>'}</h4>
             <p>${e.status_desc || e.statusDesc || (e.available ? 'Sẵn sàng hoạt động' : 'Chưa khả dụng')}</p>
           </div>
-          <div style="display:flex; align-items:center; gap:8px;">
-            <button class="btn-action" style="padding:4px 8px;" onclick="moveRank(${idx}, -1)">▲</button>
-            <button class="btn-action" style="padding:4px 8px;" onclick="moveRank(${idx}, 1)">▼</button>
+          <div style="display:flex; align-items:center; gap:6px;">
+            <button class="btn-action" style="padding:5px 8px;" onclick="moveRank(${idx}, -1)" title="Tăng ưu tiên"><span class="mi" style="font-size:16px;">keyboard_arrow_up</span></button>
+            <button class="btn-action" style="padding:5px 8px;" onclick="moveRank(${idx}, 1)" title="Giảm ưu tiên"><span class="mi" style="font-size:16px;">keyboard_arrow_down</span></button>
             <span class="badge-rank">Ưu tiên ${idx + 1}</span>
           </div>
         `;
@@ -2592,7 +2662,7 @@
       const resDiv = document.getElementById('aiTestResult');
       const btn = document.getElementById('btnSaveAI');
       btn.disabled = true;
-      btn.textContent = '⏳ Đang lưu...';
+      btn.innerHTML = '<span class="mi">hourglass_top</span> Đang lưu...';
       resDiv.innerHTML = '<span style="color:var(--text-muted);">Đang lưu cấu hình AI Engines...</span>';
 
       try {
@@ -2603,18 +2673,18 @@
         });
         const data = await res.json();
         await loadEngines();
-        resDiv.innerHTML = `<span style="color:#10b981;">✅ ${data.message || 'Đã lưu cấu hình AI Engines!'}</span>`;
+        resDiv.innerHTML = `<span style="color:#10b981;"><span class="mi" style="font-size:15px;">check_circle</span> ${data.message || 'Đã lưu cấu hình AI Engines!'}</span>`;
       } catch (e) {
-        resDiv.innerHTML = `<span style="color:#ef4444;">❌ Lỗi lưu cấu hình: ${e.message}</span>`;
+        resDiv.innerHTML = `<span style="color:#ef4444;"><span class="mi" style="font-size:15px;">error</span> Lỗi lưu cấu hình: ${e.message}</span>`;
       } finally {
         btn.disabled = false;
-        btn.textContent = '💾 Lưu Cấu Hình';
+        btn.innerHTML = '<span class="mi">save</span> Lưu Cấu Hình';
       }
     }
 
     async function testAIConnection() {
       const resDiv = document.getElementById('aiTestResult');
-      resDiv.innerHTML = '<span style="color:var(--text-muted);">⏳ Đang kiểm tra kết nối các AI Engine...</span>';
+      resDiv.innerHTML = '<span style="color:var(--text-muted);"><span class="mi" style="font-size:15px;">hourglass_top</span> Đang kiểm tra kết nối các AI Engine...</span>';
 
       try {
         const localUrl = document.getElementById('localUrlInput').value.trim();
@@ -2636,12 +2706,12 @@
         await loadEngines();
 
         if (testData.ok) {
-          resDiv.innerHTML = `<span style="color:#10b981;">✅ Local LLM: ${testData.message}</span>`;
+          resDiv.innerHTML = `<span style="color:#10b981;"><span class="mi" style="font-size:15px;">check_circle</span> Local LLM: ${testData.message}</span>`;
         } else {
-          resDiv.innerHTML = `<span style="color:#ef4444;">❌ Local LLM: ${testData.message}</span>`;
+          resDiv.innerHTML = `<span style="color:#ef4444;"><span class="mi" style="font-size:15px;">error</span> Local LLM: ${testData.message}</span>`;
         }
       } catch (e) {
-        resDiv.innerHTML = `<span style="color:#ef4444;">❌ Lỗi kiểm tra: ${e.message}</span>`;
+        resDiv.innerHTML = `<span style="color:#ef4444;"><span class="mi" style="font-size:15px;">error</span> Lỗi kiểm tra: ${e.message}</span>`;
       }
     }
 
@@ -2664,12 +2734,12 @@
       const btn = document.getElementById('btnSaveHA');
 
       if (!url) {
-        resDiv.innerHTML = '<span style="color:#ef4444;">❌ Vui lòng nhập URL Home Assistant!</span>';
+        resDiv.innerHTML = '<span style="color:#ef4444;"><span class="mi" style="font-size:15px;">error</span> Vui lòng nhập URL Home Assistant!</span>';
         return;
       }
 
       btn.disabled = true;
-      btn.textContent = '⏳ Đang kiểm tra & lưu...';
+      btn.innerHTML = '<span class="mi">hourglass_top</span> Đang kiểm tra & lưu...';
       resDiv.innerHTML = '<span style="color:var(--text-muted);">Đang kết nối tới Home Assistant REST API...</span>';
 
       try {
@@ -2680,15 +2750,15 @@
         });
         const data = await res.json();
         if (data.ok) {
-          resDiv.innerHTML = `<span style="color:#10b981;">✅ ${data.message}</span>`;
+          resDiv.innerHTML = `<span style="color:#10b981;"><span class="mi" style="font-size:15px;">check_circle</span> ${data.message}</span>`;
         } else {
-          resDiv.innerHTML = `<span style="color:#ef4444;">❌ Kết nối thất bại: ${data.message}</span>`;
+          resDiv.innerHTML = `<span style="color:#ef4444;"><span class="mi" style="font-size:15px;">error</span> Kết nối thất bại: ${data.message}</span>`;
         }
       } catch (e) {
-        resDiv.innerHTML = `<span style="color:#ef4444;">❌ Lỗi: ${e.message}</span>`;
+        resDiv.innerHTML = `<span style="color:#ef4444;"><span class="mi" style="font-size:15px;">error</span> Lỗi: ${e.message}</span>`;
       } finally {
         btn.disabled = false;
-        btn.textContent = '💾 Kiểm Tra & Lưu Cấu Hình';
+        btn.innerHTML = '<span class="mi">save</span> Kiểm Tra & Lưu Cấu Hình';
       }
     }
 
@@ -2709,7 +2779,7 @@
       const btn = document.getElementById('btnScanCam');
       const list = document.getElementById('scanResultList');
       btn.disabled = true;
-      btn.textContent = '⏳ Đang quét ONVIF...';
+      btn.innerHTML = '<span class="mi">hourglass_top</span> Đang quét ONVIF...';
       list.innerHTML = `
         <div style="padding:14px; text-align:center; color:var(--text-muted); font-size:13px;">
           Đang phát sóng ONVIF WS-Discovery dò tìm thiết bị trên mạng...
@@ -2737,8 +2807,8 @@
               <h4>${dev.manufacturer} - ${dev.name} (${dev.ip})</h4>
               <p>Hardware: ${dev.hardware || 'IP Camera'} | ONVIF Port: ${dev.onvif_port || 2020}</p>
             </div>
-            <button class="btn-action" style="padding:6px 14px; background:var(--primary); color:#fff; font-weight:600;" onclick="selectDevice('${dev.ip}', '${dev.name}', '${dev.manufacturer}')">
-              Chọn & Cấu Hình
+            <button class="btn-save" style="padding:7px 14px; font-size:12px;" onclick="selectDevice('${dev.ip}', '${dev.name}', '${dev.manufacturer}')">
+              <span class="mi" style="font-size:15px;">check</span> Chọn & Cấu Hình
             </button>
           `;
           list.appendChild(item);
@@ -2747,7 +2817,7 @@
         list.innerHTML = `<div style="color:#ef4444; font-size:13px;">Lỗi quét thiết bị: ${e.message}</div>`;
       } finally {
         btn.disabled = false;
-        btn.textContent = '🔍 Quét Mạng LAN';
+        btn.innerHTML = '<span class="mi">radar</span> Quét Mạng LAN';
       }
     }
 
@@ -2769,7 +2839,7 @@
       }
 
       const resDiv = document.getElementById('camTestResult');
-      resDiv.innerHTML = `<span style="color:#10b981;">👉 Đã chọn thiết bị <b>${name} (${ip})</b>. Nhập tài khoản/mật khẩu rồi bấm Lưu hoặc Thử Kết Nối.</span>`;
+      resDiv.innerHTML = `<span style="color:#10b981;"><span class="mi" style="font-size:15px;">touch_app</span> Đã chọn thiết bị <b>${name} (${ip})</b>. Nhập tài khoản/mật khẩu rồi bấm Lưu hoặc Thử Kết Nối.</span>`;
     }
 
     async function loadSavedCameraConfig() {
@@ -2802,7 +2872,7 @@
       };
 
       if (!payload.ip) {
-        resDiv.innerHTML = '<span style="color:#ef4444;">❌ Vui lòng nhập địa chỉ IP camera!</span>';
+        resDiv.innerHTML = '<span style="color:#ef4444;"><span class="mi" style="font-size:15px;">error</span> Vui lòng nhập địa chỉ IP camera!</span>';
         return;
       }
 
@@ -2814,9 +2884,9 @@
           body: JSON.stringify(payload)
         });
         const data = await res.json();
-        resDiv.innerHTML = `<span style="color:#10b981;">✅ ${data.message || 'Đã lưu cấu hình camera!'}</span>`;
+        resDiv.innerHTML = `<span style="color:#10b981;"><span class="mi" style="font-size:15px;">check_circle</span> ${data.message || 'Đã lưu cấu hình camera!'}</span>`;
       } catch (e) {
-        resDiv.innerHTML = `<span style="color:#ef4444;">❌ Lỗi lưu cấu hình: ${e.message}</span>`;
+        resDiv.innerHTML = `<span style="color:#ef4444;"><span class="mi" style="font-size:15px;">error</span> Lỗi lưu cấu hình: ${e.message}</span>`;
       }
     }
 
@@ -2829,12 +2899,12 @@
       const btn = document.getElementById('btnTestCam');
 
       if (!ip) {
-        resDiv.innerHTML = '<span style="color:#ef4444;">❌ Vui lòng nhập địa chỉ IP!</span>';
+        resDiv.innerHTML = '<span style="color:#ef4444;"><span class="mi" style="font-size:15px;">error</span> Vui lòng nhập địa chỉ IP!</span>';
         return;
       }
 
       btn.disabled = true;
-      btn.textContent = '⏳ Đang thử RTSP...';
+      btn.innerHTML = '<span class="mi">hourglass_top</span> Đang thử RTSP...';
       resDiv.innerHTML = `<span style="color:var(--text-muted);">Đang kết nối RTSP rtsp://${ip}:554${path}...</span>`;
 
       try {
@@ -2845,15 +2915,15 @@
         });
         const data = await res.json();
         if (data.success) {
-          resDiv.innerHTML = `<span style="color:#10b981;">✅ Kết nối thành công! ${data.message}</span>`;
+          resDiv.innerHTML = `<span style="color:#10b981;"><span class="mi" style="font-size:15px;">check_circle</span> Kết nối thành công! ${data.message}</span>`;
         } else {
-          resDiv.innerHTML = `<span style="color:#ef4444;">❌ Kết nối thất bại: ${data.message || 'Không thể liên lạc'}</span>`;
+          resDiv.innerHTML = `<span style="color:#ef4444;"><span class="mi" style="font-size:15px;">error</span> Kết nối thất bại: ${data.message || 'Không thể liên lạc'}</span>`;
         }
       } catch (e) {
-        resDiv.innerHTML = `<span style="color:#ef4444;">❌ Lỗi kiểm tra RTSP: ${e.message}</span>`;
+        resDiv.innerHTML = `<span style="color:#ef4444;"><span class="mi" style="font-size:15px;">error</span> Lỗi kiểm tra RTSP: ${e.message}</span>`;
       } finally {
         btn.disabled = false;
-        btn.textContent = '⚡ Thử Kết Nối';
+        btn.innerHTML = '<span class="mi">bolt</span> Thử Kết Nối';
       }
     }
 
@@ -2979,7 +3049,7 @@
       };
 
       btn.disabled = true;
-      btn.textContent = '⏳ Đang lưu...';
+      btn.innerHTML = '<span class="mi">hourglass_top</span> Đang lưu...';
       try {
         const res = await fetch('/api/automation/config', {
           method: 'POST',
@@ -2989,15 +3059,15 @@
         const data = await res.json();
         if (data.ok) {
           currentAutoCfg = data.config;
-          statusEl.innerHTML = `<span style="color:#10b981;">✅ Đã lưu kịch bản vào configs/automation.json (${checkedLights.length} đèn)!</span>`;
+          statusEl.innerHTML = `<span style="color:#10b981;"><span class="mi" style="font-size:15px;">check_circle</span> Đã lưu kịch bản vào configs/automation.json (${checkedLights.length} đèn)!</span>`;
         } else {
-          statusEl.innerHTML = `<span style="color:#ef4444;">❌ Lỗi lưu cấu hình</span>`;
+          statusEl.innerHTML = `<span style="color:#ef4444;"><span class="mi" style="font-size:15px;">error</span> Lỗi lưu cấu hình</span>`;
         }
       } catch (e) {
-        statusEl.innerHTML = `<span style="color:#ef4444;">❌ Lỗi: ${e.message}</span>`;
+        statusEl.innerHTML = `<span style="color:#ef4444;"><span class="mi" style="font-size:15px;">error</span> Lỗi: ${e.message}</span>`;
       } finally {
         btn.disabled = false;
-        btn.textContent = '💾 Lưu Kịch Bản';
+        btn.innerHTML = '<span class="mi">save</span> Lưu Kịch Bản';
       }
     }
 
