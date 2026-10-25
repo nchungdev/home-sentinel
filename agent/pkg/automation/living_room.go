@@ -5,12 +5,6 @@ import (
 	"time"
 )
 
-var livingRoomLights = []string{
-	"light.dqsmart_0201bff7b7_1", // Đèn trần phòng khách
-	"light.dqsmart_0201bff7b7_2", // Đèn led viền phòng khách
-	"light.dqsmart_0201bff7b7_4", // Đèn chùm phòng khách
-}
-
 func (m *Manager) runInactivityLoop() {
 	ticker := time.NewTicker(1 * time.Minute)
 	defer ticker.Stop()
@@ -26,30 +20,40 @@ func (m *Manager) runInactivityLoop() {
 }
 
 func (m *Manager) checkLivingRoomInactivity() {
+	rule := m.store.Get().IdleLivingRoom
+	if !rule.Enabled {
+		return
+	}
+
+	idleLimit := time.Duration(rule.IdleMinutes) * time.Minute
+	if idleLimit <= 0 {
+		idleLimit = 15 * time.Minute
+	}
+
 	m.activityMutex.Lock()
 	idleTime := time.Since(m.lastActivityTime)
 	m.activityMutex.Unlock()
 
-	if idleTime < m.inactivity {
+	if idleTime < idleLimit {
 		return
 	}
 
-	activeLights := m.getActiveLivingRoomLights()
+	activeLights := m.getActiveLivingRoomLights(rule.TargetLights)
 	if len(activeLights) == 0 {
 		return
 	}
 
-	if m.isTVScreenOn() {
+	if rule.CheckTVPlayback && m.isTVScreenOn() {
 		return
 	}
 
 	tNow := time.Now().Format("15:04:05")
-	m.turnOffLivingRoom(activeLights, idleTime, tNow)
+	m.turnOffLivingRoom(rule, activeLights, idleTime, tNow)
 }
 
-func (m *Manager) getActiveLivingRoomLights() []string {
+func (m *Manager) getActiveLivingRoomLights(targets []string) []string {
 	var onLights []string
-	for _, id := range livingRoomLights {
+	for _, id := range targets {
 		if m.isEntityOn(id) {
 			onLights = append(onLights, id)
 		}
@@ -57,16 +61,17 @@ func (m *Manager) getActiveLivingRoomLights() []string {
 	return onLights
 }
 
-func (m *Manager) turnOffLivingRoom(lights []string, idle time.Duration, tNow string) {
+func (m *Manager) turnOffLivingRoom(rule IdleLivingRoomRule, lights []string, idle time.Duration, tNow string) {
 	for _, id := range lights {
 		payload := map[string]interface{}{"entity_id": id}
 		_ = m.haClient.RequestJSON("/api/services/light/turn_off", payload, nil)
 	}
 
-	// Gọi script tắt điện phòng khách của HA nếu có
-	_ = m.haClient.RequestJSON("/api/services/script/turn_on", map[string]interface{}{
-		"entity_id": "script.dqsmart_1792859129663",
-	}, nil)
+	if rule.TurnOffScript != "" {
+		_ = m.haClient.RequestJSON("/api/services/script/turn_on", map[string]interface{}{
+			"entity_id": rule.TurnOffScript,
+		}, nil)
+	}
 
 	idleMin := int(idle.Minutes())
 	msg := fmt.Sprintf("[%s] 🌙 Phòng khách vắng người (>%d phút): Tự động tắt %d đèn phòng khách để tiết kiệm điện", tNow, idleMin, len(lights))

@@ -15,14 +15,16 @@ type CameraConfig struct {
 }
 
 type Manager struct {
-	haClient   *haclient.Client
-	getCamera  func() CameraConfig
-	broadcast  func(string)
-	tvHost     string
-	inactivity time.Duration
+	haClient  *haclient.Client
+	getCamera func() CameraConfig
+	broadcast func(string)
+	tvHost    string
+
+	store *ConfigStore
 
 	lastActivityTime time.Time
 	lastDoorTrigger  time.Time
+	lastTVPromptTime time.Time
 	activityMutex    sync.Mutex
 	stopChan         chan struct{}
 }
@@ -32,17 +34,17 @@ func NewManager(
 	getCamera func() CameraConfig,
 	broadcast func(string),
 	tvHost string,
-	inactivity time.Duration,
+	configPath string,
 ) *Manager {
-	if inactivity <= 0 {
-		inactivity = 15 * time.Minute
+	if configPath == "" {
+		configPath = "sentinel_automation_config.json"
 	}
 	m := &Manager{
 		haClient:         client,
 		getCamera:        getCamera,
 		broadcast:        broadcast,
 		tvHost:           tvHost,
-		inactivity:       inactivity,
+		store:            NewConfigStore(configPath),
 		lastActivityTime: time.Now(),
 		stopChan:         make(chan struct{}),
 	}
@@ -52,6 +54,14 @@ func NewManager(
 
 func (m *Manager) Stop() {
 	close(m.stopChan)
+}
+
+func (m *Manager) GetConfig() Config {
+	return m.store.Get()
+}
+
+func (m *Manager) UpdateConfig(cfg Config) {
+	m.store.Update(cfg)
 }
 
 func (m *Manager) RecordActivity(reason string) {

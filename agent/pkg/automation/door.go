@@ -2,25 +2,30 @@ package automation
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/nchungdev/home-sentinel/agent/pkg/camstream"
 )
 
-const frontDoorLight = "light.dqsmart_020119140c_1"
-
 func (m *Manager) HandleEveningArrival(triggerReason string) {
-	if !m.isEveningTime() {
+	rule := m.store.Get().EveningArrival
+	if !rule.Enabled || !m.isEveningTime(rule) {
 		return
 	}
 
+	cooldown := time.Duration(rule.CooldownSec) * time.Second
+	if cooldown <= 0 {
+		cooldown = 5 * time.Minute
+	}
+
 	m.activityMutex.Lock()
-	if time.Since(m.lastDoorTrigger) < 5*time.Minute {
+	if time.Since(m.lastDoorTrigger) < cooldown {
 		m.activityMutex.Unlock()
 		return
 	}
 
-	if m.isEntityOn(frontDoorLight) {
+	if m.isEntityOn(rule.TargetLight) {
 		m.activityMutex.Unlock()
 		return
 	}
@@ -30,11 +35,11 @@ func (m *Manager) HandleEveningArrival(triggerReason string) {
 	m.activityMutex.Unlock()
 
 	tNow := time.Now().Format("15:04:05")
-	if m.haClient != nil && m.haClient.BaseURL != "" {
-		payload := map[string]interface{}{"entity_id": frontDoorLight}
+	if m.haClient != nil && m.haClient.BaseURL != "" && rule.TargetLight != "" {
+		payload := map[string]interface{}{"entity_id": rule.TargetLight}
 		err := m.haClient.RequestJSON("/api/services/light/turn_on", payload, nil)
 		if err == nil {
-			msg := fmt.Sprintf("[%s] 💡 [Buổi tối] Nhận diện %s: Đã bật Đèn trần cửa chính!", tNow, triggerReason)
+			msg := fmt.Sprintf("[%s] 💡 [Buổi tối] Nhận diện %s: Đã bật %s!", tNow, triggerReason, rule.TargetLight)
 			if m.broadcast != nil {
 				m.broadcast(msg)
 			}
@@ -42,12 +47,32 @@ func (m *Manager) HandleEveningArrival(triggerReason string) {
 		}
 	}
 
-	m.pointCameraToDoor()
+	if rule.TargetPreset != "" {
+		m.pointCameraToPreset(rule.TargetPreset)
+	}
 }
 
-func (m *Manager) isEveningTime() bool {
+func (m *Manager) MatchesDoorSound(text string) bool {
+	rule := m.store.Get().EveningArrival
+	if !rule.Enabled {
+		return false
+	}
+	lower := strings.ToLower(text)
+	for _, kw := range rule.SoundKeywords {
+		if strings.Contains(lower, strings.ToLower(kw)) {
+			return true
+		}
+	}
+	return false
+}
+
+func (m *Manager) isEveningTime(rule EveningArrivalRule) bool {
 	hour := time.Now().Hour()
-	if hour >= 18 || hour < 6 {
+	if rule.StartHour > rule.EndHour {
+		if hour >= rule.StartHour || hour < rule.EndHour {
+			return true
+		}
+	} else if hour >= rule.StartHour && hour < rule.EndHour {
 		return true
 	}
 
@@ -63,7 +88,7 @@ func (m *Manager) isEveningTime() bool {
 }
 
 func (m *Manager) isEntityOn(entityID string) bool {
-	if m.haClient == nil || m.haClient.BaseURL == "" {
+	if m.haClient == nil || m.haClient.BaseURL == "" || entityID == "" {
 		return false
 	}
 	var state struct {
@@ -75,8 +100,8 @@ func (m *Manager) isEntityOn(entityID string) bool {
 	return false
 }
 
-func (m *Manager) pointCameraToDoor() {
-	if m.getCamera == nil {
+func (m *Manager) pointCameraToPreset(presetToken string) {
+	if m.getCamera == nil || presetToken == "" {
 		return
 	}
 	cfg := m.getCamera()
@@ -86,6 +111,6 @@ func (m *Manager) pointCameraToDoor() {
 	}
 	if cfg.IP != "" && pwd != "" {
 		session := camstream.GetTapoSession(cfg.IP, cfg.Username, pwd)
-		_ = session.GotoPreset("3")
+		_ = session.GotoPreset(presetToken)
 	}
 }

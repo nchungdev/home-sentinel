@@ -16,6 +16,10 @@ func NewTranscriber(groqKey string) *Transcriber {
 	}
 }
 
+func (t *Transcriber) HasGroqKey() bool {
+	return t.groqClient != nil && t.groqClient.APIKey != ""
+}
+
 func (t *Transcriber) UpdateGroqKey(key string) {
 	if t.groqClient != nil {
 		t.groqClient.APIKey = key
