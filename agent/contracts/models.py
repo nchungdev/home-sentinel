@@ -265,3 +265,130 @@ class PresentationResponse:
             client_actions=list(actions),
             mood=str(tone),
         )
+
+
+@dataclass
+class Suggestion:
+    id: str = ""
+    kind: str = ""
+    title: str = ""
+    message: str = ""
+    target_id: str = ""
+    action: ActionStep = field(default_factory=ActionStep)
+    evidence: dict[str, Any] = field(default_factory=dict)
+    generated_at: int = 0
+    expires_at: int = 0
+    dedupe_key: str = ""
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "kind": self.kind,
+            "title": self.title,
+            "message": self.message,
+            "target_id": self.target_id,
+            "action": self.action.to_dict() if hasattr(self.action, "to_dict") else self.action,
+            "evidence": self.evidence,
+            "generated_at": self.generated_at,
+            "expires_at": self.expires_at,
+            "dedupe_key": self.dedupe_key,
+        }
+
+    @classmethod
+    def from_dict(cls, payload: dict[str, Any] | None) -> "Suggestion":
+        if not payload:
+            return cls()
+        identifier = payload.get("id", "")
+        kind_name = payload.get("kind", "")
+        title_text = payload.get("title", "")
+        msg_text = payload.get("message", "")
+        target = payload.get("target_id", payload.get("targetId", ""))
+        action_data = payload.get("action", {})
+        if isinstance(action_data, dict):
+            parsed_action = ActionStep.from_dict(action_data)
+        elif isinstance(action_data, ActionStep):
+            parsed_action = action_data
+        else:
+            parsed_action = ActionStep()
+        evidence_data = payload.get("evidence", {})
+        gen_timestamp = payload.get("generated_at", payload.get("generatedAt", 0))
+        exp_timestamp = payload.get("expires_at", payload.get("expiresAt", 0))
+        dedupe = payload.get("dedupe_key", payload.get("dedupeKey", ""))
+        return cls(
+            id=str(identifier),
+            kind=str(kind_name),
+            title=str(title_text),
+            message=str(msg_text),
+            target_id=str(target),
+            action=parsed_action,
+            evidence=dict(evidence_data) if isinstance(evidence_data, dict) else {},
+            generated_at=int(gen_timestamp),
+            expires_at=int(exp_timestamp),
+            dedupe_key=str(dedupe),
+        )
+
+
+@dataclass
+class ContextSnapshot:
+    timestamp_epoch_ms: int = 0
+    time_of_day: str = ""
+    viewer_profile: str | None = None
+    environment: dict[str, Any] = field(default_factory=dict)
+    recent_media: list[dict[str, Any]] = field(default_factory=list)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "timestamp_epoch_ms": self.timestamp_epoch_ms,
+            "time_of_day": self.time_of_day,
+            "viewer_profile": self.viewer_profile,
+            "environment": self.environment,
+            "recent_media": self.recent_media,
+        }
+
+    @classmethod
+    def from_dict(cls, payload: dict[str, Any] | None) -> "ContextSnapshot":
+        if not payload:
+            return cls()
+        timestamp = payload.get("timestamp_epoch_ms", payload.get("timestampEpochMs", 0))
+        time_slot = payload.get("time_of_day", payload.get("timeOfDay", ""))
+        profile = payload.get("viewer_profile", payload.get("viewerProfile"))
+        env_data = payload.get("environment", {})
+        media_list = payload.get("recent_media", payload.get("recentMedia", []))
+        return cls(
+            timestamp_epoch_ms=int(timestamp),
+            time_of_day=str(time_slot),
+            viewer_profile=str(profile) if profile is not None else None,
+            environment=dict(env_data) if isinstance(env_data, dict) else {},
+            recent_media=list(media_list) if isinstance(media_list, list) else [],
+        )
+
+
+@dataclass
+class ProactiveChip:
+    chip_id: str = ""
+    label: str = ""
+    icon_key: str = ""
+    action_payload: dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "chip_id": self.chip_id,
+            "label": self.label,
+            "icon_key": self.icon_key,
+            "action_payload": self.action_payload,
+        }
+
+    @classmethod
+    def from_dict(cls, payload: dict[str, Any] | None) -> "ProactiveChip":
+        if not payload:
+            return cls()
+        chip_identifier = payload.get("chip_id", payload.get("chipId", ""))
+        label_text = payload.get("label", "")
+        icon_identifier = payload.get("icon_key", payload.get("iconKey", ""))
+        payload_data = payload.get("action_payload", payload.get("actionPayload", {}))
+        return cls(
+            chip_id=str(chip_identifier),
+            label=str(label_text),
+            icon_key=str(icon_identifier),
+            action_payload=dict(payload_data) if isinstance(payload_data, dict) else {},
+        )

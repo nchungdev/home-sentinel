@@ -4,11 +4,14 @@ from contracts import (
     ActionPlan,
     ActionStatus,
     ActionStep,
+    ContextSnapshot,
     ExecutionResult,
     InputEvent,
     Intent,
     PresentationResponse,
+    ProactiveChip,
     RequestContext,
+    Suggestion,
 )
 
 
@@ -134,6 +137,71 @@ class ContractsInitializationTest(unittest.TestCase):
         self.assertEqual(len(restored.cards), 1)
         self.assertEqual(len(restored.quick_chips), 2)
         self.assertEqual(restored.mood, "happy")
+
+    def test_suggestion_serialization(self):
+        suggestion = Suggestion(
+            id="sug-101",
+            kind="media_playback",
+            title="Xem tiếp tập mới",
+            message="Tập mới của Breaking Bad đã sẵn sàng",
+            target_id="plex.tv",
+            action=ActionStep(
+                step_id="step-play",
+                action_type="play_media",
+                target_id="plex.play",
+                parameters={"media_id": "12345"},
+            ),
+            evidence={"source": "radarr", "downloaded_at": 1729850000000},
+            generated_at=1729850100000,
+            expires_at=1729853700000,
+            dedupe_key="media_breaking_bad_s05e16",
+        )
+        serialized = suggestion.to_dict()
+        self.assertEqual(serialized["id"], "sug-101")
+        self.assertEqual(serialized["action"]["target_id"], "plex.play")
+
+        restored = Suggestion.from_dict(serialized)
+        self.assertEqual(restored.id, "sug-101")
+        self.assertEqual(restored.kind, "media_playback")
+        self.assertEqual(restored.title, "Xem tiếp tập mới")
+        self.assertEqual(restored.action.action_type, "play_media")
+        self.assertEqual(restored.action.parameters["media_id"], "12345")
+        self.assertEqual(restored.evidence["source"], "radarr")
+        self.assertEqual(restored.generated_at, 1729850100000)
+        self.assertEqual(restored.expires_at, 1729853700000)
+        self.assertEqual(restored.dedupe_key, "media_breaking_bad_s05e16")
+
+    def test_context_snapshot_serialization(self):
+        snapshot = ContextSnapshot(
+            timestamp_epoch_ms=1729850000000,
+            time_of_day="evening",
+            viewer_profile="husband",
+            environment={"temperature": 26.5, "ac_mode": "cool"},
+            recent_media=[{"title": "Breaking Bad", "season": 5, "episode": 16}],
+        )
+        serialized = snapshot.to_dict()
+        self.assertEqual(serialized["time_of_day"], "evening")
+
+        restored = ContextSnapshot.from_dict(serialized)
+        self.assertEqual(restored.timestamp_epoch_ms, 1729850000000)
+        self.assertEqual(restored.time_of_day, "evening")
+        self.assertEqual(restored.viewer_profile, "husband")
+        self.assertEqual(restored.environment["temperature"], 26.5)
+        self.assertEqual(len(restored.recent_media), 1)
+
+    def test_proactive_chip_serialization(self):
+        chip = ProactiveChip(
+            chip_id="chip-coffee",
+            label="Pha cà phê sáng",
+            icon_key="coffee",
+            action_payload={"entity_id": "switch.coffee_maker"},
+        )
+        serialized = chip.to_dict()
+        restored = ProactiveChip.from_dict(serialized)
+        self.assertEqual(restored.chip_id, "chip-coffee")
+        self.assertEqual(restored.label, "Pha cà phê sáng")
+        self.assertEqual(restored.icon_key, "coffee")
+        self.assertEqual(restored.action_payload["entity_id"], "switch.coffee_maker")
 
 
 if __name__ == "__main__":
