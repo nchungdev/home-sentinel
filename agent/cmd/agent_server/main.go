@@ -53,6 +53,9 @@ type Server struct {
 
 	AutomationMgr *automation.Manager
 
+	isTranscribing bool
+	transcribeLock sync.Mutex
+
 	lastTVPromptTime time.Time
 	promptMutex      sync.Mutex
 }
@@ -996,8 +999,23 @@ func startCameraWakeWordListener(server *Server) {
 							audioToTranscribe := speechBuffer
 							speechBuffer = nil
 
+							server.transcribeLock.Lock()
+							if server.isTranscribing {
+								server.transcribeLock.Unlock()
+								logMic("Đang xử lý câu nói trước, bỏ qua đoạn này để tránh nghẽn Whisper.")
+								continue
+							}
+							server.isTranscribing = true
+							server.transcribeLock.Unlock()
+
 							logMic("Gửi %.1fs âm thanh sang Whisper...", float64(len(audioToTranscribe))/32000)
 							go func(rawPCM []byte) {
+								defer func() {
+									server.transcribeLock.Lock()
+									server.isTranscribing = false
+									server.transcribeLock.Unlock()
+								}()
+
 								text, terr := transcribePCM(rawPCM)
 								if terr != nil {
 									logMic("Whisper lỗi: %v", terr)
@@ -1097,16 +1115,16 @@ func startCameraWakeWordListener(server *Server) {
 
 // transcribePCM gửi trực tiếp dữ liệu PCM sang Faster-Whisper trên cổng :10300
 func transcribePCM(pcm []byte) (string, error) {
-	conn, err := net.DialTimeout("tcp", "127.0.0.1:10300", 3*time.Second)
+	conn, err := net.DialTimeout("tcp", "127.0.0.1:10300", 2*time.Second)
 	if err != nil {
 		return "", err
 	}
 	defer conn.Close()
-	if err := conn.SetDeadline(time.Now().Add(60 * time.Second)); err != nil {
+	if err := conn.SetDeadline(time.Now().Add(10 * time.Second)); err != nil {
 		return "", err
 	}
 
-	tData, _ := json.Marshal(map[string]interface{}{"name": "base-int8", "language": "vi"})
+	tData, _ := json.Marshal(map[string]interface{}{"name": "tiny-int8", "language": "vi"})
 	tHeader, _ := json.Marshal(map[string]interface{}{"type": "transcribe", "version": "1.10.2", "data_length": len(tData)})
 	conn.Write(append(tHeader, '\n'))
 	conn.Write(tData)
