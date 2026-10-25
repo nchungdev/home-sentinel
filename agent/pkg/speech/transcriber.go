@@ -12,7 +12,7 @@ type Transcriber struct {
 func NewTranscriber(groqKey string) *Transcriber {
 	return &Transcriber{
 		groqClient: NewGroqClient(groqKey),
-		localModel: "tiny-int8",
+		localModel: "base-int8",
 	}
 }
 

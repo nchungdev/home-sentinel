@@ -112,24 +112,24 @@ func AnalyzeAudioSegment(pcm []byte) AudioFeatures {
 	}
 
 	// 2. Lọc không gian yên tĩnh và tiếng tạp âm bên ngoài nhà vọng vào:
-	// Tạp âm ngoài đường, xe chạy qua, tiếng gió thường có RMS < 500 hoặc Peak < 3000
-	// Giọng nói của chủ nhà trong phòng khách khi ra lệnh thường đạt RMS 600 - 2500, Peak > 3500
-	if rms < 500.0 && maxPeak < 3000 {
+	// Tạp âm ngoài đường, xe chạy qua, tiếng gió thường có RMS < 250 hoặc Peak < 1500
+	// Giọng nói của người dùng trong phòng khách khi ra lệnh thường đạt RMS 300 - 2500, Peak > 2000
+	if rms < 250.0 && maxPeak < 1500 {
 		return feat
 	}
 
 	// 3. Tiếng động dạng xung ngắn / cơ học (Impulse Noise): cạch cửa, va quẹt, rơi đồ
 	// Hoặc âm thanh có ZCR quá thấp (ù gió, quạt, máy bay, xe cộ) hay quá cao (tiếng rít)
-	isImpulseNoise := (crestFactor > 12.0 && dur < 0.6) || (crestFactor > 15.0)
-	isHighFreqNoise := zcr > 0.38
-	isLowFreqRumble := zcr < 0.05 // loại trừ tạp âm xe cộ gầm rú ngoài đường
+	isImpulseNoise := (crestFactor > 14.0 && dur < 0.5) || (crestFactor > 18.0)
+	isHighFreqNoise := zcr > 0.45
+	isLowFreqRumble := zcr < 0.03 // loại trừ tạp âm xe cộ gầm rú ngoài đường
 
 	if isImpulseNoise || isHighFreqNoise || isLowFreqRumble {
 		feat.Category = CategoryNoise
 		feat.Description = "Tiếng động / va quẹt cơ học"
 	} else {
-		// Giọng nói thực sự của chủ nhà: RMS tối thiểu 500, dải ZCR 0.05 - 0.38, thời lượng ít nhất 0.8s
-		if dur >= 0.8 {
+		// Giọng nói thực sự của chủ nhà: RMS tối thiểu 250, thời lượng ít nhất 0.6s
+		if dur >= 0.6 {
 			feat.Category = CategorySpeech
 			feat.Description = "Lời nói con người"
 		} else {

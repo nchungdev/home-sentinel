@@ -12,7 +12,7 @@ import (
 // TranscribeLocalPCM gửi trực tiếp dữ liệu PCM sang Wyoming Faster-Whisper :10300
 func TranscribeLocalPCM(pcm []byte, modelName string) (string, error) {
 	if modelName == "" {
-		modelName = "tiny-int8"
+		modelName = "base-int8"
 	}
 	conn, err := net.DialTimeout("tcp", "127.0.0.1:10300", 2*time.Second)
 	if err != nil {
