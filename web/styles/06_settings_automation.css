@@ -7,8 +7,10 @@
       gap: 10px;
       margin-bottom: 20px;
       border-bottom: 1px solid var(--border);
-      padding-bottom: 12px;
+      padding-bottom: 14px;
       overflow-x: auto;
+      flex-shrink: 0 !important;
+      min-height: 44px;
     }
     .subtab-btn {
       background: var(--surface);

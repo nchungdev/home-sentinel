@@ -1,13 +1,13 @@
     <!-- 2.5. AUTOMATION VIEW (MÔ HÌNH KỊCH BẢN TỰ ĐỘNG HÓA TỔNG QUÁT THEO CHUẨN HOME ASSISTANT) -->
     <div id="view-automation" class="view-content setting-view">
-      <div class="subtabs-bar" style="justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
-        <div style="display:flex; align-items:center; gap:10px; overflow-x:auto; flex-wrap:wrap;">
-          <div id="autoTabsBar" style="display:contents;"></div>
-          <button class="btn-add-tab" onclick="addNewAutomationRule()" title="Thêm kịch bản tự động hóa mới">
+      <div class="subtabs-bar" style="justify-content:space-between; align-items:center; flex-shrink:0;">
+        <div style="display:flex; align-items:center; gap:8px; overflow-x:auto;">
+          <div id="autoTabsBar" style="display:flex; align-items:center; gap:8px;"></div>
+          <button class="btn-add-tab" onclick="addNewAutomationRule()" title="Thêm kịch bản tự động hóa mới" style="flex-shrink:0;">
             <span class="mi" style="font-size:16px;">add</span> Thêm kịch bản
           </button>
         </div>
-        <div style="display:flex; align-items:center; gap:10px; flex-shrink:0;">
+        <div style="display:flex; align-items:center; gap:10px; margin-left:auto; flex-shrink:0;">
           <span id="autoSaveStatus" style="font-size:12px; color:var(--text-muted);">Lưu vào configs/automation.json</span>
           <button class="btn-modern" style="padding:8px 14px; font-size:12.5px;" onclick="loadAutomationConfigAndDevices()">
             <span class="mi" style="font-size:16px;">refresh</span> Tải lại thiết bị
@@ -19,7 +19,7 @@
       </div>
 
       <!-- CONTAINER CHỨA TOÀN BỘ CÁC PANEL KỊCH BẢN ĐƯỢC RENDER ĐỒNG NHẤT -->
-      <div id="autoPanelsContainer" style="width:100%;">
+      <div id="autoPanelsContainer" style="width:100%; flex-shrink:0;">
         <div style="padding:40px; text-align:center; color:var(--text-muted); font-size:13px;">
           Đang tải dữ liệu kịch bản tự động hóa...
         </div>
