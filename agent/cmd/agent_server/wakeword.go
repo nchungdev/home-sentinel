@@ -69,6 +69,7 @@ func matchesWakeWord(text string) (bool, string) {
 	wakeWords := []string{
 		"duinch ơi", "duinch oi", "duinch",
 		"đu in ơi", "đu in oi", "đu in",
+		"tất cả ơi", "tất cả", "tất ca",
 		"đuyn ơi", "đuyn oi", "đuyn",
 		"đo in ơi", "đo in",
 		"đui ơi", "đui",
