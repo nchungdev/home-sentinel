@@ -160,46 +160,42 @@ func (e *serverExecutionEngine) Execute(
 		lower := strings.ToLower(text)
 
 		tvPattern := regexp.MustCompile(
-			`(?i)(?:nói\s+gì\s+đó|gửi\s+(?:tin\s+nhắn|lời\s+chào|thông\s+báo)|chào|nhắn|bảo)\s+.*(?:với|lên|qua|cho|tới)\s+(?:tv|tivi|màn\s+hình)|` +
+			`(?i)(?:nói\s+gì\s+đó|gửi\s+(?:tin\s+nhắn|lời\s+chào|câu\s+chào|thông\s+báo)|chào|nhắn|bảo)\s+.*(?:với|lên|qua|cho|tới)\s+(?:tv|tivi|màn\s+hình)|` +
 				`(?i)(?:gửi\s+tin\s+nhắn\s+qua\s+socket|nhắn\s+lên\s+tv|chào\s+tv|nói\s+với\s+tv|lời\s+chào.*tv|câu\s+chào.*tv)`,
 		)
 
 		if e.server != nil && tvPattern.MatchString(lower) {
-			msg := ""
-			if idx := strings.Index(text, ":"); idx > 0 && idx < len(text)-2 {
-				msg = strings.TrimSpace(text[idx+1:])
-			}
-
-			if msg != "" {
-				sent := e.server.BroadcastDuinchGreeting(msg, "happy")
-				e.server.BroadcastDuinchNotification(&DuinchNotificationPayload{
-					Source:   "user",
-					Title:    "Tin nhắn",
-					Message:  msg,
-					Severity: "info",
-				})
-				reply := fmt.Sprintf("Đã gửi tin nhắn lên TV (%d thiết bị): %q", sent, msg)
-				return &contracts.ExecutionResult{
-					StepID:   step.StepID,
-					Status:   contracts.ActionStatusSucceeded,
-					Detail:   &reply,
-					CanRetry: false,
-				}, nil
-			}
-
-			greeting := "Chúc cả nhà một buổi tối ấm áp và xem phim vui vẻ!"
-			if e.llmManager != nil {
-				var sb strings.Builder
-				e.llmManager.StreamChat(
-					"Viết 1 câu chào ngắn dưới 18 từ gửi đến gia đình hiển thị trên màn hình TV phòng khách, ấm áp, thân thiện, không để trong ngoặc kép.",
-					func(chunk string) { sb.WriteString(chunk) },
+			msg, isExplicit := extractTVMessage(text)
+			if !isExplicit && e.llmManager != nil {
+				prompt := fmt.Sprintf(
+					"Bạn là trợ lý AI Duinch trên TV phòng khách. Người dùng yêu cầu hiển thị một lời chào hoặc thông điệp lên TV: %q.\n"+
+						"Hãy soạn 1 câu ngắn gọn, tự nhiên, tươi vui gửi đến người xem TV (tối đa 15 từ). "+
+						"Chỉ trả lời bằng đúng nội dung câu, không kèm giải thích hay dấu ngoặc kép.",
+					text,
 				)
+				var sb strings.Builder
+				e.llmManager.StreamChat(prompt, func(chunk string) { sb.WriteString(chunk) })
 				if g := strings.Trim(strings.TrimSpace(sb.String()), "\"'“”"); g != "" {
-					greeting = g
+					msg = g
 				}
 			}
-			sent := e.server.BroadcastDuinchGreeting(greeting, "happy")
-			reply := fmt.Sprintf("Đã gửi câu chào lên TV (%d thiết bị): %q", sent, greeting)
+			if msg == "" {
+				msg = "Xin chào gia đình, chúc cả nhà một ngày thật vui vẻ!"
+			}
+
+			sent := e.server.BroadcastDuinchGreeting(msg, "happy")
+			e.server.BroadcastDuinchNotification(&DuinchNotificationPayload{
+				Source:   "user",
+				Title:    "Tin nhắn",
+				Message:  msg,
+				Severity: "info",
+			})
+
+			actionLabel := "tin nhắn"
+			if !isExplicit {
+				actionLabel = "câu chào"
+			}
+			reply := fmt.Sprintf("Đã gửi %s lên TV (%d thiết bị): %q", actionLabel, sent, msg)
 			return &contracts.ExecutionResult{
 				StepID:   step.StepID,
 				Status:   contracts.ActionStatusSucceeded,
