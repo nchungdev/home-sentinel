@@ -3,3 +3,8 @@ bin/
 __pycache__/
 agent/__pycache__/
 /agent_server
+/agent_server_linux
+/sentinel_server*
+sentinel_*_config.json
+*.log
+local/
