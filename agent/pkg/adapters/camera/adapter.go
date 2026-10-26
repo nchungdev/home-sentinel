@@ -39,7 +39,7 @@ func NewAdapter(requester Requester, cfg Config) *Adapter {
 	if cfg.IP == "" {
 		cfg.IP = os.Getenv("AGENT_CAMERA_IP")
 		if cfg.IP == "" {
-			cfg.IP = "192.168.1.6"
+			cfg.IP = "192.168.1.100"
 		}
 	}
 	if cfg.User == "" {

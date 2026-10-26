@@ -51,15 +51,18 @@ func (s *Server) speakOnCamera(text string, voice string) error {
 
 func (s *Server) executeSmartHomeAction(query string, tNow string) {
 	lowerQuery := strings.ToLower(query)
+	targetTV := os.Getenv("TV_HOST")
+	if targetTV == "" {
+		targetTV = "192.168.1.50"
+	}
 	if strings.Contains(lowerQuery, "mở tv") || strings.Contains(lowerQuery, "bật tv") {
 		s.broadcastTerminal(fmt.Sprintf("[%s] 📺 Duinch Camera: \"Dạ, em mở TV ngay đây ạ!\"", tNow))
 		_ = s.speakOnCamera("Dạ, em mở TV ngay đây ạ!", "female")
-		_ = turnOnTV("192.168.1.8")
+		_ = turnOnTV(targetTV)
 	} else if strings.Contains(lowerQuery, "tắt tv") {
 		s.broadcastTerminal(fmt.Sprintf("[%s] 📺 Duinch Camera: \"Dạ, em tắt TV đây ạ!\"", tNow))
 		_ = s.speakOnCamera("Dạ, em tắt TV đây ạ!", "female")
-		adbBin := "/home/chungnh/bin/adb"
-		_ = exec.Command(adbBin, "-s", "192.168.1.8:5555", "shell", "input keyevent 26").Run()
+		_ = turnOffTV(targetTV)
 	}
 }
 
@@ -121,6 +124,20 @@ func turnOnTV(tvHost string) error {
 	_ = exec.Command(adbBin, "connect", target).Run()
 	_ = exec.Command(adbBin, "-s", target, "shell", "input keyevent 224").Run()
 	_ = exec.Command(adbBin, "-s", target, "shell", "input keyevent 3").Run()
+	return nil
+}
+
+func turnOffTV(tvHost string) error {
+	adbBin := "/home/chungnh/bin/adb"
+	if _, err := os.Stat(adbBin); err != nil {
+		adbBin = "adb"
+	}
+	target := tvHost
+	if !strings.Contains(target, ":") {
+		target = target + ":5555"
+	}
+	_ = exec.Command(adbBin, "connect", target).Run()
+	_ = exec.Command(adbBin, "-s", target, "shell", "input keyevent 223").Run()
 	return nil
 }
 

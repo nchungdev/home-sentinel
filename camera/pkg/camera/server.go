@@ -26,7 +26,7 @@ type CameraServer struct {
 func NewCameraServer(webPort int, go2rtcPort int) *CameraServer {
 	defaultIP := os.Getenv("CAMERA_IP")
 	if defaultIP == "" {
-		defaultIP = "192.168.1.6"
+		defaultIP = "192.168.1.100"
 	}
 
 	return &CameraServer{

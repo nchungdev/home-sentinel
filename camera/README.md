@@ -26,7 +26,7 @@ python3 main.py
 
 ```json
 {
-  "stream_url": "rtsp://192.168.1.6:554/stream1",
+  "stream_url": "rtsp://<camera-ip>:554/stream1",
   "model": "yolov8n.pt",
   "zones": [
     {

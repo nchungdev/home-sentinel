@@ -86,7 +86,7 @@ The automation system (`agent/pkg/automation/`) follows the authentic **Home Ass
         { "type": "tv_state", "tv_state": "on" }
       ],
       "actions": [
-        { "type": "tv", "service": "turn_off", "target_tv": "192.168.1.8" }
+        { "type": "tv", "service": "turn_off", "target_tv": "<tv-ip>" }
       ]
     }
   ]

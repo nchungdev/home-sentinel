@@ -20,7 +20,7 @@
         if (!groups || !Array.isArray(groups) || groups.length === 0) {
           container.innerHTML = `
             <div style="font-size:12px; color:var(--text-muted); text-align:center; padding:12px; border:1px dashed var(--border); border-radius:8px;">
-              Chưa kết nối được Agent Bridge (:8088). Hãy mở <a href="http://192.168.1.37:8000/#settings" target="_blank" style="color:var(--accent);">Agent Bridge Web</a> để đăng nhập tài khoản CLI.
+              Chưa kết nối được Agent Bridge (:8088). Hãy mở <a href="http://${window.location.hostname || 'localhost'}:8000/#settings" target="_blank" style="color:var(--accent);">Agent Bridge Web</a> để đăng nhập tài khoản CLI.
             </div>
           `;
           return;

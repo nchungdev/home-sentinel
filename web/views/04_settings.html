@@ -36,7 +36,7 @@
         <div class="card">
           <div style="display:flex; justify-content:space-between; align-items:center;">
             <div class="card-title">Tài Khoản CLI & API Tokens</div>
-            <a href="http://192.168.1.37:8000/#settings" target="_blank" class="btn-action" style="padding:6px 12px; font-size:12px; text-decoration:none; color:#818cf8; border-color:rgba(99,102,241,0.4);">
+            <a href="#" onclick="window.open('http://' + (window.location.hostname || 'localhost') + ':8000/#settings', '_blank'); return false;" class="btn-action" style="padding:6px 12px; font-size:12px; text-decoration:none; color:#818cf8; border-color:rgba(99,102,241,0.4);">
               <span class="mi" style="font-size:15px;">open_in_new</span> Mở Agent Bridge
             </a>
           </div>
@@ -149,7 +149,7 @@
           </p>
           <div class="form-group">
             <label>Home Assistant URL:</label>
-            <input type="text" id="cfgHaUrl" value="http://192.168.1.37:8123" placeholder="http://192.168.1.37:8123">
+            <input type="text" id="cfgHaUrl" value="" placeholder="http://<ha-ip>:8123">
           </div>
           <div class="form-group">
             <label>Long-Lived Access Token:</label>

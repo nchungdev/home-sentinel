@@ -36,7 +36,7 @@
             id: 'clap', name: 'Ngồi Sofa vỗ tay', icon: 'front_hand', enabled: true,
             description: 'Camera phát hiện người ở Sofa kết hợp tiếng vỗ tay sẽ bật thiết bị và mở TV.',
             triggers: [{ type: 'clap_sound', preset: '1' }], conditions: [],
-            actions: [{ type: 'entities', service: 'turn_on', target_entities: [] }, { type: 'tv', target_tv: '192.168.1.8' }, { type: 'camera', camera_preset: '1' }]
+            actions: [{ type: 'entities', service: 'turn_on', target_entities: [] }, { type: 'tv', target_tv: '192.168.1.50' }, { type: 'camera', camera_preset: '1' }]
           },
           {
             id: 'evening', name: 'Phát hiện người buổi tối', icon: 'wb_twilight', enabled: true,
@@ -48,7 +48,7 @@
             id: 'turn_off_tv_idle', name: 'Tự động tắt TV khi vắng người', icon: 'tv_off', enabled: true,
             description: 'Tự động đưa Android TV vào chế độ ngủ (Sleep) khi phòng khách không có người sau thời gian chờ.',
             triggers: [{ type: 'idle_room', idle_minutes: 5 }], conditions: [{ type: 'tv_state', tv_state: 'on' }],
-            actions: [{ type: 'tv', service: 'turn_off', target_tv: '192.168.1.8' }]
+            actions: [{ type: 'tv', service: 'turn_off', target_tv: '192.168.1.50' }]
           }
         ];
       }

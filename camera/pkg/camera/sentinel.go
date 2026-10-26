@@ -50,19 +50,17 @@ type CameraSentinel struct {
 
 func NewCameraSentinel(go2rtcPort int) *CameraSentinel {
 	defaultWhitelist := map[string]bool{
-		"127.0.0.1":    true,
-		"::1":          true,
-		"localhost":    true,
-		"192.168.1.1":  true,
-		"192.168.1.6":  true,
-		"192.168.1.8":  true,
-		"192.168.1.11": true,
-		"192.168.1.13": true,
+		"127.0.0.1": true,
+		"::1":       true,
+		"localhost": true,
 	}
 
 	tvHost := os.Getenv("TARGET_TV_HOST")
 	if tvHost == "" {
-		tvHost = "192.168.1.8"
+		tvHost = os.Getenv("TV_HOST")
+	}
+	if tvHost == "" {
+		tvHost = "192.168.1.50"
 	}
 
 	return &CameraSentinel{

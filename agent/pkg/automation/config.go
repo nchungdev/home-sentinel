@@ -63,7 +63,7 @@ func DefaultConfig() Config {
 		SofaClapAction: SofaClapRule{
 			Enabled:       true,
 			TargetFan:     "fan.dmaker_sg_548577868_p39_s_2_fan",
-			TargetTV:      "192.168.1.8",
+			TargetTV:      "192.168.1.50",
 			WindowSeconds: 60,
 		},
 	}
@@ -198,7 +198,7 @@ func (c *Config) buildDefaultRulesFromLegacy() {
 		Enabled: true,
 		Triggers: []TriggerItem{{Type: "idle_room", IdleMinutes: 5}},
 		Conditions: []ConditionItem{{Type: "tv_state", TVState: "on"}},
-		Actions: []ActionItem{{Type: "tv", Service: "turn_off", TargetTV: "192.168.1.8"}},
+		Actions: []ActionItem{{Type: "tv", Service: "turn_off", TargetTV: "192.168.1.50"}},
 	})
 }
 

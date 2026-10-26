@@ -1,6 +1,7 @@
 package main
 
 import (
+	"os"
 	"regexp"
 	"strings"
 )
@@ -44,6 +45,13 @@ func extractTVMessage(text string) (string, bool) {
 	}
 
 	return "", false
+}
+
+func defaultTVHost() string {
+	if host := strings.TrimSpace(os.Getenv("TV_HOST")); host != "" {
+		return host
+	}
+	return "192.168.1.50"
 }
 
 func isMetaInstruction(s string) bool {

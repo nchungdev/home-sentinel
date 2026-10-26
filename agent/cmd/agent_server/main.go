@@ -182,7 +182,7 @@ func NewServer() *Server {
 			}
 		},
 		server.broadcastTerminal,
-		"192.168.1.8",
+		defaultTVHost(),
 		"configs/automation.json",
 	)
 	return server

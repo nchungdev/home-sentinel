@@ -13,7 +13,7 @@ Autonomous smart home backend and AI coordinator for Android TV, Tapo PTZ securi
   - [1. Prerequisites](#1-prerequisites)
   - [2. Configuration Files](#2-configuration-files)
   - [3. Building the Binary](#3-building-the-binary)
-  - [4. Deploying to Remote NAS / Server](#4-deploying-to-remote-nas--server)
+  - [4. Deploying to Remote Server / NAS](#4-deploying-to-remote-server--nas)
   - [5. Running as a Daemon / Systemd Service](#5-running-as-a-daemon--systemd-service)
   - [6. Verification & Health Checklist](#6-verification--health-checklist)
 - [Communication Protocols & Endpoints](#communication-protocols--endpoints)
@@ -104,11 +104,11 @@ home-sentinel/
 Verify that the target machine (NAS / Linux server) has the following dependencies:
 - **Architecture**: Linux `x86_64` (`amd64`) or `aarch64` (`arm64`).
 - **FFmpeg**: Required for camera audio stream processing (`ffmpeg -version`).
-- **ADB**: Required for Android TV control (`adb version` or `/home/chungnh/bin/adb`).
+- **ADB**: Required for Android TV control (`adb version` or path to binary).
 - **Network Access**:
-  - Android TV: Port `5555` open on `192.168.1.8` (or target TV IP).
-  - Tapo Camera: Port `554` (RTSP) and port `443` on `192.168.1.6`.
-  - Home Assistant: Port `8123` accessible on the local network.
+  - Android TV: Port `5555` open on `<tv-ip>`.
+  - Tapo Camera: Port `554` (RTSP) and port `443` on `<camera-ip>`.
+  - Home Assistant: Port `8123` accessible on `<ha-ip>`.
 
 ---
 
@@ -119,9 +119,9 @@ Place these configuration JSON files in the working directory alongside the exec
 #### `sentinel_camera_config.json`
 ```json
 {
-  "ip": "192.168.1.6",
+  "ip": "<camera-ip>",
   "port": 0,
-  "username": "admin",
+  "username": "<camera-username>",
   "password": "<camera-password>",
   "cloud_password": "<camera-password>",
   "brand": "tapo",
@@ -133,7 +133,7 @@ Place these configuration JSON files in the working directory alongside the exec
 #### `sentinel_ha_config.json`
 ```json
 {
-  "url": "http://192.168.1.37:8123",
+  "url": "http://<ha-ip>:8123",
   "token": "<home-assistant-long-lived-access-token>"
 }
 ```
@@ -162,7 +162,7 @@ Place these configuration JSON files in the working directory alongside the exec
       "enabled": true,
       "triggers": [{ "type": "idle_room", "idle_minutes": 5 }],
       "conditions": [{ "type": "tv_state", "tv_state": "on" }],
-      "actions": [{ "type": "tv", "service": "turn_off", "target_tv": "192.168.1.8" }]
+      "actions": [{ "type": "tv", "service": "turn_off", "target_tv": "<tv-ip>" }]
     }
   ]
 }
@@ -181,26 +181,26 @@ go test ./...
 # 2. Build for host machine
 go build -o bin/sentinel_server ./agent/cmd/agent_server
 
-# 3. Cross-compile for Linux NAS (amd64)
+# 3. Cross-compile for Linux target (amd64)
 GOOS=linux GOARCH=amd64 go build -o /tmp/sentinel_server_linux ./agent/cmd/agent_server
 ```
 
 ---
 
-### 4. Deploying to Remote NAS / Server
+### 4. Deploying to Remote Server / NAS
 
-To deploy to a remote host (e.g. `chungnh@192.168.1.37`):
+To deploy to a remote host (e.g. `<user>@<server-ip>`):
 
 ```bash
 # 1. Transfer binary via SCP
-scp -O /tmp/sentinel_server_linux chungnh@192.168.1.37:/home/chungnh/sentinel_server.new
+scp -O /tmp/sentinel_server_linux <user>@<server-ip>:/home/<user>/sentinel_server.new
 
 # 2. Atomically update and restart process
-ssh chungnh@192.168.1.37 << 'EOF'
-  chmod +x /home/chungnh/sentinel_server.new
-  mv /home/chungnh/sentinel_server.new /home/chungnh/sentinel_server
+ssh <user>@<server-ip> << 'EOF'
+  chmod +x /home/<user>/sentinel_server.new
+  mv /home/<user>/sentinel_server.new /home/<user>/sentinel_server
   pkill -f sentinel_server || true
-  nohup /home/chungnh/sentinel_server > /home/chungnh/sentinel.log 2>&1 &
+  nohup /home/<user>/sentinel_server > /home/<user>/sentinel.log 2>&1 &
   sleep 1
   ps aux | grep sentinel_server
 EOF
@@ -220,13 +220,13 @@ After=network.target
 
 [Service]
 Type=simple
-User=chungnh
-WorkingDirectory=/home/chungnh
-ExecStart=/home/chungnh/sentinel_server
+User=<user>
+WorkingDirectory=/home/<user>
+ExecStart=/home/<user>/sentinel_server
 Restart=always
 RestartSec=5
-StandardOutput=append:/home/chungnh/sentinel.log
-StandardError=append:/home/chungnh/sentinel.log
+StandardOutput=append:/home/<user>/sentinel.log
+StandardError=append:/home/<user>/sentinel.log
 
 [Install]
 WantedBy=multi-user.target
@@ -247,13 +247,13 @@ An AI Agent must execute these verification checks after any deployment:
 
 #### Step 1: Healthcheck
 ```bash
-curl -s http://192.168.1.37:8788/health
+curl -s http://<server-ip>:8788/health
 # Expected: {"status":"healthy", ...}
 ```
 
 #### Step 2: Conversational Chat Test (`/v2/ask`)
 ```bash
-curl -s -X POST http://192.168.1.37:8788/v2/ask \
+curl -s -X POST http://<server-ip>:8788/v2/ask \
   -H "Content-Type: application/json" \
   -d '{"request_id":"chk-1","session_id":"s1","text":"nói với tv là Xin chào","locale":"vi-VN","input_type":"text"}'
 # Expected NDJSON stream ending with "completed" status
@@ -261,13 +261,13 @@ curl -s -X POST http://192.168.1.37:8788/v2/ask \
 
 #### Step 3: Check Android TV ADB Connection
 ```bash
-adb connect 192.168.1.8:5555
-adb -s 192.168.1.8:5555 shell dumpsys power | grep mWakefulness=
+adb connect <tv-ip>:5555
+adb -s <tv-ip>:5555 shell dumpsys power | grep mWakefulness=
 # Expected: mWakefulness=Awake or Asleep
 ```
 
 #### Step 4: Verify Web UI Dashboard
-Open `http://192.168.1.37:8788/` in a web browser. Verify:
+Open `http://<server-ip>:8788/` in a web browser. Verify:
 - HA devices list loaded under "Thiết bị".
 - Automation rules visible and editable under "Kịch bản".
 - Camera live stream / PTZ responsive under "Camera".

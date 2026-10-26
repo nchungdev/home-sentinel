@@ -222,7 +222,7 @@
                   <option value="turn_on" ${act.service !== 'turn_off' ? 'selected' : ''}>🟢 Bật TV (Wake up / Bật màn hình)</option>
                 </select>
               </div>
-              <div class="form-group"><label>IP Android TV:</label><input type="text" id="act-tv-${escapeHtml(rule.id)}-${idx}" value="${escapeHtml(act.target_tv || '192.168.1.8')}"></div>
+              <div class="form-group"><label>IP Android TV:</label><input type="text" id="act-tv-${escapeHtml(rule.id)}-${idx}" value="${escapeHtml(act.target_tv || '192.168.1.50')}"></div>
             ` : ''}
             ${act.type === 'camera' ? `
               <div class="form-group"><label>Vị trí Preset:</label>
