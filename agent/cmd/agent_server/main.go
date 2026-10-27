@@ -213,6 +213,7 @@ func main() {
 
 	suggestionEngine := proactive.NewSuggestionEngine(nil, nil)
 	mux.Handle("/v2/suggestions", transport.NewV2SuggestionsHandler(suggestionEngine, &transportCfg))
+	registerWatchRoutes(mux, &transportCfg)
 
 	mux.HandleFunc("/api/logs/client", server.handleClientLogs)
 	mux.HandleFunc("/api/llm/engines", server.handleConfigLLM)

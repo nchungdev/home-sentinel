@@ -75,3 +75,12 @@ TV renderer QA uses the release instrumentation APK (`assembleReleaseAndroidTest
 `adb shell am instrument -w com.gathin.tvhome.test/com.gathin.tvhome.AgentRenderInstrumentation`.
 It feeds sample content into the real TV WebView, checks the DOM/image decode, and saves
 screenshots in the app's external files directory. It does not call an AI provider.
+
+## Watch history
+
+`POST /v2/watch/events` takes what the TV's apps are playing (the launcher reads their media
+sessions) and keeps the newest event per app and title in `sentinel_watch_history.json`.
+`GET /v2/watch/continue` answers the launcher's "continue watching" list: unfinished entries from
+the last 14 days plus Plex On Deck, read from `PLEX_URL` (default `http://127.0.0.1:32400`) with
+`PLEX_TOKEN` or the token in Plex Media Server's `Preferences.xml`. The contract is section 9 of
+`tv-agent-launcher/docs/modules/agent-protocol.md`.

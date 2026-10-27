@@ -42,6 +42,7 @@ type PlexResult struct {
 
 type Bridge struct {
 	NASHost    string
+	PlexURL    string
 	HTTPClient *http.Client
 }
 
@@ -54,6 +55,7 @@ func NewBridge(nasHost string) *Bridge {
 	}
 	return &Bridge{
 		NASHost: nasHost,
+		PlexURL: os.Getenv("PLEX_URL"),
 		HTTPClient: &http.Client{
 			Timeout: 4 * time.Second,
 		},
