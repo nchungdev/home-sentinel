@@ -257,9 +257,13 @@ func (s *Server) handleDuinchGreeting(w http.ResponseWriter, r *http.Request) {
 			period, topic,
 		)
 		var sb strings.Builder
-		s.LLMManager.StreamChat(prompt, func(chunk string) {
+		err := s.LLMManager.StreamChatContext(r.Context(), prompt, func(chunk string) {
 			sb.WriteString(chunk)
 		})
+		if err != nil {
+			http.Error(w, "greeting generation unavailable", http.StatusServiceUnavailable)
+			return
+		}
 		msg = strings.Trim(strings.TrimSpace(sb.String()), "\"'“”")
 	}
 	if msg == "" {
@@ -275,4 +279,3 @@ func (s *Server) handleDuinchGreeting(w http.ResponseWriter, r *http.Request) {
 		"clients_sent": sent,
 	})
 }
-

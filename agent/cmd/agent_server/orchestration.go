@@ -174,7 +174,12 @@ func (e *serverExecutionEngine) Execute(
 					text,
 				)
 				var sb strings.Builder
-				e.llmManager.StreamChat(prompt, func(chunk string) { sb.WriteString(chunk) })
+				err := e.llmManager.StreamChatContext(
+					ctx, prompt, func(chunk string) { sb.WriteString(chunk) },
+				)
+				if err != nil {
+					return nil, err
+				}
 				if g := strings.Trim(strings.TrimSpace(sb.String()), "\"'“”"); g != "" {
 					msg = g
 				}
@@ -205,9 +210,12 @@ func (e *serverExecutionEngine) Execute(
 		}
 
 		var sb strings.Builder
-		e.llmManager.StreamChat(text, func(chunk string) {
+		err := e.llmManager.StreamChatContext(ctx, text, func(chunk string) {
 			sb.WriteString(chunk)
 		})
+		if err != nil {
+			return nil, err
+		}
 		reply := sb.String()
 		if reply == "" {
 			reply = "Hiện tại trợ lý AI chưa phản hồi được. Bạn vui lòng thử lại sau giây lát nhé."
@@ -240,4 +248,3 @@ func (e *serverExecutionEngine) Execute(
 		CanRetry: false,
 	}, nil
 }
-

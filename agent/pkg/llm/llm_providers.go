@@ -3,47 +3,17 @@ package llm
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 )
 
-func (m *Manager) StreamChat(prompt string, onChunk func(string)) {
-	m.config.mu.RLock()
-	order := make([]string, len(m.config.PriorityOrder))
-	copy(order, m.config.PriorityOrder)
-	m.config.mu.RUnlock()
-
-	for _, engineID := range order {
-		var err error
-		switch engineID {
-		case "local_qwen":
-			err = m.callLocalLLM(prompt, onChunk)
-		case "agy":
-			err = m.callGenericCLI(m.config.AgyPath, []string{"-p", prompt, "--append-system-prompt", SystemPrompt}, onChunk)
-		case "codex":
-			err = m.callGenericCLI(m.config.CodexPath, []string{"exec", prompt}, onChunk)
-		case "claude":
-			err = m.callGenericCLI(m.config.ClaudePath, []string{"-p", prompt, "--append-system-prompt", SystemPrompt}, onChunk)
-		case "gemini":
-			err = m.callGemini(prompt, onChunk)
-		case "rule_fallback":
-			onChunk(fmt.Sprintf("Chào bạn! Yêu cầu \"%s\" đã được ghi nhận qua Rule Engine dự phòng.", prompt))
-			return
-		}
-
-		if err == nil {
-			return
-		}
-	}
-
-	onChunk("Tất cả các mô hình AI hiện không khả dụng. Bạn vui lòng kiểm tra lại cấu hình!")
-}
-
-func (m *Manager) callLocalLLM(prompt string, onChunk func(string)) error {
+func (m *Manager) callLocalLLM(ctx context.Context, prompt string, onChunk func(string)) error {
 	reqBody := map[string]interface{}{
 		"messages": []map[string]string{
 			{"role": "system", "content": SystemPrompt},
@@ -59,7 +29,9 @@ func (m *Manager) callLocalLLM(prompt string, onChunk func(string)) error {
 		return err
 	}
 
-	req, err := http.NewRequest(http.MethodPost, m.config.LocalLLMURL, bytes.NewReader(data))
+	req, err := http.NewRequestWithContext(
+		ctx, http.MethodPost, m.config.LocalLLMURL, bytes.NewReader(data),
+	)
 	if err != nil {
 		return err
 	}
@@ -76,6 +48,7 @@ func (m *Manager) callLocalLLM(prompt string, onChunk func(string)) error {
 	}
 
 	scanner := bufio.NewScanner(resp.Body)
+	scanner.Buffer(make([]byte, 4096), 1024*1024)
 	hasData := false
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -103,17 +76,21 @@ func (m *Manager) callLocalLLM(prompt string, onChunk func(string)) error {
 		}
 	}
 
+	if err := scanner.Err(); err != nil {
+		return err
+	}
 	if !hasData {
 		return fmt.Errorf("empty local llm stream")
 	}
 	return nil
 }
 
-func (m *Manager) callGenericCLI(binPath string, args []string, onChunk func(string)) error {
+func (m *Manager) callGenericCLI(ctx context.Context, binPath string, args []string, onChunk func(string)) error {
 	if binPath == "" {
 		return fmt.Errorf("binary path empty")
 	}
-	cmd := exec.Command(binPath, args...)
+	cmd := exec.CommandContext(ctx, binPath, args...)
+	cmd.WaitDelay = time.Second
 	cmd.Dir = os.Getenv("HOME")
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
@@ -125,6 +102,7 @@ func (m *Manager) callGenericCLI(binPath string, args []string, onChunk func(str
 	}
 
 	scanner := bufio.NewScanner(stdout)
+	scanner.Buffer(make([]byte, 4096), 1024*1024)
 	hasData := false
 	for scanner.Scan() {
 		text := scanner.Text()
@@ -134,7 +112,13 @@ func (m *Manager) callGenericCLI(binPath string, args []string, onChunk func(str
 		}
 	}
 
+	if scanner.Err() != nil {
+		_ = cmd.Process.Kill()
+	}
 	if err := cmd.Wait(); err != nil {
+		return err
+	}
+	if err := scanner.Err(); err != nil {
 		return err
 	}
 	if !hasData {
@@ -143,13 +127,14 @@ func (m *Manager) callGenericCLI(binPath string, args []string, onChunk func(str
 	return nil
 }
 
-func (m *Manager) callGemini(prompt string, onChunk func(string)) error {
+func (m *Manager) callGemini(ctx context.Context, prompt string, onChunk func(string)) error {
 	if m.config.GeminiKey == "" {
 		return fmt.Errorf("no gemini key")
 	}
 
 	endpoint := fmt.Sprintf(
-		"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key=%s",
+		"https://generativelanguage.googleapis.com/v1beta/models/"+
+			"gemini-2.5-flash:streamGenerateContent?alt=sse&key=%s",
 		m.config.GeminiKey,
 	)
 
@@ -168,7 +153,7 @@ func (m *Manager) callGemini(prompt string, onChunk func(string)) error {
 		return err
 	}
 
-	req, err := http.NewRequest(http.MethodPost, endpoint, bytes.NewReader(data))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(data))
 	if err != nil {
 		return err
 	}
@@ -185,6 +170,7 @@ func (m *Manager) callGemini(prompt string, onChunk func(string)) error {
 	}
 
 	scanner := bufio.NewScanner(resp.Body)
+	scanner.Buffer(make([]byte, 4096), 1024*1024)
 	hasData := false
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -215,6 +201,9 @@ func (m *Manager) callGemini(prompt string, onChunk func(string)) error {
 		}
 	}
 
+	if err := scanner.Err(); err != nil {
+		return err
+	}
 	if !hasData {
 		return fmt.Errorf("empty gemini stream")
 	}
