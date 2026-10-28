@@ -72,8 +72,11 @@ func (s *arrSource) item(entry map[string]any) (contracts.MediaItem, bool) {
 	if kind == "show" {
 		actions = []contracts.MediaAction{browseAction(s.id, itemID, "Chọn mùa để yêu cầu")}
 	}
-	return contracts.MediaItem{ID: itemID, Title: title, Year: int(year), Summary: overview, Kind: kind,
-		ExternalIDs: map[string]string{externalKey: itemID}, Availability: availability, Actions: actions}, true
+	return contracts.MediaItem{
+		ID: itemID, Title: title, Year: int(year), Summary: overview, Kind: kind,
+		Poster: arrPoster(entry), ExternalIDs: map[string]string{externalKey: itemID},
+		Availability: availability, Actions: actions,
+	}, true
 }
 
 func (s *arrSource) defaults(ctx context.Context) (int, string, error) {

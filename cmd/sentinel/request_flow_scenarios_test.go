@@ -30,7 +30,8 @@ func TestRequestFlowHTTPScenarios(t *testing.T) {
 		{"Tìm cách sửa lỗi Windows", "technical", "lookup", 2},
 		{"Thời tiết hôm nay", "general", "lookup", 1},
 		{"Tóm tắt https://example.com/article", "web", "summarize_url", 1},
-		{"Interstellar", "general", "clarify", 0},
+		{"Interstellar", "media", "find_to_watch", 12},
+		{"bạn nghĩ sao về chuyện này hôm qua nhỉ?", "general", "clarify", 0},
 	}
 	for _, test := range tests {
 		t.Run(test.text, func(t *testing.T) {

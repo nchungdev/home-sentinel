@@ -6,6 +6,14 @@ const (
 	StateStopped = "stopped"
 )
 
+type Details struct {
+	Kind    string `json:"kind,omitempty"`
+	Year    int    `json:"year,omitempty"`
+	Season  int    `json:"season,omitempty"`
+	Episode int    `json:"episode,omitempty"`
+	Channel string `json:"channel,omitempty"`
+}
+
 type Event struct {
 	PackageName string `json:"package_name"`
 	AppLabel    string `json:"app_label"`
@@ -17,6 +25,7 @@ type Event struct {
 	State       string `json:"state"`
 	ArtworkURL  string `json:"artwork_url,omitempty"`
 	At          int64  `json:"at"`
+	Details
 }
 
 func (e Event) key() string {
@@ -42,5 +51,6 @@ type Item struct {
 	PosterURL   string  `json:"poster_url,omitempty"`
 	RemainingMs int64   `json:"remaining_ms,omitempty"`
 	Action      Action  `json:"action"`
-	UpdatedAt   int64   `json:"-"`
+	Details
+	UpdatedAt int64 `json:"-"`
 }

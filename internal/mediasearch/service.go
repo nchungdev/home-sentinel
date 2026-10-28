@@ -11,6 +11,11 @@ import (
 	"github.com/nchungdev/home-sentinel/internal/contracts"
 )
 
+const (
+	probeTimeout  = 4 * time.Second
+	searchTimeout = 15 * time.Second
+)
+
 var ErrNotConfigured = errors.New("not_configured")
 var ErrAuthRequired = errors.New("auth_required")
 
@@ -47,15 +52,23 @@ func (s *Service) inspect(ctx context.Context, index int, refresh bool) contract
 	if !refresh && found && time.Since(cached.checked) < 30*time.Second {
 		return cached.capability
 	}
-	probeContext, cancel := context.WithTimeout(ctx, 2*time.Second)
-	defer cancel()
-	capability := s.sources[index].Capability(probeContext)
+	capability := s.probe(ctx, index)
+	if capability.Status == "unreachable" && ctx.Err() == nil {
+		capability = s.probe(ctx, index)
+	}
 	if ctx.Err() == nil {
 		s.mutex.Lock()
 		s.cache[index] = capabilityCache{capability: capability, checked: time.Now()}
 		s.mutex.Unlock()
 	}
 	return capability
+}
+
+func (s *Service) probe(ctx context.Context, index int) contracts.MediaSourceCapability {
+	probeContext, cancel := context.WithTimeout(ctx, probeTimeout)
+	defer cancel()
+
+	return s.sources[index].Capability(probeContext)
 }
 
 func (s *Service) Discover(ctx context.Context, refresh bool) []contracts.MediaSourceCapability {
@@ -84,7 +97,7 @@ func (s *Service) searchSource(ctx context.Context, index int, query string, upd
 		updates <- sourceUpdate{index: index, result: &result}
 		return
 	}
-	sourceContext, cancel := context.WithTimeout(ctx, 5*time.Second)
+	sourceContext, cancel := context.WithTimeout(ctx, searchTimeout)
 	defer cancel()
 	items, err := s.sources[index].Search(sourceContext, query)
 	for itemIndex := range items {

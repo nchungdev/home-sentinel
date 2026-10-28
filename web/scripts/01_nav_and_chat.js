@@ -98,6 +98,7 @@
         'agent': 'Agent Chat',
         'camera': 'Camera Live & PTZ',
         'automation': 'Kịch Bản Tự Động Hóa (Automation)',
+        'tvmodes': 'Chế độ TV',
         'setting': 'Settings'
       };
       document.getElementById('viewHeaderTitle').textContent = titles[name] || 'Home Sentinel';
@@ -113,6 +114,10 @@
 
       if (name === 'automation') {
         loadAutomationConfigAndDevices();
+      }
+
+      if (name === 'tvmodes') {
+        loadTvModes();
       }
 
       if (name === 'setting') {

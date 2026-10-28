@@ -103,6 +103,7 @@ func itemFromEvent(event Event) Item {
 		Progress:    progressOf(event),
 		PosterURL:   event.ArtworkURL,
 		RemainingMs: remaining(event.PositionMs, event.DurationMs),
+		Details:     event.Details,
 		Action:      actionFor(event),
 		UpdatedAt:   event.At,
 	}

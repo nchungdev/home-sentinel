@@ -55,6 +55,10 @@ type Item struct {
 	Title   string       `json:"title"`
 	URL     string       `json:"url,omitempty"`
 	Content string       `json:"content,omitempty"`
+	Poster  string       `json:"poster,omitempty"`
+	Year    int          `json:"year,omitempty"`
+	Season  int          `json:"season,omitempty"`
+	Episode int          `json:"episode,omitempty"`
 	Actions []ItemAction `json:"actions,omitempty"`
 }
 

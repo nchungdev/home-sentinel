@@ -6,6 +6,8 @@ import (
 	"strings"
 )
 
+const maxBareTitleWords = 6
+
 type RuleClassifier struct{}
 
 func (RuleClassifier) Understand(ctx context.Context, input Input) (Understanding, error) {
@@ -60,12 +62,23 @@ func (RuleClassifier) Understand(ctx context.Context, input Input) (Understandin
 		result.Domain, result.Intent = "general", "lookup"
 	case lower == "xin chào" || lower == "chào" || lower == "hello":
 		result.Intent = "chat"
+	case isBareTitle(query):
+		result.Domain, result.Intent = "media", "find_to_watch"
 	default:
 		return enrichUnderstanding(input, result), nil
 	}
 
 	result.NeedsInput, result.Question = false, ""
 	return enrichUnderstanding(input, result), nil
+}
+
+func isBareTitle(query string) bool {
+	words := strings.Fields(query)
+	if len(words) == 0 || len(words) > maxBareTitleWords {
+		return false
+	}
+
+	return !strings.ContainsAny(query, "?!")
 }
 
 func containsAny(text string, phrases ...string) bool {

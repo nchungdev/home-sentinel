@@ -57,6 +57,12 @@ func (g *authGate) Required() bool {
 	return g.token != ""
 }
 
+func (g *authGate) Token() string {
+	g.mutex.RLock()
+	defer g.mutex.RUnlock()
+	return g.token
+}
+
 func (g *authGate) Rotate() (string, error) {
 	if g.fromEnv {
 		return "", errTokenFromEnv

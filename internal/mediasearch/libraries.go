@@ -9,19 +9,22 @@ import (
 	"github.com/nchungdev/home-sentinel/internal/contracts"
 )
 
-type plexSource struct{ *httpSource }
+type plexSource struct {
+	*httpSource
+	identity plexIdentity
+}
 
 func (s *plexSource) Search(ctx context.Context, query string) ([]contracts.MediaItem, error) {
 	var response struct {
 		MediaContainer struct {
-			MachineID string `json:"machineIdentifier"`
-			Hub       []struct {
+			Hub []struct {
 				Metadata []struct {
 					Title   string `json:"title"`
 					Year    int    `json:"year"`
 					ID      string `json:"ratingKey"`
 					Type    string `json:"type"`
 					Summary string `json:"summary"`
+					Thumb   string `json:"thumb"`
 				} `json:"Metadata"`
 			} `json:"Hub"`
 		} `json:"MediaContainer"`
@@ -38,14 +41,16 @@ func (s *plexSource) Search(ctx context.Context, query string) ([]contracts.Medi
 				continue
 			}
 			seen[entry.ID] = true
-			target := s.link("/web/index.html#!/details?key=" + url.QueryEscape("/library/metadata/"+entry.ID))
-			if response.MediaContainer.MachineID != "" {
-				target = "https://app.plex.tv/desktop/#!/server/" + url.PathEscape(response.MediaContainer.MachineID) +
-					"/details?key=" + url.QueryEscape("/library/metadata/"+entry.ID)
-			}
+			target := s.itemLink(ctx, entry.ID)
 			actions := libraryActions(s.id, entry.ID, entry.Type, target)
-			items = append(items, contracts.MediaItem{ID: entry.ID, Title: entry.Title, Year: entry.Year,
-				Kind: entry.Type, Summary: entry.Summary, URL: target, Availability: "in_library", Actions: actions})
+			if app := s.appLink(ctx, entry.ID); app != "" {
+				actions = append([]contracts.MediaAction{appAction(app)}, actions...)
+			}
+			items = append(items, contracts.MediaItem{
+				ID: entry.ID, Title: entry.Title, Year: entry.Year, Kind: entry.Type,
+				Summary: entry.Summary, URL: target, Poster: s.poster(entry.Thumb),
+				Availability: "in_library", Actions: actions,
+			})
 			if len(items) == resultLimit {
 				return items, nil
 			}

@@ -75,7 +75,7 @@ func (s *plexSource) Browse(ctx context.Context, itemID string) ([]contracts.Med
 			number := entry.Index
 			episode = &number
 		}
-		target := s.link("/web/index.html#!/details?key=" + url.QueryEscape("/library/metadata/"+entry.ID))
+		target := s.itemLink(ctx, entry.ID)
 		items = append(items, contracts.MediaItem{ID: entry.ID, Title: entry.Title, Kind: entry.Type,
 			Season: &season, Episode: episode, ParentID: itemID, Summary: entry.Summary, Availability: "in_library",
 			Actions: libraryActions(s.id, entry.ID, entry.Type, target)})

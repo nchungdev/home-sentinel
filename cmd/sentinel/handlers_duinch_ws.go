@@ -118,8 +118,14 @@ func (s *Server) handleDuinchWS(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) broadcastDuinchPayload(event *DuinchWsEvent) int {
+	return s.sendDuinchPayload(event, true)
+}
+
+func (s *Server) sendDuinchPayload(event *DuinchWsEvent, replayLater bool) int {
 	duinchClientsMu.Lock()
-	lastDuinchEvent = event
+	if replayLater {
+		lastDuinchEvent = event
+	}
 	sent := 0
 	for conn := range duinchClients {
 		_ = conn.SetWriteDeadline(time.Now().Add(4 * time.Second))

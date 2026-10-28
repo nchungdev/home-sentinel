@@ -1,0 +1,18 @@
+    <!-- CHẾ ĐỘ TV: KỊCH BẢN HIỆN TRÊN MÀN HÌNH CHÍNH CỦA TV -->
+    <div id="view-tvmodes" class="view-content setting-view">
+      <div class="subtabs-bar tvm-bar">
+        <span class="tvm-hint">Các chế độ hiện thành hàng nút trên màn hình chính TV. Bật một chế độ sẽ lưu trạng thái hiện tại; chọn "Bình thường" để trả lại như cũ.</span>
+        <div class="tvm-bar-actions">
+          <span id="tvmStatus" class="tvm-status"></span>
+          <button class="btn-modern" onclick="addTvMode()">
+            <span class="mi">add</span> Thêm chế độ
+          </button>
+          <button class="btn-modern primary" onclick="saveTvModes()">
+            <span class="mi">save</span> Lưu
+          </button>
+        </div>
+      </div>
+      <div id="tvmList" class="tvm-list">
+        <div class="tvm-empty">Đang tải chế độ TV…</div>
+      </div>
+    </div>

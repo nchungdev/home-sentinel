@@ -74,3 +74,37 @@
   display: inline-block;
   margin: 10px 10px 0 0;
 }
+.search-flow-tabs {
+  display: flex;
+  gap: 6px;
+  margin-top: 14px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+.search-flow-tabs button {
+  flex: none;
+  padding: 8px 14px;
+  border: 1px solid #42465b;
+  border-radius: 999px;
+  background: #202334;
+  color: #edeefe;
+  cursor: pointer;
+}
+.search-flow-tabs button[aria-selected="true"] {
+  border-color: #a9adff;
+  background: #343a63;
+}
+.search-flow-tabs button:focus-visible {
+  outline: 2px solid #a9adff;
+  outline-offset: 3px;
+}
+.search-flow-groups section {
+  max-height: 60vh;
+  overflow-y: auto;
+}
+.search-flow-groups section[hidden] {
+  display: none;
+}
+.search-flow-groups {
+  margin-top: 10px;
+}

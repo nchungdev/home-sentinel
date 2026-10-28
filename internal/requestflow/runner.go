@@ -6,6 +6,11 @@ import (
 	"time"
 )
 
+const (
+	taskTimeout      = 20 * time.Second
+	maxParallelTasks = 8
+)
+
 type Runner struct {
 	Classifier Classifier
 	Skills     Registry
@@ -38,7 +43,7 @@ func (r Runner) Run(ctx context.Context, input Input, emit func(Event)) error {
 	}
 
 	updates := make(chan Event, len(plan.Tasks)*2)
-	workers := make(chan struct{}, 4)
+	workers := make(chan struct{}, maxParallelTasks)
 	for _, task := range plan.Tasks {
 		go func() {
 			select {
@@ -48,7 +53,7 @@ func (r Runner) Run(ctx context.Context, input Input, emit func(Event)) error {
 				return
 			}
 			updates <- Event{Type: "task_started", Task: &task}
-			taskContext, cancel := context.WithTimeout(ctx, 5*time.Second)
+			taskContext, cancel := context.WithTimeout(ctx, taskTimeout)
 			defer cancel()
 			skill, found := r.Skills[task.Skill]
 			if !found {

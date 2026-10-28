@@ -5,7 +5,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/nchungdev/home-sentinel/internal/integrations/mediabridge"
 )
@@ -15,7 +14,7 @@ func FromEnvironment(bridge *mediabridge.Bridge) *Service {
 		return New(PlaceholderSources()...)
 	}
 
-	client := &http.Client{Timeout: 5 * time.Second,
+	client := &http.Client{Timeout: searchTimeout,
 		CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 	plexURL := os.Getenv("PLEX_URL")
 	if plexURL == "" && bridge != nil {
@@ -29,7 +28,7 @@ func FromEnvironment(bridge *mediabridge.Bridge) *Service {
 			publicURL: os.Getenv(strings.ToUpper(id) + "_PUBLIC_URL"), apiKey: key,
 			keyHeader: header, probePath: probe, client: client}
 	}
-	plex := &plexSource{makeSource("plex", "Plex", "library", plexURL, mediabridge.ReadPlexToken(),
+	plex := &plexSource{httpSource: makeSource("plex", "Plex", "library", plexURL, mediabridge.ReadPlexToken(),
 		"X-Plex-Token", "/library/sections")}
 	jellyfin := &jellyfinSource{makeSource("jellyfin", "Jellyfin", "library",
 		envDefault("JELLYFIN_URL", "http://127.0.0.1:8096"), os.Getenv("JELLYFIN_API_KEY"),

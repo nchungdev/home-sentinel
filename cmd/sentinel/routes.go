@@ -30,6 +30,9 @@ func newRouter(server *Server) http.Handler {
 	public.HandleFunc("/api/auth/login", server.handleAuthLogin)
 	public.HandleFunc("/api/auth/logout", server.handleAuthLogout)
 	public.HandleFunc("/api/auth/status", server.handleAuthStatus)
+	public.HandleFunc("/api/pair/start", server.handlePairStart)
+	public.HandleFunc("/api/pair/poll", server.handlePairPoll)
+	public.HandleFunc(pairPagePath, servePairPage)
 	public.Handle("/", server.Auth.Protect(protected))
 
 	return server.Auth.AllowNetwork(public)
@@ -69,6 +72,7 @@ func registerSystemRoutes(mux *http.ServeMux, server *Server) {
 	mux.HandleFunc("/api/media/request", server.handleMediaRequest)
 	mux.HandleFunc("/api/nas/status", server.handleNASStatus)
 	mux.HandleFunc("/api/token/generate", server.handleGenerateToken)
+	mux.HandleFunc("/api/pair/approve", server.handlePairApprove)
 	mux.HandleFunc("/api/logs/client", server.handleClientLogs)
 	mux.HandleFunc("/api/llm/engines", server.handleConfigLLM)
 	mux.HandleFunc("/api/llm/test", server.handleLLMTest)
@@ -95,6 +99,9 @@ func registerHomeRoutes(mux *http.ServeMux, server *Server) {
 	mux.HandleFunc("/api/ha/config", server.handleHAConfig)
 	mux.HandleFunc("/api/ha/entities", server.handleHAEntities)
 	mux.HandleFunc("/api/automation/config", server.handleAutomationConfig)
+	mux.HandleFunc("/v2/modes", server.handleTVModes)
+	mux.HandleFunc("/v2/modes/{id}/activate", server.handleTVModeActivate)
+	mux.HandleFunc("/api/tv-modes/config", server.handleTVModesConfig)
 	mux.HandleFunc("/event", server.handlePresenceEvent)
 }
 

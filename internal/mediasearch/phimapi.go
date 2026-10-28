@@ -24,7 +24,10 @@ type phimAPIResponse struct {
 			Type       string `json:"type"`
 			Episode    string `json:"episode_current"`
 			Language   string `json:"lang"`
+			Poster     string `json:"poster_url"`
+			Thumb      string `json:"thumb_url"`
 		} `json:"items"`
+		ImageDomain string `json:"APP_DOMAIN_CDN_IMAGE"`
 	} `json:"data"`
 }
 
@@ -79,6 +82,7 @@ func (s *phimAPISource) Search(ctx context.Context, query string) ([]contracts.M
 		items = append(items, contracts.MediaItem{
 			ID: "phimapi:" + entry.Slug, Title: entry.Name, Kind: kind, Year: entry.Year,
 			URL: target, Summary: strings.Join(summary, " · "), Availability: "external",
+			Poster: phimAPIImage(response.Data.ImageDomain, entry.Poster, entry.Thumb),
 			Actions: []contracts.MediaAction{
 				{Type: "catalog_detail", Label: "Chọn tập", SourceID: "phimapi",
 					ItemID: "phimapi:" + entry.Slug, Enabled: true},

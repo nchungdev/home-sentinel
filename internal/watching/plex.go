@@ -48,6 +48,7 @@ func (p *PlexOnDeck) item(entry mediabridge.OnDeckEntry, token string) Item {
 		Progress:    deckProgress(entry),
 		PosterURL:   p.bridge.PlexImageURL(poster, token),
 		RemainingMs: remaining(entry.ViewOffset, entry.Duration),
+		Details:     deckDetails(entry),
 		Action: Action{
 			ActionType: "plex.open",
 			Parameters: map[string]any{"uri": "plex://server/play?key=" + entry.RatingKey},
@@ -76,4 +77,13 @@ func deckProgress(entry mediabridge.OnDeckEntry) float64 {
 		return 0
 	}
 	return float64(entry.ViewOffset) / float64(entry.Duration)
+}
+
+func deckDetails(entry mediabridge.OnDeckEntry) Details {
+	if entry.Type == "episode" {
+		return Details{
+			Kind: "series", Year: entry.Year, Season: entry.Season, Episode: entry.Episode,
+		}
+	}
+	return Details{Kind: "movie", Year: entry.Year}
 }

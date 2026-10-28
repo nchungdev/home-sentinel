@@ -37,7 +37,7 @@ func TestPhimAPISearchValidatesAndMapsMetadata(t *testing.T) {
 
 func TestConfiguredSourcesExcludeMissingKeysAndPlaceholders(t *testing.T) {
 	service := New(
-		&plexSource{&httpSource{id: "plex", baseURL: "http://127.0.0.1:32400",
+		&plexSource{httpSource: &httpSource{id: "plex", baseURL: "http://127.0.0.1:32400",
 			keyHeader: "X-Plex-Token"}},
 		placeholderSource{id: "motchill"},
 		&youtubeSource{&httpSource{id: "youtube", baseURL: "https://www.googleapis.com"}},

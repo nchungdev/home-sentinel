@@ -22,7 +22,10 @@ func TestPlansRouteByPurpose(t *testing.T) {
 			map[string]bool{"page.extract": true}},
 		{"Thêm phim Interstellar vào thư viện", "request_library",
 			map[string]bool{"library.check": true, "request.prepare": true}},
-		{"Interstellar", "clarify", map[string]bool{}},
+		{"Interstellar", "find_to_watch",
+			map[string]bool{"library.search": true, "catalog.search": true,
+				"video.search": true, "web.search": true}},
+		{"bạn nghĩ sao về chuyện này hôm qua nhỉ?", "clarify", map[string]bool{}},
 		{"xin chào", "chat", map[string]bool{"answer.compose": true}},
 	}
 	for _, test := range tests {
@@ -123,10 +126,19 @@ func TestAmbiguousInputDoesNotExecuteSkills(t *testing.T) {
 	runner := PlaceholderRunner()
 	runner.Skills = nil
 	var events []Event
-	_ = runner.Run(context.Background(), Input{Text: "Interstellar"}, func(event Event) {
+	_ = runner.Run(context.Background(), Input{Text: "bạn nghĩ sao về chuyện này hôm qua nhỉ?"}, func(event Event) {
 		events = append(events, event)
 	})
 	if len(events) != 2 || events[1].Status != "needs_input" {
 		t.Fatalf("ambiguous input triggered retrieval: %+v", events)
+	}
+}
+
+func TestBareTitleSearchesMediaWithoutQuestion(t *testing.T) {
+	understanding, err := RuleClassifier{}.Understand(
+		context.Background(), Input{Text: "Naruto"})
+	if err != nil || understanding.NeedsInput || understanding.Intent != "find_to_watch" ||
+		understanding.Entities["title"] != "Naruto" {
+		t.Fatalf("bare title was not routed to media search: %+v, %v", understanding, err)
 	}
 }

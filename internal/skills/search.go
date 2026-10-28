@@ -27,9 +27,11 @@ func (s MediaSearch) Execute(ctx context.Context, task requestflow.Task) request
 	result.Status, result.ErrorCode = media.Status, media.ErrorCode
 	for _, entry := range media.Items {
 		item := requestflow.Item{ID: entry.ID, Kind: "media_title", Title: entry.Title,
-			URL: entry.URL, Content: entry.Summary}
+			URL: entry.URL, Content: entry.Summary, Poster: entry.Poster, Year: entry.Year,
+			Season: valueOf(entry.Season), Episode: valueOf(entry.Episode)}
 		for _, action := range entry.Actions {
-			if action.Type == "open_url" || action.Type == "catalog_detail" {
+			if action.Type == "open_url" || action.Type == "catalog_detail" ||
+				action.Type == "open_app" {
 				item.Actions = append(item.Actions, requestflow.ItemAction{
 					Type: action.Type, Label: action.Label, URL: action.URL,
 					SourceID: action.SourceID, ItemID: action.ItemID,
@@ -69,6 +71,7 @@ func (s WebSearch) Execute(ctx context.Context, task requestflow.Task) requestfl
 	for _, link := range links {
 		result.Items = append(result.Items, requestflow.Item{
 			ID: link.URL, Kind: "web_link", Title: link.Title, URL: link.URL, Content: link.Content,
+			Poster: youtubeThumbnail(link.URL),
 		})
 	}
 

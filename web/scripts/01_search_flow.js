@@ -19,8 +19,58 @@
     function flowErrorLabel(code) {
       return { not_configured: 'Chưa cấu hình nguồn', auth_required: 'Kiểm tra tài khoản, quyền truy cập và cấu hình API',
         not_implemented: 'Nguồn chưa được hỗ trợ', skill_unavailable: 'Chức năng chưa được hỗ trợ',
-        source_unavailable: 'Nguồn chưa được hỗ trợ', timeout: 'Nguồn phản hồi quá lâu' }[code] ||
+        source_unavailable: 'Nguồn chưa được hỗ trợ', timeout: 'Nguồn phản hồi quá lâu',
+        unreachable: 'Không kết nối được tới nguồn (kiểm tra mạng/DNS của máy chủ)',
+        invalid_service: 'Nguồn trả về dữ liệu không hợp lệ' }[code] ||
         'Chưa lấy được dữ liệu từ nguồn';
+    }
+
+    const LAST_TAB_SOURCE = 'internet';
+
+    function createSourceTabs() {
+      const bar = document.createElement('div');
+      bar.className = 'search-flow-tabs';
+      bar.setAttribute('role', 'tablist');
+      const entries = [];
+      function select(entry) {
+        for (const other of entries) {
+          const active = other === entry;
+          other.tab.setAttribute('aria-selected', String(active));
+          other.tab.tabIndex = active ? 0 : -1;
+          other.panel.hidden = !active;
+        }
+      }
+      function move(entry, step) {
+        const next = entries[(entries.indexOf(entry) + step + entries.length) % entries.length];
+        select(next);
+        next.tab.focus();
+      }
+      function add(source, panel, count) {
+        const tab = document.createElement('button');
+        const entry = { tab, panel };
+        tab.type = 'button';
+        tab.setAttribute('role', 'tab');
+        tab.textContent = flowSourceLabel(source) + ' (' + count + ')';
+        panel.setAttribute('role', 'tabpanel');
+        tab.addEventListener('click', () => select(entry));
+        tab.addEventListener('keydown', event => {
+          if (event.key === 'ArrowRight') move(entry, 1);
+          else if (event.key === 'ArrowLeft') move(entry, -1);
+          else return;
+          event.preventDefault();
+        });
+        entry.source = source;
+        const lastEntry = entries.find(candidate => candidate.source === LAST_TAB_SOURCE);
+        if (lastEntry && source !== LAST_TAB_SOURCE) {
+          entries.splice(entries.indexOf(lastEntry), 0, entry);
+          bar.insertBefore(tab, lastEntry.tab);
+        } else {
+          entries.push(entry);
+          bar.appendChild(tab);
+        }
+        select(entries.find(candidate => candidate.tab.getAttribute('aria-selected') === 'true') || entry);
+      }
+      return { bar, add };
     }
 
     async function trySearchFlow(text, bubble, timer) {
@@ -39,16 +89,33 @@
       const summary = document.createElement('div');
       const groups = document.createElement('div');
       groups.className = 'search-flow-groups';
+      const tabs = createSourceTabs();
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '', initialized = false, total = 0, finalText = '', terminal = false;
       let checked = 0;
-      const failures = [];
+      const sourceStatus = document.createElement('div');
+      sourceStatus.className = 'search-flow-status';
+      const statusLines = new Map();
+      function setSourceStatus(source, text) {
+        let line = statusLines.get(source);
+        if (!line) {
+          line = document.createElement('p');
+          statusLines.set(source, line);
+          sourceStatus.appendChild(line);
+        }
+        line.textContent = flowSourceLabel(source) + ': ' + text;
+      }
+      function clearSourceStatus(source) {
+        const line = statusLines.get(source);
+        if (line) line.remove();
+        statusLines.delete(source);
+      }
       function initialize() {
         if (initialized) return;
         initialized = true;
         timer.stop();
-        bubble.replaceChildren(summary, groups);
+        bubble.replaceChildren(summary, sourceStatus, tabs.bar, groups);
       }
       function accept(event) {
         initialize();
@@ -63,17 +130,16 @@
             summary.textContent = 'Đang tìm từ các nguồn phù hợp…';
           }
         }
+        if (event.type === 'plan_ready') {
+          for (const task of event.plan.tasks || []) setSourceStatus(task.source, 'đang tìm…');
+        }
         if (event.type === 'task_result') {
           const result = event.result;
+          if (result.error_code) setSourceStatus(result.source, flowErrorLabel(result.error_code));
+          else clearSourceStatus(result.source);
           if (result.status === 'ok' || result.status === 'empty') checked++;
-          if (!result.items.length) {
-            if (result.error_code) failures.push(result);
-            return;
-          }
+          if (!result.items.length) return;
           const section = document.createElement('section');
-          const heading = document.createElement('strong');
-          heading.textContent = flowSourceLabel(result.source);
-          section.appendChild(heading);
           for (const item of result.items) {
             const card = document.createElement('div');
             card.className = 'search-flow-item';
@@ -96,6 +162,7 @@
           }
           total += result.items.length;
           groups.appendChild(section);
+          tabs.add(result.source, section, result.items.length);
           summary.textContent = 'Đã nhận ' + total + ' kết quả; đang kiểm tra các nguồn còn lại…';
         }
         if (event.type === 'response_completed') {
@@ -103,21 +170,8 @@
           if (event.status !== 'needs_input') {
             finalText = total ? 'Tìm được ' + total + ' kết quả, chia theo nguồn.' :
               checked ? 'Không tìm thấy kết quả trong các nguồn đã kiểm tra.' :
-              failures.length ? 'Chưa truy cập được nguồn tìm kiếm. Bạn có thể thử lại.' :
+              statusLines.size ? 'Chưa truy cập được nguồn tìm kiếm. Bạn có thể thử lại.' :
               'Chưa có nguồn tìm kiếm khả dụng. Hãy cấu hình nguồn rồi thử lại.';
-            if (failures.length) {
-              const details = document.createElement('details');
-              const label = document.createElement('summary');
-              label.textContent = 'Trạng thái ' + failures.length + ' nguồn chưa phản hồi';
-              details.appendChild(label);
-              for (const failure of failures) {
-                const line = document.createElement('p');
-                line.textContent = flowSourceLabel(failure.source) + ': ' +
-                  flowErrorLabel(failure.error_code);
-                details.appendChild(line);
-              }
-              groups.appendChild(details);
-            }
             summary.textContent = finalText;
           }
         }

@@ -124,3 +124,18 @@ func TestYoutubeVideoGetsLaunchAction(t *testing.T) {
 		t.Fatalf("want app.open, got %+v", action)
 	}
 }
+
+func TestContinueKeepsEventDetails(t *testing.T) {
+	history := NewHistory(filepath.Join(t.TempDir(), "history.json"))
+	now := time.Now().UnixMilli()
+	show := event("b.pkg", "Show", 500, 1000, now)
+	show.Details = Details{Kind: "series", Year: 2024, Season: 2, Episode: 5}
+	if err := history.Record([]Event{show}); err != nil {
+		t.Fatal(err)
+	}
+
+	items := NewContinue(history, nil).Items(context.Background())
+	if len(items) != 1 || items[0].Details != show.Details {
+		t.Fatalf("want details %+v, got %+v", show.Details, items)
+	}
+}
