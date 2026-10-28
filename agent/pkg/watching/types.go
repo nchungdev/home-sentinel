@@ -40,6 +40,7 @@ type Item struct {
 	PackageName string  `json:"package_name"`
 	Progress    float64 `json:"progress"`
 	PosterURL   string  `json:"poster_url,omitempty"`
+	RemainingMs int64   `json:"remaining_ms,omitempty"`
 	Action      Action  `json:"action"`
 	UpdatedAt   int64   `json:"-"`
 }

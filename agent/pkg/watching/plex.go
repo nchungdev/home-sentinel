@@ -47,6 +47,7 @@ func (p *PlexOnDeck) item(entry mediabridge.OnDeckEntry, token string) Item {
 		PackageName: plexPackage,
 		Progress:    deckProgress(entry),
 		PosterURL:   p.bridge.PlexImageURL(poster, token),
+		RemainingMs: remaining(entry.ViewOffset, entry.Duration),
 		Action: Action{
 			ActionType: "plex.open",
 			Parameters: map[string]any{"uri": "plex://server/play?key=" + entry.RatingKey},

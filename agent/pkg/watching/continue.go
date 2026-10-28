@@ -102,6 +102,7 @@ func itemFromEvent(event Event) Item {
 		PackageName: event.PackageName,
 		Progress:    progressOf(event),
 		PosterURL:   event.ArtworkURL,
+		RemainingMs: remaining(event.PositionMs, event.DurationMs),
 		Action:      actionFor(event),
 		UpdatedAt:   event.At,
 	}
@@ -118,4 +119,11 @@ func actionFor(event Event) Action {
 		ActionType: "app.open",
 		Parameters: map[string]any{"package_name": event.PackageName},
 	}
+}
+
+func remaining(positionMs, durationMs int64) int64 {
+	if durationMs <= positionMs {
+		return 0
+	}
+	return durationMs - positionMs
 }
