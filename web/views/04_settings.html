@@ -20,52 +20,121 @@
 
       <!-- SUBTAB 1: AI ENGINES -->
       <div id="subtab-agent-cfg" class="subtab-panel grid-layout active">
-        <!-- Card 1: Thứ tự ưu tiên & Trạng thái tài khoản -->
         <div class="card">
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <div class="card-title">Thứ tự ưu tiên AI Engine (Tự động chuyển khi lỗi/hết token)</div>
-            <button class="btn-action" style="padding:6px 12px; font-size:12px;" onclick="loadEngines()"><span class="mi" style="font-size:15px;">refresh</span> Cập nhật</button>
+          <div class="engine-heading">
+            <div class="card-title">Chọn AI engine</div>
+            <button class="btn-action engine-refresh" onclick="loadEngines()"
+              title="Làm mới" aria-label="Làm mới danh sách engine">
+              <span class="mi" aria-hidden="true">refresh</span>
+            </button>
           </div>
-          <p style="font-size:12px; color:var(--text-muted); margin: 0 0 10px 0;">
-            Sentinel tự động failover giữa các AI Engine khả dụng trên NAS. Bạn có thể sắp xếp mức độ ưu tiên theo nhu cầu.
-          </p>
-          <div id="engineContainer" style="display:flex; flex-direction:column; gap:8px;"></div>
-        </div>
-
-        <!-- Card 2: Quản lý Tài khoản & Cấu hình CLI / Token -->
-        <div class="card">
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <div class="card-title">Tài Khoản CLI & API Tokens</div>
-            <a href="#" onclick="window.open('http://' + (window.location.hostname || 'localhost') + ':8000/#settings', '_blank'); return false;" class="btn-action" style="padding:6px 12px; font-size:12px; text-decoration:none; color:#818cf8; border-color:rgba(99,102,241,0.4);">
-              <span class="mi" style="font-size:15px;">open_in_new</span> Mở Agent Bridge
-            </a>
-          </div>
-          <p style="font-size:12px; color:var(--text-muted); margin: 4px 0 12px 0; line-height:1.5;">
-            Các engine CLI (Claude Code, OpenAI Codex, Google Antigravity) sử dụng phiên đăng nhập và hồ sơ quản lý tập trung trên NAS qua Agent Bridge.
-          </p>
-
-          <!-- Danh sách tài khoản đọc từ Agent Bridge -->
-          <div id="bridgeAccountsList" style="display:flex; flex-direction:column; gap:8px; margin-bottom:16px;">
-            <div style="font-size:12px; color:var(--text-muted); text-align:center; padding:12px; border:1px dashed var(--border); border-radius:8px;">
-              Đang đọc trạng thái đăng nhập từ Agent Bridge...
+          <p class="engine-help">Chọn một engine rồi lưu để sử dụng.
+            Khi gặp lỗi, Sentinel báo lỗi để bạn chọn lại.</p>
+          <div id="activeEngineBanner" class="engine-banner"></div>
+          <div class="form-group">
+            <span id="enginePickerLabel" class="engine-field-label">Engine sử dụng</span>
+            <div class="engine-picker" id="enginePicker">
+              <button type="button" id="engineContainer" class="engine-picker-trigger"
+                aria-haspopup="listbox" aria-expanded="false" aria-controls="engineOptions"
+                aria-labelledby="enginePickerLabel engineSelectedName"
+                onclick="toggleEnginePicker()" onkeydown="engineTriggerKey(event)">
+                <span id="engineSelectedName">Chọn engine</span>
+                <span class="mi" aria-hidden="true">expand_more</span>
+              </button>
+              <div id="engineOptions" class="engine-picker-options" role="listbox"
+                aria-labelledby="enginePickerLabel" hidden></div>
             </div>
           </div>
-
-          <div style="border-top:1px solid var(--border); padding-top:14px;">
-            <div class="card-title" style="font-size:13px; margin-bottom:8px;">Cấu hình API Key & Endpoint Độc Lập</div>
+          <p id="engineSelectionStatus" class="engine-help"></p>
+          <div class="engine-connection">
+          <div class="card-title" id="engineConfigTitle">Kết nối engine</div>
+          <p class="engine-help" id="engineConfigHelp"></p>
+          <div id="engineKeyFields" hidden>
             <div class="form-group">
-              <label>Google Gemini API Key:</label>
-              <input type="password" id="geminiKeyInput" placeholder="AIzaSy...">
+              <label for="engineApiKey">API key</label>
+              <input type="password" id="engineApiKey" autocomplete="new-password"
+                placeholder="Nhập API key">
             </div>
-            <div class="form-group" style="margin-top:8px;">
-              <label>Local LLM URL (NAS):</label>
-              <input type="text" id="localUrlInput" value="http://127.0.0.1:9931/v1/chat/completions">
+            <div class="form-group" id="engineModelField">
+              <label for="engineModel">Model</label>
+              <input type="text" id="engineModel" placeholder="Nhập model ID của nhà cung cấp">
             </div>
-            <div style="display:flex; gap:12px; margin-top:14px;">
-              <button class="btn-save" id="btnSaveAI" onclick="saveAIConfig()"><span class="mi">save</span> Lưu Cấu Hình</button>
-              <button class="btn-action" onclick="testAIConnection()"><span class="mi">bolt</span> Kiểm Tra Kết Nối</button>
+          </div>
+          <div class="form-group" id="engineLocalFields" hidden>
+            <label for="localUrlInput">Local LLM endpoint</label>
+            <input type="url" id="localUrlInput">
+          </div>
+          <div id="engineLoginFields" hidden>
+            <div class="form-group">
+              <span id="engineAuthLabel" class="engine-field-label">Phương thức xác thực</span>
+              <div id="authPicker" class="engine-picker">
+                <button id="engineAuthTrigger" class="engine-picker-trigger" type="button"
+                  aria-haspopup="listbox" aria-expanded="false" aria-controls="engineAuthOptions"
+                  aria-labelledby="engineAuthLabel engineAuthMethodLabel"
+                  onclick="togglePicker('engineAuthTrigger', 'engineAuthOptions')"
+                  onkeydown="pickerTriggerKey(event, 'engineAuthTrigger', 'engineAuthOptions')">
+                  <span id="engineAuthMethodLabel">Đang kiểm tra…</span>
+                  <span class="mi" aria-hidden="true">expand_more</span>
+                </button>
+                <div id="engineAuthOptions" class="engine-picker-options" role="listbox"
+                  aria-labelledby="engineAuthLabel" hidden></div>
+              </div>
             </div>
-            <div id="aiTestResult" style="font-size:12px; margin-top:8px; line-height:1.4;"></div>
+            <p id="engineAuthStatus" class="engine-help" role="status"></p>
+            <div id="engineAuthSecretFields" class="form-group" hidden>
+              <label for="engineAuthSecret">API key hoặc token</label>
+              <input id="engineAuthSecret" type="password" autocomplete="new-password"
+                placeholder="Credential được lưu trên máy chạy Sentinel"
+                oninput="updateAuthSecretButton()">
+            </div>
+            <div id="engineAuthEmailFields" class="form-group" hidden>
+              <label for="engineAuthEmail">Email tổ chức</label>
+              <input id="engineAuthEmail" type="email" autocomplete="username"
+                placeholder="you@company.com">
+            </div>
+            <button class="btn-action" id="btnEngineLogin" onclick="startEngineLogin()">
+              Đăng nhập
+            </button>
+            <button id="btnCancelEngineLogin" class="btn-action" onclick="cancelEngineLogin()" hidden>
+              Hủy đăng nhập
+            </button>
+            <a id="engineLoginLink" class="btn-action" target="_blank" rel="noopener" hidden>
+              Mở trang đăng nhập
+            </a>
+            <div id="engineLoginCodeFields" hidden>
+              <div class="form-group">
+                <label for="engineLoginCode">Mã xác thực hoặc URL callback từ trang đăng nhập</label>
+                <input id="engineLoginCode" type="password" autocomplete="one-time-code">
+              </div>
+              <p class="engine-help">Nếu trình duyệt báo không kết nối được localhost,
+                dán URL callback trên thanh địa chỉ vào ô này.</p>
+              <button class="btn-action" onclick="submitEngineLoginCode()">Xác nhận</button>
+            </div>
+            <div id="engineLoginNavigation" class="engine-login-navigation" hidden>
+              <span class="engine-help">Nếu CLI yêu cầu lựa chọn:</span>
+              <button class="btn-action" aria-label="Lựa chọn trước"
+                onclick="navigateEngineLogin('up')">↑</button>
+              <button class="btn-action" aria-label="Lựa chọn tiếp"
+                onclick="navigateEngineLogin('down')">↓</button>
+              <button class="btn-action" onclick="navigateEngineLogin('enter')">Xác nhận</button>
+            </div>
+            <details class="engine-login-details" id="engineLoginDetails">
+              <summary>Chi tiết và đăng nhập thủ công</summary>
+              <p class="engine-help">Nếu trình duyệt không hoàn tất được luồng xác thực,
+                chạy lệnh sau trên máy chạy Sentinel bằng tài khoản đang chạy service.</p>
+              <code id="engineLoginCommand" class="engine-command"></code>
+              <pre id="engineLoginOutput" class="engine-login-output" aria-live="polite"></pre>
+            </details>
+          </div>
+          <div class="engine-form-actions">
+            <button class="btn-action" id="btnTestAI" onclick="testAIConnection()">
+              Kiểm tra kết nối
+            </button>
+            <button class="btn-save" id="btnSaveAI" onclick="saveAIConfig()">
+              Lưu và sử dụng
+            </button>
+          </div>
+          <div id="aiTestResult" class="engine-help" role="status" aria-live="polite"></div>
           </div>
         </div>
       </div>

@@ -1,0 +1,45 @@
+    .auth-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      background: rgba(9, 10, 15, 0.85);
+    }
+    .auth-card {
+      width: 100%;
+      max-width: 360px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 24px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+    .auth-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text-bright);
+      font-size: 16px;
+      font-weight: 600;
+    }
+    .auth-message {
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+    .auth-input {
+      padding: 10px 12px;
+      color: var(--text-bright);
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 14px;
+    }
+    .auth-input:focus {
+      outline: none;
+      border-color: var(--border-focus);
+    }

@@ -66,36 +66,51 @@ Detailed architectural specifications are documented in [docs/architecture.md](d
 
 ## Directory Layout
 
-```
+```text
 home-sentinel/
-├── agent/
-│   ├── cmd/agent_server/     # Main server entrypoint, HTTP/WS handlers, and routing
-│   └── pkg/
-│       ├── adapters/         # HA and Camera execution adapters
-│       ├── arbitration/      # Conflict resolution and event arbitration
-│       ├── automation/       # HA-style automation engine, TV ADB controls, config store
-│       ├── camstream/        # Tapo camera RTSP stream and ONVIF session manager
-│       ├── contracts/        # Shared data models (InputEvent, ActionPlan, etc.)
-│       ├── haclient/         # Direct REST client for Home Assistant
-│       ├── llm/              # Multi-engine LLM manager (Groq, OpenAI, Local Qwen)
-│       ├── mediabridge/      # Plex, Radarr, Sonarr media integrations
-│       ├── orchestrator/     # Core 6-layer pipeline coordinator
-│       ├── proactive/        # Suggestion engine for TV idle screen
-│       ├── resolution/       # Entity matching and ActionPlan generator
-│       ├── speech/           # Audio transcription and TTS bindings
-│       ├── telemetry/        # Metric tracking and latency monitoring
-│       ├── transport/        # /v2/ask NDJSON streaming HTTP handler
-│       └── understanding/    # Intent classification and phonetic normalization
-├── configs/
-│   └── automation.json       # Persistent automation rules
-├── docs/
-│   └── architecture.md       # Technical design and protocol documentation
-└── web/                      # Embedded modern web dashboard (HTML, CSS, JS)
+├── cmd/
+│   ├── sentinel/               # Main Home Sentinel server
+│   ├── camera-center/          # Optional camera connector daemon
+│   └── tapo-speaker/           # Camera speaker utility
+├── internal/
+│   ├── contracts/             # Typed request/action/result contracts
+│   ├── requestflow/           # Classification, planning, skill execution preview
+│   ├── orchestrator/          # Existing request pipeline
+│   ├── understanding/         # Existing intent and slot extraction
+│   ├── resolution/            # Entity matching and action planning
+│   ├── tools/                 # Explicit action tools and registry
+│   ├── skills/                # Read/search skills and metadata retrieval
+│   ├── search/web/            # General internet search through SearXNG
+│   ├── mediasearch/           # Existing multi-source media search adapters
+│   ├── catalog/               # PhimAPI title details and episode resolution
+│   ├── playback/              # Stream resolution and playback sessions
+│   ├── watching/              # Watch history and progress
+│   ├── cache/                 # Bounded memory and optional Redis search cache
+│   ├── integrations/          # Camera, HA, media-server and ONVIF connectors
+│   ├── adapters/              # Execution adapters for device actions
+│   ├── llm/                   # AI engines, credentials and login flows
+│   ├── speech/                # Audio service clients and transcription
+│   ├── transport/             # HTTP/NDJSON protocol handlers
+│   └── ...                    # Arbitration, automation, proactive, telemetry
+├── workers/
+│   ├── vision/                # Camera image processing worker
+│   └── yamnet/                # Audio classification worker and model
+├── web/                       # Embedded web dashboard
+├── configs/                   # Configuration examples and automation rules
+├── scripts/                   # Operational command-line helpers
+├── deploy/                    # Deployment files, systemd and supporting services
+├── docs/                      # Architecture, setup and acceptance cases
+└── tests/                     # Cross-component test support
 ```
+
+Home Sentinel is the application at the repository root. Camera connectors and inference
+workers supply data or processing capabilities to it; they are optional supporting components.
+Folders marked planned contain responsibility specifications, not working implementations.
+See [repository layout](docs/repository-layout.md) for boundaries and migration paths.
 
 ---
 
-## Agent Server Installation & Setup Guide
+## Home Sentinel Installation & Setup Guide
 
 > **Note for AI Agents**: Follow these sequential instructions when setting up, compiling, deploying, or troubleshooting the Home Sentinel server.
 
@@ -141,15 +156,40 @@ Place these configuration JSON files in the working directory alongside the exec
 #### `sentinel_llm_config.json`
 ```json
 {
-  "priority_order": [
-    "gemini",
-    "local_qwen",
-    "rule_fallback"
-  ],
+  "selected_engine": "gemini",
   "gemini_key": "<gemini-api-key>",
   "local_llm_url": "http://127.0.0.1:9931/v1/chat/completions"
 }
 ```
+
+Sentinel runs on the host you choose (Linux/NAS, macOS or Windows).
+Set `AGENT_BIND=127.0.0.1` for a local-only instance; the default listens on all interfaces.
+Select one engine in Settings; requests use only that engine and report failures without
+switching providers. Existing `priority_order` files migrate to their first recognized engine.
+`rule_fallback` now means AI chat is disabled.
+
+Gemini, OpenAI API and Anthropic API accept keys in Settings. OpenAI and Anthropic also
+require a model ID available to the API account. Blank key fields retain saved credentials;
+GET responses expose only whether a key is set. Configuration files are saved with owner-only
+permissions where supported by the operating system.
+
+CLI engines reuse authentication on the host running Sentinel under the service's OS account.
+Settings checks that existing session before starting any login and exposes each engine's methods:
+Codex (ChatGPT, API key, organization access token), Claude (subscription, Console, SSO, API key,
+OAuth token, existing cloud configuration), and AGY (Google/Gemini Enterprise, Gemini key, ADC).
+Google Cloud ADC login requires `gcloud` on the server. API-only engines retain their key form.
+
+New browser logins execute on the server and expose the CLI-generated URL to the web client.
+Codex uses device authentication. AGY receives a terminal (PTY on Unix, ConPTY on Windows),
+with terminal queries answered and a separate empty workspace for its startup trust prompt.
+Claude browser launches are captured by a Sentinel helper rather than opening a browser on the
+server. A client on another device can paste a loopback callback URL into the login form;
+Sentinel forwards only the callback matching that session's loopback target and OAuth state.
+
+Login completion is verified against the native session, rather than exit code alone. Logins can
+be cancelled and expire after five minutes. UI reloads resume an in-progress session. Keys and
+tokens are stored only in native CLI storage or the owner-only local Sentinel configuration.
+Connection tests send a small model request without saving drafts.
 
 #### `configs/automation.json`
 ```json
@@ -179,10 +219,10 @@ Compile the Go server from the repository root:
 go test ./...
 
 # 2. Build for host machine
-go build -o bin/sentinel_server ./agent/cmd/agent_server
+go build -o bin/sentinel_server ./cmd/sentinel
 
 # 3. Cross-compile for Linux target (amd64)
-GOOS=linux GOARCH=amd64 go build -o /tmp/sentinel_server_linux ./agent/cmd/agent_server
+GOOS=linux GOARCH=amd64 go build -o /tmp/sentinel_server_linux ./cmd/sentinel
 ```
 
 ---
@@ -285,7 +325,21 @@ Open `http://<server-ip>:8788/` in a web browser. Verify:
 | `GET` | `/api/ha/entities` | Live Home Assistant entities list |
 | `POST` | `/api/camera/ptz` | Control Tapo camera Pan/Tilt/Zoom presets |
 | `POST` | `/api/camera/speak` | Send TTS audio to Tapo camera speaker |
-| `GET` | `/health` | Server health check endpoint |
+| `GET` | `/api/nas/status` | Disk, Docker and host snapshot of the NAS (JSON, no LLM) |
+| `POST` | `/api/token/generate` | Rotate the access token (409 when `AGENT_TOKEN` manages it) |
+| `POST` | `/api/auth/login` | Web login: `{"token": "..."}` sets an HttpOnly session cookie |
+| `GET` | `/api/auth/status` | `{"required": bool, "authorized": bool}` |
+| `GET` | `/health` | Health check; 401 when a wrong `Authorization` header is sent |
+
+### Access control
+
+Every route except `/`, `/health` and `/api/auth/*` requires the access token, sent as
+`Authorization: Bearer <token>` (TV launcher), the `sentinel_session` cookie (web UI) or the
+HTTP Basic password (Radarr/Sonarr webhooks). The token comes from `AGENT_TOKEN`, otherwise
+from `sentinel_auth.json` written by `/api/token/generate`; without either, the server runs
+open and logs a warning. `AGENT_ALLOW` limits every route to the listed IPs or CIDRs.
+`AGENT_NAS_MOUNTS` (comma-separated, default `/`) and `AGENT_DOCKER_SOCKET` choose what
+`/api/nas/status` and the "trạng thái NAS" intent report.
 
 ---
 

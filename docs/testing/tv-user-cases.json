@@ -1,0 +1,2608 @@
+{
+  "schema_version": 1,
+  "researched_at": "2026-10-27",
+  "language": "vi-VN",
+  "scope": "Acceptance scenarios proposed for Sentinel on TV; not a usage-frequency survey.",
+  "execution_status": "not_run",
+  "sources": {
+    "G": {
+      "title": "Google Assistant: nhu cầu thông tin và tác vụ hằng ngày",
+      "url": "https://support.google.com/googlehome/answer/7172842?hl=en"
+    },
+    "A": {
+      "title": "Apple TV: tìm nội dung bằng Siri",
+      "url": "https://support.apple.com/guide/tv/search-with-siri-atvb2f98a04a/27/tvos/27"
+    },
+    "F": {
+      "title": "Fire TV: voice search và điều khiển nội dung",
+      "url": "https://developer.amazon.com/docs/fire-tv/voice-enable-your-app-and-content.html"
+    },
+    "I": {
+      "title": "Apple TV: thông tin ngoài media",
+      "url": "https://support.apple.com/en-gb/guide/tv/atvbb96a3e3f/tvos"
+    },
+    "N": {
+      "title": "Android TV: D-pad, focus và điều hướng",
+      "url": "https://developer.android.com/training/tv/get-started/navigation"
+    },
+    "P": {
+      "title": "Plex: trạng thái đã xem và xem dở",
+      "url": "https://support.plex.tv/articles/201018487-mark-as-watched-or-unwatched/"
+    },
+    "S": {
+      "title": "Plex: lựa chọn phụ đề và audio",
+      "url": "https://support.plex.tv/articles/200471113-configuring-subtitle-support/"
+    },
+    "W": {
+      "title": "SearXNG Search API",
+      "url": "https://docs.searxng.org/dev/search_api.html"
+    },
+    "PROJECT": {
+      "title": "Yêu cầu Sentinel trong hội thoại; tình huống do kỹ sư đề xuất",
+      "url": null
+    }
+  },
+  "cases": [
+    {
+      "id": "TV-001",
+      "group": "Tìm nội dung để xem",
+      "priority": "P0",
+      "input": "Tìm phim Interstellar để xem",
+      "context": "Plex và Jellyfin đã cấu hình; có nguồn online",
+      "expected": {
+        "domain": "media",
+        "intent": "find_to_watch",
+        "skills": [
+          "library.search",
+          "catalog.search",
+          "web.search"
+        ],
+        "source_policy": "Tìm các nguồn khả dụng thuộc thư viện và catalog; web tìm link bổ sung",
+        "response": "Kết quả chia theo nguồn, có hành động phù hợp",
+        "assertions": [
+          "Không dừng sau hit đầu",
+          "Không tự phát chỉ vì người dùng nói tìm"
+        ]
+      },
+      "evidence": [
+        "A",
+        "F",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-002",
+      "group": "Tìm nội dung để xem",
+      "priority": "P0",
+      "input": "Tìm phim trên Plex thôi",
+      "context": "Plex có cấu hình; còn các nguồn khác",
+      "expected": {
+        "domain": "media",
+        "intent": "find_to_watch",
+        "skills": [
+          "library.search"
+        ],
+        "source_policy": "Giới hạn Plex theo yêu cầu",
+        "response": "Danh sách phim Plex hoặc lỗi riêng Plex",
+        "assertions": [
+          "Không gọi Jellyfin/catalog/web",
+          "Không chuyển nguồn ngầm"
+        ]
+      },
+      "evidence": [
+        "A",
+        "F",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-003",
+      "group": "Tìm nội dung để xem",
+      "priority": "P0",
+      "input": "Trong Jellyfin có phim Dune không?",
+      "context": "Jellyfin có credentials",
+      "expected": {
+        "domain": "media",
+        "intent": "library_lookup",
+        "skills": [
+          "library.search"
+        ],
+        "source_policy": "Chỉ tra thư viện Jellyfin",
+        "response": "Có hoặc chưa có kèm phiên bản tìm được",
+        "assertions": [
+          "Không kết luận không có nếu nguồn lỗi"
+        ]
+      },
+      "evidence": [
+        "A",
+        "F",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-004",
+      "group": "Tìm nội dung để xem",
+      "priority": "P1",
+      "input": "Cho xem phim hành động của Thành Long",
+      "context": "Không có ngữ cảnh phim trước đó",
+      "expected": {
+        "domain": "media",
+        "intent": "find_to_watch",
+        "skills": [
+          "catalog.search",
+          "movie.metadata",
+          "library.search"
+        ],
+        "source_policy": "Lọc theo thể loại và người tham gia; đối chiếu metadata khi cần",
+        "response": "Danh sách đúng điều kiện",
+        "assertions": [
+          "Không coi tên diễn viên là tên phim"
+        ]
+      },
+      "evidence": [
+        "A",
+        "F",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-005",
+      "group": "Tìm nội dung để xem",
+      "priority": "P1",
+      "input": "Có phim nào xem dưới 90 phút không?",
+      "context": "Có metadata thời lượng",
+      "expected": {
+        "domain": "media",
+        "intent": "find_to_watch",
+        "skills": [
+          "library.search",
+          "catalog.search"
+        ],
+        "source_policy": "Nguồn hỗ trợ lọc hoặc chuẩn hóa thời lượng sau tìm",
+        "response": "Danh sách kèm thời lượng",
+        "assertions": [
+          "Không đưa phim thiếu dữ liệu như đã chắc chắn đạt điều kiện"
+        ]
+      },
+      "evidence": [
+        "A",
+        "F",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-006",
+      "group": "Tìm nội dung để xem",
+      "priority": "P1",
+      "input": "Tìm hoạt hình phù hợp cho bé 5 tuổi",
+      "context": "Profile trẻ em; có giới hạn nội dung",
+      "expected": {
+        "domain": "media",
+        "intent": "find_to_watch",
+        "skills": [
+          "catalog.search",
+          "movie.metadata"
+        ],
+        "source_policy": "Nguồn được phép trong profile",
+        "response": "Gợi ý có phân loại độ tuổi",
+        "assertions": [
+          "Không chỉ dựa từ khóa hoạt hình để đánh giá phù hợp"
+        ]
+      },
+      "evidence": [
+        "A",
+        "F",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-007",
+      "group": "Tìm nội dung để xem",
+      "priority": "P1",
+      "input": "Tìm bản thuyết minh tiếng Việt của phim này",
+      "context": "Đang xem chi tiết một title có ID",
+      "expected": {
+        "domain": "media",
+        "intent": "find_to_watch",
+        "skills": [
+          "catalog.search",
+          "library.search"
+        ],
+        "source_policy": "Tra các phiên bản của title đang chọn",
+        "response": "Các bản có audio phù hợp, ghi rõ nguồn",
+        "assertions": [
+          "Phân biệt thuyết minh với phụ đề"
+        ]
+      },
+      "evidence": [
+        "A",
+        "F",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-008",
+      "group": "Tìm nội dung để xem",
+      "priority": "P1",
+      "input": "Phim này có bản 4K không?",
+      "context": "Title đang chọn; client báo giới hạn codec",
+      "expected": {
+        "domain": "media",
+        "intent": "find_to_watch",
+        "skills": [
+          "catalog.search",
+          "library.search"
+        ],
+        "source_policy": "Tra phiên bản cùng title",
+        "response": "Chất lượng và khả năng phát trên thiết bị",
+        "assertions": [
+          "Không suy 4K từ tên phim",
+          "Không hứa phát được nếu codec chưa xác minh"
+        ]
+      },
+      "evidence": [
+        "A",
+        "F",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-009",
+      "group": "Tìm nội dung để xem",
+      "priority": "P0",
+      "input": "Tìm phim này trên tất cả nguồn đang dùng",
+      "context": "Title rõ; chỉ ba nguồn được cấu hình",
+      "expected": {
+        "domain": "media",
+        "intent": "find_to_watch",
+        "skills": [
+          "library.search",
+          "catalog.search",
+          "web.search"
+        ],
+        "source_policy": "Chỉ nguồn đã bật và khả dụng",
+        "response": "Mỗi nguồn có trạng thái riêng và kết quả tăng dần",
+        "assertions": [
+          "Không gọi nguồn thiếu cấu hình",
+          "Không đợi đủ nguồn mới hiển thị"
+        ]
+      },
+      "evidence": [
+        "A",
+        "F",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-010",
+      "group": "Tìm nội dung để xem",
+      "priority": "P1",
+      "input": "Tìm trailer chính thức của phim này",
+      "context": "Title và năm đã xác định",
+      "expected": {
+        "domain": "media",
+        "intent": "find_trailer",
+        "skills": [
+          "video.search",
+          "web.search"
+        ],
+        "source_policy": "YouTube/search; ưu tiên kênh nhà phát hành",
+        "response": "Danh sách trailer với xuất xứ",
+        "assertions": [
+          "Không trả phim đầy đủ thay trailer"
+        ]
+      },
+      "evidence": [
+        "A",
+        "F",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-011",
+      "group": "Thông tin phim và gợi ý",
+      "priority": "P0",
+      "input": "Ai đạo diễn Interstellar?",
+      "context": "Không có phiên phát",
+      "expected": {
+        "domain": "media",
+        "intent": "lookup",
+        "skills": [
+          "movie.metadata",
+          "web.search"
+        ],
+        "source_policy": "Metadata trước; web khi thiếu hoặc cần xác minh",
+        "response": "Tên đạo diễn có nguồn",
+        "assertions": [
+          "Không gọi Plex/*arr/resolver video"
+        ]
+      },
+      "evidence": [
+        "A",
+        "I",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-012",
+      "group": "Thông tin phim và gợi ý",
+      "priority": "P0",
+      "input": "Tìm thông tin về phim Interstellar",
+      "context": "Không có ý định phát",
+      "expected": {
+        "domain": "media",
+        "intent": "lookup",
+        "skills": [
+          "movie.metadata",
+          "web.search"
+        ],
+        "source_policy": "Metadata và thông tin bổ sung",
+        "response": "Tóm tắt ngắn, năm, người tham gia",
+        "assertions": [
+          "Không chuyển thành tìm nơi xem"
+        ]
+      },
+      "evidence": [
+        "A",
+        "I",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-013",
+      "group": "Thông tin phim và gợi ý",
+      "priority": "P1",
+      "input": "Diễn viên đang xuất hiện là ai?",
+      "context": "Chỉ biết title; không có dữ liệu cảnh hiện tại",
+      "expected": {
+        "domain": "media",
+        "intent": "identify_actor",
+        "skills": [
+          "movie.metadata"
+        ],
+        "source_policy": "Đối chiếu cast; hỏi ảnh/cảnh hoặc tên nhân vật khi thiếu",
+        "response": "Trả người đúng khi đủ bằng chứng, nếu không hỏi rõ",
+        "assertions": [
+          "Không đoán diễn viên theo vị trí phát khi không có mapping cảnh"
+        ]
+      },
+      "evidence": [
+        "A",
+        "I",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-014",
+      "group": "Thông tin phim và gợi ý",
+      "priority": "P1",
+      "input": "Phim này ra mắt năm nào?",
+      "context": "Title có ID trong context",
+      "expected": {
+        "domain": "media",
+        "intent": "lookup",
+        "skills": [
+          "movie.metadata"
+        ],
+        "source_policy": "Đúng title, phân biệt remake",
+        "response": "Năm phát hành cùng tên phiên bản",
+        "assertions": [
+          "Không dùng năm của bản cùng tên"
+        ]
+      },
+      "evidence": [
+        "A",
+        "I",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-015",
+      "group": "Thông tin phim và gợi ý",
+      "priority": "P1",
+      "input": "Phim này có mấy mùa?",
+      "context": "Đang chọn series",
+      "expected": {
+        "domain": "media",
+        "intent": "lookup",
+        "skills": [
+          "movie.metadata",
+          "catalog.detail"
+        ],
+        "source_policy": "Phân biệt số mùa phát hành và số mùa nguồn đang có",
+        "response": "Thông tin tổng và tính sẵn có",
+        "assertions": [
+          "Không coi số mùa trong thư viện là toàn bộ series"
+        ]
+      },
+      "evidence": [
+        "A",
+        "I",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-016",
+      "group": "Thông tin phim và gợi ý",
+      "priority": "P1",
+      "input": "Tóm tắt phim này nhưng đừng spoil",
+      "context": "Title rõ",
+      "expected": {
+        "domain": "media",
+        "intent": "summarize",
+        "skills": [
+          "movie.metadata",
+          "answer.compose"
+        ],
+        "source_policy": "Synopsis không tiết lộ kết thúc",
+        "response": "Tóm tắt không spoiler",
+        "assertions": [
+          "Không gọi playback",
+          "Không tiết lộ twist"
+        ]
+      },
+      "evidence": [
+        "A",
+        "I",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-017",
+      "group": "Thông tin phim và gợi ý",
+      "priority": "P1",
+      "input": "Phim này được đánh giá thế nào?",
+      "context": "Title rõ; rating nguồn có thể khác nhau",
+      "expected": {
+        "domain": "media",
+        "intent": "review",
+        "skills": [
+          "movie.metadata",
+          "web.search"
+        ],
+        "source_policy": "Tách điểm từng nguồn và nhận xét có dẫn chứng",
+        "response": "Điểm kèm thang điểm, nguồn, nhận xét",
+        "assertions": [
+          "Không bịa điểm",
+          "Không gộp thang điểm khác nhau thành một số"
+        ]
+      },
+      "evidence": [
+        "A",
+        "I",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-018",
+      "group": "Thông tin phim và gợi ý",
+      "priority": "P1",
+      "input": "Gợi ý phim giống Interstellar",
+      "context": "Không có profile lịch sử",
+      "expected": {
+        "domain": "media",
+        "intent": "recommend",
+        "skills": [
+          "movie.metadata",
+          "catalog.search"
+        ],
+        "source_policy": "Đối chiếu chủ đề, thể loại; không cần đọc lịch sử nếu không có quyền",
+        "response": "Gợi ý kèm lý do và tùy chọn tìm nơi xem",
+        "assertions": [
+          "Không tự phát",
+          "Không giả đã biết sở thích cá nhân"
+        ]
+      },
+      "evidence": [
+        "A",
+        "I",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-019",
+      "group": "Thông tin phim và gợi ý",
+      "priority": "P1",
+      "input": "Tối nay có gì hay để xem?",
+      "context": "Profile có lịch sử được phép dùng",
+      "expected": {
+        "domain": "media",
+        "intent": "recommend",
+        "skills": [
+          "history.read",
+          "library.search",
+          "catalog.search"
+        ],
+        "source_policy": "Ưu tiên nội dung sẵn có và chưa xem theo profile",
+        "response": "Một số gợi ý có lý do",
+        "assertions": [
+          "Không dùng lịch sử của profile khác"
+        ]
+      },
+      "evidence": [
+        "A",
+        "I",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-020",
+      "group": "Thông tin phim và gợi ý",
+      "priority": "P1",
+      "input": "Phim Dune bản nào vậy?",
+      "context": "Có hai kết quả cùng tên khác năm",
+      "expected": {
+        "domain": "media",
+        "intent": "clarify_title",
+        "skills": [
+          "movie.metadata"
+        ],
+        "source_policy": "Giữ các ứng viên cùng tên",
+        "response": "Cho chọn theo năm/poster/đạo diễn",
+        "assertions": [
+          "Không chọn ngầm một bản"
+        ]
+      },
+      "evidence": [
+        "A",
+        "I",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-021",
+      "group": "Series, tập và tiếp tục xem",
+      "priority": "P0",
+      "input": "Mở mùa 2 tập 3 của bộ này",
+      "context": "Đang chọn series có ID",
+      "expected": {
+        "domain": "media",
+        "intent": "play_episode",
+        "skills": [
+          "catalog.detail",
+          "episode.resolve",
+          "player.open"
+        ],
+        "source_policy": "Nguồn đang chọn, tra ID tập ổn định",
+        "response": "Phát đúng tập bằng player native",
+        "assertions": [
+          "Không suy tập bằng nối URL"
+        ]
+      },
+      "evidence": [
+        "P",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-022",
+      "group": "Series, tập và tiếp tục xem",
+      "priority": "P0",
+      "input": "Mở danh sách tập",
+      "context": "Đang xem chi tiết series",
+      "expected": {
+        "domain": "media",
+        "intent": "browse_episodes",
+        "skills": [
+          "catalog.detail"
+        ],
+        "source_policy": "Nguồn/title đang chọn",
+        "response": "Danh sách mùa/tập điều hướng bằng remote",
+        "assertions": [
+          "Không tải trước stream của tất cả tập"
+        ]
+      },
+      "evidence": [
+        "P",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-023",
+      "group": "Series, tập và tiếp tục xem",
+      "priority": "P0",
+      "input": "Xem tiếp phim hôm qua",
+      "context": "Profile có hai nội dung xem dở hôm qua",
+      "expected": {
+        "domain": "media",
+        "intent": "resume",
+        "skills": [
+          "history.read"
+        ],
+        "source_policy": "Lịch sử đúng profile",
+        "response": "Cho chọn hai mục; tiếp tục vị trí đã lưu sau lựa chọn",
+        "assertions": [
+          "Không tự chọn khi mơ hồ"
+        ]
+      },
+      "evidence": [
+        "P",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-024",
+      "group": "Series, tập và tiếp tục xem",
+      "priority": "P0",
+      "input": "Phát tập tiếp theo",
+      "context": "Đang phát tập có next ID",
+      "expected": {
+        "domain": "media",
+        "intent": "next_episode",
+        "skills": [
+          "history.read",
+          "catalog.detail",
+          "episode.resolve",
+          "player.open"
+        ],
+        "source_policy": "Queue series đang hoạt động",
+        "response": "Resolve tập kế tiếp lúc cần",
+        "assertions": [
+          "Không dùng lại URL stream tập cũ"
+        ]
+      },
+      "evidence": [
+        "P",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-025",
+      "group": "Series, tập và tiếp tục xem",
+      "priority": "P0",
+      "input": "Quay lại tập trước",
+      "context": "Đang phát tập 4",
+      "expected": {
+        "domain": "media",
+        "intent": "previous_episode",
+        "skills": [
+          "catalog.detail",
+          "episode.resolve",
+          "player.open"
+        ],
+        "source_policy": "Thứ tự episode của nguồn",
+        "response": "Phát tập đứng trước trong thứ tự nguồn",
+        "assertions": [
+          "Không trừ ID hay ép số tập liên tục"
+        ]
+      },
+      "evidence": [
+        "P",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-026",
+      "group": "Series, tập và tiếp tục xem",
+      "priority": "P1",
+      "input": "Mở tập đặc biệt Tết",
+      "context": "Nguồn có tên tập đặc biệt, không có số mùa chuẩn",
+      "expected": {
+        "domain": "media",
+        "intent": "play_episode",
+        "skills": [
+          "catalog.detail",
+          "episode.resolve",
+          "player.open"
+        ],
+        "source_policy": "Giữ label và source ID",
+        "response": "Chọn đúng tập đặc biệt",
+        "assertions": [
+          "Không ép thành season 1 episode 0"
+        ]
+      },
+      "evidence": [
+        "P",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-027",
+      "group": "Series, tập và tiếp tục xem",
+      "priority": "P0",
+      "input": "Xem lại từ đầu",
+      "context": "Đang ở màn chi tiết một tập có tiến độ",
+      "expected": {
+        "domain": "media",
+        "intent": "restart",
+        "skills": [
+          "player.open",
+          "history.write"
+        ],
+        "source_policy": "Tập đang chọn",
+        "response": "Phát từ vị trí 0 sau hành động rõ ràng",
+        "assertions": [
+          "Không xóa lịch sử toàn series"
+        ]
+      },
+      "evidence": [
+        "P",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-028",
+      "group": "Series, tập và tiếp tục xem",
+      "priority": "P1",
+      "input": "Đánh dấu tập này đã xem",
+      "context": "Đang chọn một tập",
+      "expected": {
+        "domain": "media",
+        "intent": "mark_watched",
+        "skills": [
+          "history.write"
+        ],
+        "source_policy": "Episode ID và profile hiện tại",
+        "response": "Cập nhật trạng thái một tập",
+        "assertions": [
+          "Không đánh dấu cả mùa"
+        ]
+      },
+      "evidence": [
+        "P",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-029",
+      "group": "Series, tập và tiếp tục xem",
+      "priority": "P1",
+      "input": "Có tập mới chưa?",
+      "context": "Context là series đang theo dõi",
+      "expected": {
+        "domain": "media",
+        "intent": "check_new_episodes",
+        "skills": [
+          "catalog.detail",
+          "history.read"
+        ],
+        "source_policy": "So tập nguồn đang có với tiến độ profile",
+        "response": "Tập mới kèm trạng thái sẵn có",
+        "assertions": [
+          "Không coi lịch phát tương lai là tập đã xem được"
+        ]
+      },
+      "evidence": [
+        "P",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-030",
+      "group": "Series, tập và tiếp tục xem",
+      "priority": "P0",
+      "input": "Chuyển tập sau tập cuối",
+      "context": "Đã đến tập cuối hiện có",
+      "expected": {
+        "domain": "media",
+        "intent": "next_episode",
+        "skills": [
+          "catalog.detail"
+        ],
+        "source_policy": "Kiểm tra nguồn trước khi chuyển",
+        "response": "Thông báo đã hết tập; cho quay về series",
+        "assertions": [
+          "Không lặp vô hạn hoặc phát title khác"
+        ]
+      },
+      "evidence": [
+        "P",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-031",
+      "group": "Điều khiển phát và ngôn ngữ",
+      "priority": "P0",
+      "input": "Tạm dừng",
+      "context": "Có media session hoạt động",
+      "expected": {
+        "domain": "playback",
+        "intent": "pause",
+        "skills": [
+          "player.control"
+        ],
+        "source_policy": "Client đang phát",
+        "response": "Pause và báo trạng thái thực tế",
+        "assertions": [
+          "Không tìm phim tên Tạm dừng"
+        ]
+      },
+      "evidence": [
+        "F",
+        "S",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-032",
+      "group": "Điều khiển phát và ngôn ngữ",
+      "priority": "P0",
+      "input": "Phát tiếp",
+      "context": "Một session đang paused",
+      "expected": {
+        "domain": "playback",
+        "intent": "resume",
+        "skills": [
+          "player.control"
+        ],
+        "source_policy": "Session hiện tại",
+        "response": "Tiếp tục phiên hiện tại",
+        "assertions": [
+          "Không khởi động một video mới"
+        ]
+      },
+      "evidence": [
+        "F",
+        "S",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-033",
+      "group": "Điều khiển phát và ngôn ngữ",
+      "priority": "P0",
+      "input": "Tua tới phút 20",
+      "context": "Video có duration và hỗ trợ seek",
+      "expected": {
+        "domain": "playback",
+        "intent": "seek",
+        "skills": [
+          "player.control"
+        ],
+        "source_policy": "Session hiện tại",
+        "response": "Seek đến 1200 giây",
+        "assertions": [
+          "Không cộng thêm 20 phút vào vị trí hiện tại"
+        ]
+      },
+      "evidence": [
+        "F",
+        "S",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-034",
+      "group": "Điều khiển phát và ngôn ngữ",
+      "priority": "P0",
+      "input": "Lùi lại 15 giây",
+      "context": "Vị trí hiện tại là 8 giây",
+      "expected": {
+        "domain": "playback",
+        "intent": "seek_relative",
+        "skills": [
+          "player.control"
+        ],
+        "source_policy": "Session hiện tại",
+        "response": "Seek về 0 giây",
+        "assertions": [
+          "Không gửi timestamp âm"
+        ]
+      },
+      "evidence": [
+        "F",
+        "S",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-035",
+      "group": "Điều khiển phát và ngôn ngữ",
+      "priority": "P1",
+      "input": "Chuyển tới một tiếng hai mươi phút",
+      "context": "Video dài hơn 80 phút",
+      "expected": {
+        "domain": "playback",
+        "intent": "seek",
+        "skills": [
+          "player.control"
+        ],
+        "source_policy": "Session hiện tại",
+        "response": "Seek đến 4800 giây",
+        "assertions": [
+          "Parse đơn vị tiếng/phút đúng"
+        ]
+      },
+      "evidence": [
+        "F",
+        "S",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-036",
+      "group": "Điều khiển phát và ngôn ngữ",
+      "priority": "P0",
+      "input": "Bật phụ đề tiếng Việt",
+      "context": "Session có nhiều subtitle track",
+      "expected": {
+        "domain": "playback",
+        "intent": "set_subtitle",
+        "skills": [
+          "player.tracks"
+        ],
+        "source_policy": "Track session hiện tại",
+        "response": "Chọn vi; nếu thiếu thì báo không có",
+        "assertions": [
+          "Không tải hoặc thay track ngôn ngữ khác ngầm"
+        ]
+      },
+      "evidence": [
+        "F",
+        "S",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-037",
+      "group": "Điều khiển phát và ngôn ngữ",
+      "priority": "P0",
+      "input": "Tắt phụ đề",
+      "context": "Phụ đề đang bật",
+      "expected": {
+        "domain": "playback",
+        "intent": "set_subtitle",
+        "skills": [
+          "player.tracks"
+        ],
+        "source_policy": "Session hiện tại",
+        "response": "Tắt subtitle thực tế",
+        "assertions": [
+          "Không thay audio"
+        ]
+      },
+      "evidence": [
+        "F",
+        "S",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-038",
+      "group": "Điều khiển phát và ngôn ngữ",
+      "priority": "P1",
+      "input": "Đổi sang tiếng gốc",
+      "context": "Có metadata original language và audio tracks",
+      "expected": {
+        "domain": "playback",
+        "intent": "set_audio",
+        "skills": [
+          "player.tracks"
+        ],
+        "source_policy": "Track session; hỏi lại nếu không xác định bản gốc",
+        "response": "Đổi audio đúng ngôn ngữ",
+        "assertions": [
+          "Không tự coi tiếng Anh luôn là tiếng gốc"
+        ]
+      },
+      "evidence": [
+        "F",
+        "S",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-039",
+      "group": "Điều khiển phát và ngôn ngữ",
+      "priority": "P1",
+      "input": "Họ vừa nói gì vậy?",
+      "context": "Session hỗ trợ seek và subtitle",
+      "expected": {
+        "domain": "playback",
+        "intent": "replay_dialogue",
+        "skills": [
+          "player.control",
+          "player.tracks"
+        ],
+        "source_policy": "Session hiện tại",
+        "response": "Lùi đoạn ngắn; bật phụ đề tạm nếu hỗ trợ rồi khôi phục",
+        "assertions": [
+          "Báo giới hạn nếu player ngoài không cho điều khiển"
+        ]
+      },
+      "evidence": [
+        "F",
+        "S",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-040",
+      "group": "Điều khiển phát và ngôn ngữ",
+      "priority": "P1",
+      "input": "Chuyển xuống 720p cho đỡ giật",
+      "context": "Nguồn có rendition 720p; đang phát",
+      "expected": {
+        "domain": "playback",
+        "intent": "set_quality",
+        "skills": [
+          "player.quality"
+        ],
+        "source_policy": "Session/manifest hiện tại",
+        "response": "Đổi rendition và giữ tiến độ khi khả thi",
+        "assertions": [
+          "Không tải trang WebView",
+          "Không hứa có 720p khi nguồn không cấp"
+        ]
+      },
+      "evidence": [
+        "F",
+        "S",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-041",
+      "group": "YouTube, âm nhạc và truyền hình",
+      "priority": "P0",
+      "input": "Mở nhạc Sơn Tùng trên YouTube",
+      "context": "YouTube đã cài; provider search được cấu hình",
+      "expected": {
+        "domain": "media",
+        "intent": "find_music",
+        "skills": [
+          "video.search",
+          "app.open"
+        ],
+        "source_policy": "Giới hạn YouTube; phân biệt ca sĩ và bài hát",
+        "response": "Kết quả phù hợp hoặc mở đúng nội dung theo yêu cầu",
+        "assertions": [
+          "Không gọi catalog phim"
+        ]
+      },
+      "evidence": [
+        "G",
+        "F",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-042",
+      "group": "YouTube, âm nhạc và truyền hình",
+      "priority": "P1",
+      "input": "Phát bài Nơi này có anh",
+      "context": "Không chỉ định dịch vụ; có nhiều provider",
+      "expected": {
+        "domain": "media",
+        "intent": "play_music",
+        "skills": [
+          "music.search",
+          "player.open"
+        ],
+        "source_policy": "Provider nhạc được cấu hình và quyền nội dung",
+        "response": "Chọn bài đúng; hỏi provider nếu chưa có mặc định",
+        "assertions": [
+          "Không phát bản cover tùy ý khi kết quả mơ hồ"
+        ]
+      },
+      "evidence": [
+        "G",
+        "F",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-043",
+      "group": "YouTube, âm nhạc và truyền hình",
+      "priority": "P1",
+      "input": "Cho nghe nhạc không lời để ngủ",
+      "context": "Có provider hỗ trợ playlist",
+      "expected": {
+        "domain": "media",
+        "intent": "find_music",
+        "skills": [
+          "music.search"
+        ],
+        "source_policy": "Provider nhạc khả dụng",
+        "response": "Playlist phù hợp và tùy chọn phát",
+        "assertions": [
+          "Không suy ra người dùng cho phép đặt timer"
+        ]
+      },
+      "evidence": [
+        "G",
+        "F",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-044",
+      "group": "YouTube, âm nhạc và truyền hình",
+      "priority": "P1",
+      "input": "Mở karaoke bài này",
+      "context": "Đang chọn một bài hát rõ",
+      "expected": {
+        "domain": "media",
+        "intent": "find_karaoke",
+        "skills": [
+          "video.search"
+        ],
+        "source_policy": "Tìm bản karaoke theo title/người thể hiện",
+        "response": "Kết quả karaoke đúng bài",
+        "assertions": [
+          "Không coi bản có vocal là karaoke chỉ vì cùng title"
+        ]
+      },
+      "evidence": [
+        "G",
+        "F",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-045",
+      "group": "YouTube, âm nhạc và truyền hình",
+      "priority": "P0",
+      "input": "Phát video hướng dẫn nấu phở",
+      "context": "Ý định xem hướng dẫn, không phải tìm công thức chữ",
+      "expected": {
+        "domain": "media",
+        "intent": "find_video",
+        "skills": [
+          "video.search",
+          "web.search"
+        ],
+        "source_policy": "Video search và web hỗ trợ lọc video",
+        "response": "Video có tiêu đề và nguồn",
+        "assertions": [
+          "Không gọi Plex/*arr chỉ vì yêu cầu có chữ phát"
+        ]
+      },
+      "evidence": [
+        "G",
+        "F",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-046",
+      "group": "YouTube, âm nhạc và truyền hình",
+      "priority": "P0",
+      "input": "Chỉ tôi cách nấu phở",
+      "context": "Không yêu cầu video",
+      "expected": {
+        "domain": "general",
+        "intent": "how_to",
+        "skills": [
+          "web.search",
+          "page.extract",
+          "answer.compose"
+        ],
+        "source_policy": "Nguồn công thức; đọc trang chọn lọc",
+        "response": "Hướng dẫn ngắn kèm nguồn và tùy chọn tìm video",
+        "assertions": [
+          "Không tự mở YouTube"
+        ]
+      },
+      "evidence": [
+        "G",
+        "F",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-047",
+      "group": "YouTube, âm nhạc và truyền hình",
+      "priority": "P0",
+      "input": "Mở VTV1",
+      "context": "Có channel registry được cấu hình",
+      "expected": {
+        "domain": "live_tv",
+        "intent": "play_channel",
+        "skills": [
+          "channel.lookup",
+          "player.open"
+        ],
+        "source_policy": "Registry kênh hợp lệ của người dùng",
+        "response": "Phát đúng kênh hoặc báo chưa cấu hình",
+        "assertions": [
+          "Không tìm stream tùy ý trên web thay kênh được phép"
+        ]
+      },
+      "evidence": [
+        "G",
+        "F",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-048",
+      "group": "YouTube, âm nhạc và truyền hình",
+      "priority": "P1",
+      "input": "Lịch chiếu VTV3 tối nay",
+      "context": "Có EPG; timezone người dùng",
+      "expected": {
+        "domain": "live_tv",
+        "intent": "schedule",
+        "skills": [
+          "epg.lookup"
+        ],
+        "source_policy": "EPG kênh đúng ngày địa phương",
+        "response": "Danh sách giờ và chương trình",
+        "assertions": [
+          "Không trả lịch cũ từ cache ngoài ngày"
+        ]
+      },
+      "evidence": [
+        "G",
+        "F",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-049",
+      "group": "YouTube, âm nhạc và truyền hình",
+      "priority": "P1",
+      "input": "Trận Việt Nam tối nay xem ở đâu?",
+      "context": "Đội và môn còn mơ hồ; chưa biết giải",
+      "expected": {
+        "domain": "sports",
+        "intent": "find_broadcast",
+        "skills": [
+          "sports.lookup",
+          "web.search"
+        ],
+        "source_policy": "Làm rõ trận rồi tìm đơn vị phát có quyền tại vùng",
+        "response": "Giờ đấu và nơi xem có nguồn",
+        "assertions": [
+          "Không bịa link trực tiếp hoặc khẳng định quyền phát"
+        ]
+      },
+      "evidence": [
+        "G",
+        "F",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-050",
+      "group": "YouTube, âm nhạc và truyền hình",
+      "priority": "P1",
+      "input": "Tìm video mới nhất của kênh này",
+      "context": "Đang chọn channel ID trên YouTube",
+      "expected": {
+        "domain": "media",
+        "intent": "find_video",
+        "skills": [
+          "video.search"
+        ],
+        "source_policy": "Theo channel ID và thứ tự ngày công bố",
+        "response": "Các video mới kèm ngày",
+        "assertions": [
+          "Không dùng relevance thay cho newest"
+        ]
+      },
+      "evidence": [
+        "G",
+        "F",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-051",
+      "group": "Ứng dụng, remote và thiết bị TV",
+      "priority": "P0",
+      "input": "Mở YouTube",
+      "context": "Ứng dụng được cài trên TV hiện tại",
+      "expected": {
+        "domain": "device",
+        "intent": "open_app",
+        "skills": [
+          "app.open"
+        ],
+        "source_policy": "Inventory ứng dụng client hiện tại",
+        "response": "Mở đúng package và báo kết quả",
+        "assertions": [
+          "Không tìm kiếm video nếu chỉ yêu cầu mở app"
+        ]
+      },
+      "evidence": [
+        "N",
+        "F",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-052",
+      "group": "Ứng dụng, remote và thiết bị TV",
+      "priority": "P0",
+      "input": "Về màn hình chính",
+      "context": "Đang ở app khác",
+      "expected": {
+        "domain": "device",
+        "intent": "navigate_home",
+        "skills": [
+          "navigation.control"
+        ],
+        "source_policy": "Client nhận lệnh",
+        "response": "Về launcher/home",
+        "assertions": [
+          "Không mở trang web có chữ home"
+        ]
+      },
+      "evidence": [
+        "N",
+        "F",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-053",
+      "group": "Ứng dụng, remote và thiết bị TV",
+      "priority": "P0",
+      "input": "Quay lại",
+      "context": "Đang ở màn chi tiết sau kết quả tìm kiếm",
+      "expected": {
+        "domain": "device",
+        "intent": "navigate_back",
+        "skills": [
+          "navigation.control"
+        ],
+        "source_policy": "Stack màn hình hiện tại",
+        "response": "Về danh sách và giữ focus item cũ",
+        "assertions": [
+          "Không hủy toàn bộ hội thoại"
+        ]
+      },
+      "evidence": [
+        "N",
+        "F",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-054",
+      "group": "Ứng dụng, remote và thiết bị TV",
+      "priority": "P0",
+      "input": "Chọn kết quả thứ hai",
+      "context": "Danh sách đã hiển thị có ID và thứ tự ổn định",
+      "expected": {
+        "domain": "device",
+        "intent": "select_result",
+        "skills": [
+          "navigation.select"
+        ],
+        "source_policy": "Snapshot danh sách người dùng đang thấy",
+        "response": "Chọn item thứ hai của snapshot đó",
+        "assertions": [
+          "Không đổi chỉ số khi kết quả nguồn chậm chèn thêm"
+        ]
+      },
+      "evidence": [
+        "N",
+        "F",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-055",
+      "group": "Ứng dụng, remote và thiết bị TV",
+      "priority": "P0",
+      "input": "Tăng âm lượng một chút",
+      "context": "Client có volume capability",
+      "expected": {
+        "domain": "device",
+        "intent": "adjust_volume",
+        "skills": [
+          "device.volume"
+        ],
+        "source_policy": "TV/session nhận lệnh",
+        "response": "Tăng một bước theo policy thiết bị",
+        "assertions": [
+          "Không tự set 100 phần trăm"
+        ]
+      },
+      "evidence": [
+        "N",
+        "F",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-056",
+      "group": "Ứng dụng, remote và thiết bị TV",
+      "priority": "P0",
+      "input": "Đặt âm lượng 30 phần trăm",
+      "context": "Thiết bị hỗ trợ volume theo tỷ lệ",
+      "expected": {
+        "domain": "device",
+        "intent": "set_volume",
+        "skills": [
+          "device.volume"
+        ],
+        "source_policy": "Client hiện tại",
+        "response": "Set 30 phần trăm hoặc báo không hỗ trợ trị tuyệt đối",
+        "assertions": [
+          "Không nhầm mức 30 thang nội bộ với 30 phần trăm"
+        ]
+      },
+      "evidence": [
+        "N",
+        "F",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-057",
+      "group": "Ứng dụng, remote và thiết bị TV",
+      "priority": "P0",
+      "input": "Tắt tiếng",
+      "context": "Có thiết bị audio đang điều khiển",
+      "expected": {
+        "domain": "device",
+        "intent": "mute",
+        "skills": [
+          "device.volume"
+        ],
+        "source_policy": "Audio target hiện tại",
+        "response": "Mute và xác nhận từ kết quả tool",
+        "assertions": [
+          "Không tuyên bố đã mute khi tool lỗi"
+        ]
+      },
+      "evidence": [
+        "N",
+        "F",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-058",
+      "group": "Ứng dụng, remote và thiết bị TV",
+      "priority": "P1",
+      "input": "Chuyển sang HDMI 2",
+      "context": "TV có capability input switching",
+      "expected": {
+        "domain": "device",
+        "intent": "set_input",
+        "skills": [
+          "device.input"
+        ],
+        "source_policy": "TV được ghép cặp; không phải server host",
+        "response": "Đổi input hoặc báo giới hạn",
+        "assertions": [
+          "Không chạy lệnh trên máy server thay TV"
+        ]
+      },
+      "evidence": [
+        "N",
+        "F",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-059",
+      "group": "Ứng dụng, remote và thiết bị TV",
+      "priority": "P0",
+      "input": "Tắt TV sau 30 phút",
+      "context": "TV hỗ trợ timer hoặc automation được cấu hình",
+      "expected": {
+        "domain": "device",
+        "intent": "schedule_power_off",
+        "skills": [
+          "timer.schedule",
+          "device.power"
+        ],
+        "source_policy": "Đúng TV, timezone không ảnh hưởng duration",
+        "response": "Hiện giờ dự kiến tắt và cho hủy",
+        "assertions": [
+          "Không tắt ngay"
+        ]
+      },
+      "evidence": [
+        "N",
+        "F",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-060",
+      "group": "Ứng dụng, remote và thiết bị TV",
+      "priority": "P1",
+      "input": "Mở chữ to hơn",
+      "context": "Đang ở UI launcher; có cài đặt font scale",
+      "expected": {
+        "domain": "device",
+        "intent": "accessibility_settings",
+        "skills": [
+          "settings.open"
+        ],
+        "source_policy": "Cài đặt UI được kiểm soát",
+        "response": "Mở/chỉnh đúng setting; vẫn điều hướng D-pad",
+        "assertions": [
+          "Không đổi độ phân giải video"
+        ]
+      },
+      "evidence": [
+        "N",
+        "F",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-061",
+      "group": "Tra cứu internet ngoài media",
+      "priority": "P0",
+      "input": "Thời tiết hôm nay ở Đà Nẵng",
+      "context": "Địa điểm đã rõ",
+      "expected": {
+        "domain": "general",
+        "intent": "weather",
+        "skills": [
+          "weather.lookup"
+        ],
+        "source_policy": "Provider thời tiết, không catalog media",
+        "response": "Dự báo theo giờ địa phương và thời điểm dữ liệu",
+        "assertions": [
+          "Không dùng vị trí IP server thay địa điểm đã nói"
+        ]
+      },
+      "evidence": [
+        "G",
+        "I",
+        "W",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-062",
+      "group": "Tra cứu internet ngoài media",
+      "priority": "P1",
+      "input": "Ngày mai có mưa không?",
+      "context": "Chưa có vị trí được cấp quyền hoặc lưu trong context",
+      "expected": {
+        "domain": "general",
+        "intent": "weather",
+        "skills": [
+          "weather.lookup"
+        ],
+        "source_policy": "Hỏi vị trí trước khi gọi provider",
+        "response": "Câu hỏi ngắn cần địa điểm",
+        "assertions": [
+          "Không đoán vị trí từ tên server"
+        ]
+      },
+      "evidence": [
+        "G",
+        "I",
+        "W",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-063",
+      "group": "Tra cứu internet ngoài media",
+      "priority": "P1",
+      "input": "Tóm tắt tin chính hôm nay",
+      "context": "Ngôn ngữ vi; timezone người dùng",
+      "expected": {
+        "domain": "general",
+        "intent": "news",
+        "skills": [
+          "news.search",
+          "page.extract",
+          "answer.compose"
+        ],
+        "source_policy": "Nguồn tin có ngày; đọc chọn lọc và đối chiếu",
+        "response": "Các mục ngắn có nguồn/thời điểm",
+        "assertions": [
+          "Không trình bày tin cũ là sự kiện hôm nay"
+        ]
+      },
+      "evidence": [
+        "G",
+        "I",
+        "W",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-064",
+      "group": "Tra cứu internet ngoài media",
+      "priority": "P1",
+      "input": "Đội tuyển Việt Nam đá mấy giờ?",
+      "context": "Chưa biết đội nam/nữ và giải; có nhiều lịch",
+      "expected": {
+        "domain": "sports",
+        "intent": "schedule",
+        "skills": [
+          "sports.lookup"
+        ],
+        "source_policy": "Làm rõ đội/giải khi nhiều ứng viên",
+        "response": "Giờ địa phương cùng ngày và giải",
+        "assertions": [
+          "Không suy ra trận đã kết thúc từ kết quả search cũ"
+        ]
+      },
+      "evidence": [
+        "G",
+        "I",
+        "W",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-065",
+      "group": "Tra cứu internet ngoài media",
+      "priority": "P1",
+      "input": "Kết quả trận vừa rồi là bao nhiêu?",
+      "context": "Context có match ID",
+      "expected": {
+        "domain": "sports",
+        "intent": "score",
+        "skills": [
+          "sports.lookup"
+        ],
+        "source_policy": "Dữ liệu trận hiện tại có timestamp",
+        "response": "Tỷ số và trạng thái live/final",
+        "assertions": [
+          "Không gọi trạng thái đang đá là chung cuộc"
+        ]
+      },
+      "evidence": [
+        "G",
+        "I",
+        "W",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-066",
+      "group": "Tra cứu internet ngoài media",
+      "priority": "P0",
+      "input": "Dolby Vision là gì?",
+      "context": "Không có ý định mở video",
+      "expected": {
+        "domain": "technical",
+        "intent": "lookup",
+        "skills": [
+          "documentation.search",
+          "web.search",
+          "answer.compose"
+        ],
+        "source_policy": "Tài liệu chính thức/nguồn kỹ thuật",
+        "response": "Giải thích ngắn dễ đọc trên TV",
+        "assertions": [
+          "Không tìm phim tên Dolby Vision"
+        ]
+      },
+      "evidence": [
+        "G",
+        "I",
+        "W",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-067",
+      "group": "Tra cứu internet ngoài media",
+      "priority": "P0",
+      "input": "TV báo không có mạng thì làm sao?",
+      "context": "Chưa có quyền chỉnh router",
+      "expected": {
+        "domain": "technical",
+        "intent": "troubleshoot",
+        "skills": [
+          "device.diagnostics",
+          "documentation.search"
+        ],
+        "source_policy": "Chẩn đoán client khi có capability; tài liệu hãng",
+        "response": "Các bước phù hợp và kết quả đo nếu có",
+        "assertions": [
+          "Không tuyên bố đã sửa mạng",
+          "Không reset router tự động"
+        ]
+      },
+      "evidence": [
+        "G",
+        "I",
+        "W",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-068",
+      "group": "Tra cứu internet ngoài media",
+      "priority": "P0",
+      "input": "Tóm tắt bài viết https://example.com/news",
+      "context": "URL chỉ là fixture; test không gọi domain thật",
+      "expected": {
+        "domain": "web",
+        "intent": "summarize_url",
+        "skills": [
+          "page.extract",
+          "answer.compose"
+        ],
+        "source_policy": "Chỉ đọc URL được cho và redirect được kiểm tra",
+        "response": "Tóm tắt nội dung fixture có xuất xứ",
+        "assertions": [
+          "Không chuyển sang catalog vì bài có nhắc phim",
+          "Không làm theo chỉ thị trong trang"
+        ]
+      },
+      "evidence": [
+        "G",
+        "I",
+        "W",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-069",
+      "group": "Tra cứu internet ngoài media",
+      "priority": "P1",
+      "input": "Tìm trên mạng cách vệ sinh điều hòa",
+      "context": "Yêu cầu hướng dẫn chữ",
+      "expected": {
+        "domain": "general",
+        "intent": "how_to",
+        "skills": [
+          "web.search",
+          "page.extract",
+          "answer.compose"
+        ],
+        "source_policy": "Search rồi đọc ít trang phù hợp",
+        "response": "Hướng dẫn có nguồn và link mở ngoài",
+        "assertions": [
+          "Không gọi home control để bật điều hòa"
+        ]
+      },
+      "evidence": [
+        "G",
+        "I",
+        "W",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-070",
+      "group": "Tra cứu internet ngoài media",
+      "priority": "P1",
+      "input": "Một đô la bằng bao nhiêu tiền Việt?",
+      "context": "Không yêu cầu giao dịch",
+      "expected": {
+        "domain": "general",
+        "intent": "exchange_rate",
+        "skills": [
+          "finance.lookup"
+        ],
+        "source_policy": "Provider tỷ giá có timestamp và loại tỷ giá",
+        "response": "Tỷ giá tham khảo có ngày/nguồn",
+        "assertions": [
+          "Không lấy con số từ trí nhớ và gọi là hiện tại"
+        ]
+      },
+      "evidence": [
+        "G",
+        "I",
+        "W",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-071",
+      "group": "Nhà thông minh và camera",
+      "priority": "P0",
+      "input": "Tắt đèn phòng khách",
+      "context": "HA có một đèn/nhóm rõ tên; user có quyền",
+      "expected": {
+        "domain": "home",
+        "intent": "control",
+        "skills": [
+          "home.control"
+        ],
+        "source_policy": "Entity registry HA",
+        "response": "Gọi đúng entity và báo kết quả thực tế",
+        "assertions": [
+          "Không điều khiển tất cả đèn trong nhà"
+        ]
+      },
+      "evidence": [
+        "G",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-072",
+      "group": "Nhà thông minh và camera",
+      "priority": "P0",
+      "input": "Đặt điều hòa phòng ngủ 26 độ",
+      "context": "Climate entity hỗ trợ Celsius",
+      "expected": {
+        "domain": "home",
+        "intent": "set_temperature",
+        "skills": [
+          "home.control"
+        ],
+        "source_policy": "HA climate đúng phòng",
+        "response": "Set nhiệt độ đúng đơn vị",
+        "assertions": [
+          "Không đổi chế độ ngoài yêu cầu"
+        ]
+      },
+      "evidence": [
+        "G",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-073",
+      "group": "Nhà thông minh và camera",
+      "priority": "P1",
+      "input": "Mở rèm một nửa",
+      "context": "Cover entity hỗ trợ position",
+      "expected": {
+        "domain": "home",
+        "intent": "set_position",
+        "skills": [
+          "home.control"
+        ],
+        "source_policy": "HA cover được chọn",
+        "response": "Set vị trí mở 50 phần trăm theo convention integration",
+        "assertions": [
+          "Không đảo phần trăm đóng/mở"
+        ]
+      },
+      "evidence": [
+        "G",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-074",
+      "group": "Nhà thông minh và camera",
+      "priority": "P0",
+      "input": "Mở camera trước cửa",
+      "context": "Camera được cấu hình và user có quyền",
+      "expected": {
+        "domain": "camera",
+        "intent": "view",
+        "skills": [
+          "camera.view"
+        ],
+        "source_policy": "Registry camera",
+        "response": "Hiện stream theo capability client",
+        "assertions": [
+          "Không lấy camera bất kỳ theo từ cửa"
+        ]
+      },
+      "evidence": [
+        "G",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-075",
+      "group": "Nhà thông minh và camera",
+      "priority": "P1",
+      "input": "Ai đang ở cửa?",
+      "context": "Có camera và nhận diện không xác định danh tính",
+      "expected": {
+        "domain": "camera",
+        "intent": "describe_scene",
+        "skills": [
+          "camera.snapshot",
+          "vision.describe"
+        ],
+        "source_policy": "Camera cửa được phép xem",
+        "response": "Mô tả người/sự kiện nhìn thấy, nêu giới hạn",
+        "assertions": [
+          "Không khẳng định danh tính khi chưa có dữ liệu tin cậy"
+        ]
+      },
+      "evidence": [
+        "G",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-076",
+      "group": "Nhà thông minh và camera",
+      "priority": "P0",
+      "input": "Bật chế độ riêng tư camera",
+      "context": "Đang chọn một camera hỗ trợ privacy",
+      "expected": {
+        "domain": "camera",
+        "intent": "set_privacy",
+        "skills": [
+          "camera.control"
+        ],
+        "source_policy": "Camera cụ thể",
+        "response": "Privacy bật và xác nhận từ thiết bị",
+        "assertions": [
+          "Không chỉ ẩn hình trên TV rồi báo camera đã tắt"
+        ]
+      },
+      "evidence": [
+        "G",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-077",
+      "group": "Nhà thông minh và camera",
+      "priority": "P1",
+      "input": "Trong phòng khách bao nhiêu độ?",
+      "context": "Có temperature sensor đúng phòng",
+      "expected": {
+        "domain": "home",
+        "intent": "read_sensor",
+        "skills": [
+          "home.state"
+        ],
+        "source_policy": "HA state có timestamp",
+        "response": "Nhiệt độ và độ mới dữ liệu",
+        "assertions": [
+          "Không trả nhiệt độ thời tiết ngoài trời"
+        ]
+      },
+      "evidence": [
+        "G",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-078",
+      "group": "Nhà thông minh và camera",
+      "priority": "P1",
+      "input": "Đèn phòng ngủ đang bật không?",
+      "context": "HA entity có trạng thái unavailable",
+      "expected": {
+        "domain": "home",
+        "intent": "read_state",
+        "skills": [
+          "home.state"
+        ],
+        "source_policy": "HA state",
+        "response": "Báo chưa đọc được trạng thái",
+        "assertions": [
+          "Không coi unavailable là off"
+        ]
+      },
+      "evidence": [
+        "G",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-079",
+      "group": "Nhà thông minh và camera",
+      "priority": "P1",
+      "input": "Tắt hết đèn phòng khách rồi mở phim đang xem dở",
+      "context": "Hai hành động độc lập; có profile rõ",
+      "expected": {
+        "domain": "mixed",
+        "intent": "multi_task",
+        "skills": [
+          "home.control",
+          "history.read",
+          "player.open"
+        ],
+        "source_policy": "HA entity phòng khách và lịch sử đúng profile",
+        "response": "Kết quả riêng từng nhánh; phát đúng mục hoặc hỏi nếu nhiều",
+        "assertions": [
+          "Một nhánh lỗi không giả nhánh kia thành công"
+        ]
+      },
+      "evidence": [
+        "G",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-080",
+      "group": "Nhà thông minh và camera",
+      "priority": "P0",
+      "input": "Mở khóa cửa chính",
+      "context": "Entity hỗ trợ unlock; yêu cầu xác minh theo policy hiện có",
+      "expected": {
+        "domain": "home",
+        "intent": "unlock",
+        "skills": [
+          "home.control"
+        ],
+        "source_policy": "Chỉ entity được cấp quyền; kiểm tra policy thao tác nhạy cảm",
+        "response": "Xác minh nếu policy yêu cầu; báo kết quả tool",
+        "assertions": [
+          "Không thực hiện khi thiếu quyền",
+          "Không mở khóa do câu nói từ TV đang phát"
+        ]
+      },
+      "evidence": [
+        "G",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-081",
+      "group": "Ngữ cảnh, hội thoại và nhập liệu",
+      "priority": "P0",
+      "input": "Interstellar",
+      "context": "Không có ngữ cảnh trước đó",
+      "expected": {
+        "domain": "general",
+        "intent": "clarify",
+        "skills": [
+          "clarification.ask"
+        ],
+        "source_policy": "Chưa chọn nguồn",
+        "response": "Hỏi muốn biết thông tin hay tìm để xem",
+        "assertions": [
+          "Không mặc định phát hoặc cào mọi nguồn"
+        ]
+      },
+      "evidence": [
+        "N",
+        "A",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-082",
+      "group": "Ngữ cảnh, hội thoại và nhập liệu",
+      "priority": "P0",
+      "input": "Phim đó có phụ đề Việt không?",
+      "context": "Context duy nhất là một title đang chọn",
+      "expected": {
+        "domain": "media",
+        "intent": "check_subtitles",
+        "skills": [
+          "catalog.detail",
+          "player.tracks"
+        ],
+        "source_policy": "Title/phiên bản đúng context",
+        "response": "Trả khả năng phụ đề theo bản",
+        "assertions": [
+          "Không lẫn phụ đề giữa các nguồn"
+        ]
+      },
+      "evidence": [
+        "N",
+        "A",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-083",
+      "group": "Ngữ cảnh, hội thoại và nhập liệu",
+      "priority": "P0",
+      "input": "Chỉ lấy phim hài thôi",
+      "context": "Trước đó đang hiển thị kết quả tìm phim",
+      "expected": {
+        "domain": "media",
+        "intent": "refine_search",
+        "skills": [
+          "catalog.search",
+          "library.search"
+        ],
+        "source_policy": "Giữ điều kiện trước, thêm genre comedy",
+        "response": "Danh sách được lọc và focus hợp lý",
+        "assertions": [
+          "Không bắt đầu tìm mới bỏ điều kiện trước"
+        ]
+      },
+      "evidence": [
+        "N",
+        "A",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-084",
+      "group": "Ngữ cảnh, hội thoại và nhập liệu",
+      "priority": "P0",
+      "input": "Không, tôi muốn bản năm 1984",
+      "context": "Trước đó có hai bản cùng tên",
+      "expected": {
+        "domain": "media",
+        "intent": "correct_selection",
+        "skills": [
+          "movie.metadata",
+          "navigation.select"
+        ],
+        "source_policy": "Ứng viên cùng tên có năm",
+        "response": "Chuyển đúng phiên bản",
+        "assertions": [
+          "Không giữ ID bản vừa bị phủ định"
+        ]
+      },
+      "evidence": [
+        "N",
+        "A",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-085",
+      "group": "Ngữ cảnh, hội thoại và nhập liệu",
+      "priority": "P0",
+      "input": "Mở cái này trên TV phòng ngủ",
+      "context": "Đang chọn một item; hai TV online",
+      "expected": {
+        "domain": "device",
+        "intent": "handoff",
+        "skills": [
+          "device.discovery",
+          "player.open"
+        ],
+        "source_policy": "Chỉ TV phòng ngủ có capability",
+        "response": "Gửi đúng thiết bị và báo kết quả",
+        "assertions": [
+          "Không broadcast cho mọi TV"
+        ]
+      },
+      "evidence": [
+        "N",
+        "A",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-086",
+      "group": "Ngữ cảnh, hội thoại và nhập liệu",
+      "priority": "P0",
+      "input": "Tìm phim, à thôi, cho xem thời tiết",
+      "context": "ASR final chứa tự sửa câu",
+      "expected": {
+        "domain": "general",
+        "intent": "weather",
+        "skills": [
+          "weather.lookup"
+        ],
+        "source_policy": "Dùng ý định cuối; hỏi vị trí nếu thiếu",
+        "response": "Bỏ task media, xử lý thời tiết",
+        "assertions": [
+          "Không chạy cả hai ý định như hai yêu cầu độc lập"
+        ]
+      },
+      "evidence": [
+        "N",
+        "A",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-087",
+      "group": "Ngữ cảnh, hội thoại và nhập liệu",
+      "priority": "P1",
+      "input": "tim phim hoat hinh cho be",
+      "context": "Input gõ không dấu",
+      "expected": {
+        "domain": "media",
+        "intent": "find_to_watch",
+        "skills": [
+          "catalog.search",
+          "movie.metadata"
+        ],
+        "source_policy": "Chuẩn hóa tìm kiếm, giữ nội dung gốc",
+        "response": "Tìm hoạt hình và hỏi tuổi nếu chưa biết",
+        "assertions": [
+          "Không phụ thuộc hoàn toàn dấu tiếng Việt"
+        ]
+      },
+      "evidence": [
+        "N",
+        "A",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-088",
+      "group": "Ngữ cảnh, hội thoại và nhập liệu",
+      "priority": "P1",
+      "input": "Tìm phim In tơ stellar",
+      "context": "ASR có cách đọc tên ngoại ngữ",
+      "expected": {
+        "domain": "media",
+        "intent": "find_to_watch",
+        "skills": [
+          "entity.resolve",
+          "catalog.search"
+        ],
+        "source_policy": "Fuzzy match có ứng viên xác nhận khi chưa chắc",
+        "response": "Đề xuất title phù hợp",
+        "assertions": [
+          "Không tự nhận fuzzy match là chắc chắn"
+        ]
+      },
+      "evidence": [
+        "N",
+        "A",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-089",
+      "group": "Ngữ cảnh, hội thoại và nhập liệu",
+      "priority": "P0",
+      "input": "Bấm D-pad xuống rồi Back",
+      "context": "UI đang nhận kết quả nguồn chậm",
+      "expected": {
+        "domain": "device",
+        "intent": "navigate",
+        "skills": [
+          "navigation.control"
+        ],
+        "source_policy": "Snapshot UI hiện tại",
+        "response": "Focus không nhảy khi thêm kết quả; Back về màn trước",
+        "assertions": [
+          "Không cần chuột/cảm ứng",
+          "Không focus vào item đã bị gỡ"
+        ]
+      },
+      "evidence": [
+        "N",
+        "A",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-090",
+      "group": "Ngữ cảnh, hội thoại và nhập liệu",
+      "priority": "P1",
+      "input": "Tìm phim Dune và cho biết ai đạo diễn",
+      "context": "Một input có hai mục đích cùng entity",
+      "expected": {
+        "domain": "mixed",
+        "intent": "multi_task",
+        "skills": [
+          "library.search",
+          "catalog.search",
+          "movie.metadata"
+        ],
+        "source_policy": "Tìm nơi xem và metadata dùng chung entity",
+        "response": "Hai vùng thông tin rõ, kết quả từng phần",
+        "assertions": [
+          "Không coi hỏi đạo diễn là lệnh phát"
+        ]
+      },
+      "evidence": [
+        "N",
+        "A",
+        "PROJECT"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-091",
+      "group": "Nguồn lỗi, đăng nhập và phục hồi",
+      "priority": "P0",
+      "input": "Tìm phim khi Plex đang offline",
+      "context": "Jellyfin vẫn hoạt động; Plex probe timeout",
+      "expected": {
+        "domain": "media",
+        "intent": "find_to_watch",
+        "skills": [
+          "library.search",
+          "catalog.search"
+        ],
+        "source_policy": "Cô lập lỗi Plex, tiếp tục nguồn khác",
+        "response": "Có kết quả Jellyfin và trạng thái Plex",
+        "assertions": [
+          "Không kết luận thư viện rỗng từ timeout"
+        ]
+      },
+      "evidence": [
+        "PROJECT",
+        "N"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-092",
+      "group": "Nguồn lỗi, đăng nhập và phục hồi",
+      "priority": "P0",
+      "input": "Tìm phim khi một website trả rất chậm",
+      "context": "Nguồn A trả ngay, B chậm hơn deadline",
+      "expected": {
+        "domain": "media",
+        "intent": "find_to_watch",
+        "skills": [
+          "catalog.search"
+        ],
+        "source_policy": "Deadline từng nguồn và toàn request",
+        "response": "A hiển thị trước; B timeout riêng",
+        "assertions": [
+          "Không chặn kết quả A đến khi B xong"
+        ]
+      },
+      "evidence": [
+        "PROJECT",
+        "N"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-093",
+      "group": "Nguồn lỗi, đăng nhập và phục hồi",
+      "priority": "P0",
+      "input": "Tìm lại cùng phim khi Redis bị ngắt",
+      "context": "Cache backend không truy cập được",
+      "expected": {
+        "domain": "media",
+        "intent": "find_to_watch",
+        "skills": [
+          "library.search",
+          "catalog.search"
+        ],
+        "source_policy": "Bỏ cache, giữ giới hạn request nguồn",
+        "response": "Vẫn có kết quả hoặc lỗi nguồn thực tế",
+        "assertions": [
+          "Không biến lỗi Redis thành lỗi không có phim"
+        ]
+      },
+      "evidence": [
+        "PROJECT",
+        "N"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-094",
+      "group": "Nguồn lỗi, đăng nhập và phục hồi",
+      "priority": "P0",
+      "input": "Đăng nhập engine đang chọn",
+      "context": "Server ở máy A đã có native session hợp lệ; TV là B",
+      "expected": {
+        "domain": "account",
+        "intent": "login",
+        "skills": [
+          "engine.auth_status"
+        ],
+        "source_policy": "Kiểm tra native session trên A",
+        "response": "Hiện đã đăng nhập, không mở flow mới",
+        "assertions": [
+          "Không yêu cầu client B đăng nhập lại"
+        ]
+      },
+      "evidence": [
+        "PROJECT",
+        "N"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-095",
+      "group": "Nguồn lỗi, đăng nhập và phục hồi",
+      "priority": "P0",
+      "input": "Đăng nhập engine trên TV",
+      "context": "Server A chưa có session; provider hỗ trợ device/browser auth",
+      "expected": {
+        "domain": "account",
+        "intent": "login",
+        "skills": [
+          "engine.auth_start",
+          "engine.auth_status"
+        ],
+        "source_policy": "Flow theo provider/method trên A",
+        "response": "TV hiện URL/mã/QR; chỉ thành công sau xác minh",
+        "assertions": [
+          "Không mở terminal trên B thay A",
+          "Không coi process exit 0 là đã login"
+        ]
+      },
+      "evidence": [
+        "PROJECT",
+        "N"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-096",
+      "group": "Nguồn lỗi, đăng nhập và phục hồi",
+      "priority": "P0",
+      "input": "Phát tập bằng VLC nhưng TV chưa cài VLC",
+      "context": "Client inventory có system player hỗ trợ MIME",
+      "expected": {
+        "domain": "playback",
+        "intent": "open_native",
+        "skills": [
+          "player.capabilities",
+          "player.open"
+        ],
+        "source_policy": "Ưu tiên VLC nếu có, fallback player native có hỗ trợ",
+        "response": "Mở system player hoặc báo thiếu player",
+        "assertions": [
+          "Không mở WebView âm thầm"
+        ]
+      },
+      "evidence": [
+        "PROJECT",
+        "N"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-097",
+      "group": "Nguồn lỗi, đăng nhập và phục hồi",
+      "priority": "P0",
+      "input": "Phát tiếp khi URL stream hết hạn",
+      "context": "Episode ID ổn định; lưu tiến độ 600 giây",
+      "expected": {
+        "domain": "playback",
+        "intent": "refresh_stream",
+        "skills": [
+          "episode.resolve",
+          "player.open"
+        ],
+        "source_policy": "Resolve URL mới cho cùng episode, retry hữu hạn",
+        "response": "Tiếp tục gần vị trí cũ",
+        "assertions": [
+          "Không dùng TTL Redis làm bằng chứng URL còn sống"
+        ]
+      },
+      "evidence": [
+        "PROJECT",
+        "N"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-098",
+      "group": "Nguồn lỗi, đăng nhập và phục hồi",
+      "priority": "P0",
+      "input": "Hủy tìm kiếm để tìm phim khác",
+      "context": "Request cũ đang stream; request mới có ID khác",
+      "expected": {
+        "domain": "general",
+        "intent": "cancel_request",
+        "skills": [
+          "request.cancel"
+        ],
+        "source_policy": "Hủy context cũ, tách request ID",
+        "response": "UI chỉ cập nhật request đang hoạt động",
+        "assertions": [
+          "Không để kết quả muộn ghi đè tìm kiếm mới"
+        ]
+      },
+      "evidence": [
+        "PROJECT",
+        "N"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-099",
+      "group": "Nguồn lỗi, đăng nhập và phục hồi",
+      "priority": "P0",
+      "input": "Tìm phim trên dịch vụ chưa đăng nhập",
+      "context": "Nguồn trả 401; nguồn khác bình thường",
+      "expected": {
+        "domain": "media",
+        "intent": "find_to_watch",
+        "skills": [
+          "catalog.search",
+          "account.status"
+        ],
+        "source_policy": "Nguồn lỗi báo auth_required riêng",
+        "response": "Nút đăng nhập theo nguồn và kết quả nguồn khác",
+        "assertions": [
+          "Không cache 401 thành empty",
+          "Không lộ API key trong response"
+        ]
+      },
+      "evidence": [
+        "PROJECT",
+        "N"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "TV-100",
+      "group": "Nguồn lỗi, đăng nhập và phục hồi",
+      "priority": "P0",
+      "input": "Dừng giữa chừng rồi mở lại app",
+      "context": "Player native đã lưu tiến độ; token stream cũ hết hạn",
+      "expected": {
+        "domain": "media",
+        "intent": "resume",
+        "skills": [
+          "history.read",
+          "episode.resolve",
+          "player.open"
+        ],
+        "source_policy": "Profile và episode ID ổn định",
+        "response": "Resolve mới rồi resume; quay lại giữ focus",
+        "assertions": [
+          "Không yêu cầu tải lại trang web nguồn",
+          "Không trộn tiến độ profile khác"
+        ]
+      },
+      "evidence": [
+        "PROJECT",
+        "N"
+      ],
+      "execution_status": "not_run"
+    }
+  ]
+}

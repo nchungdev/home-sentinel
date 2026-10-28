@@ -1,0 +1,196 @@
+    .engine-banner {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 16px;
+      background: rgba(16, 185, 129, 0.08);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      border-radius: 10px;
+    }
+    .engine-banner:empty { display: none; }
+    .engine-banner.offline {
+      color: #fca5a5;
+      background: rgba(239, 68, 68, 0.08);
+      border-color: rgba(239, 68, 68, 0.3);
+      font-size: 13px;
+    }
+    .engine-banner-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: #34d399;
+    }
+    .engine-banner-name {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-bright);
+    }
+    .engine-banner-detail { font-size: 12px; color: var(--text-muted); }
+    .engine-pulse {
+      flex-shrink: 0;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #10b981;
+      box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.2);
+    }
+
+    .engine-list { display: flex; flex-direction: column; gap: 6px; }
+    .engine-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+    }
+    .engine-row.active {
+      background: rgba(99, 102, 241, 0.1);
+      border-color: rgba(99, 102, 241, 0.45);
+    }
+    .engine-row.unavailable .engine-title { color: var(--text-muted); }
+    .engine-rank {
+      flex-shrink: 0;
+      width: 24px;
+      height: 24px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      background: var(--surface-hover);
+      color: var(--text);
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .engine-info { flex: 1; min-width: 0; }
+    .engine-name {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-bright);
+    }
+    .engine-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .engine-dot {
+      flex-shrink: 0;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--text-muted);
+    }
+    .engine-row:not(.unavailable) .engine-dot { background: #10b981; }
+    .engine-badge {
+      flex-shrink: 0;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(99, 102, 241, 0.25);
+      color: #c7d2fe;
+      font-size: 10.5px;
+      font-weight: 600;
+    }
+    .engine-status {
+      margin-top: 2px;
+      font-size: 12px;
+      color: var(--text-muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .engine-actions { display: flex; gap: 4px; flex-shrink: 0; }
+    .engine-actions .btn-action { padding: 4px 6px; }
+    .engine-actions .btn-action .mi { font-size: 16px; }
+    .engine-actions .btn-action:disabled { opacity: 0.3; cursor: default; }
+    .engine-heading { display: flex; align-items: center; justify-content: space-between; }
+    .engine-help { font-size: 13px; line-height: 1.6; color: var(--text-muted); }
+    .engine-row { cursor: pointer; }
+    .engine-row input { accent-color: var(--accent); flex: 0 0 auto; width: 18px; }
+    .engine-name .engine-title { white-space: normal; }
+    .engine-status { white-space: normal; overflow-wrap: anywhere; }
+    .engine-badge:empty { display: none; }
+    .engine-banner { display: block; font-size: 13px; }
+    .engine-command { display: block; padding: 12px; margin: 12px 0; user-select: all; }
+    .engine-form-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 20px; }
+    [hidden] { display: none !important; }
+    .engine-login-output {
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      font-size: 12px;
+      max-height: 240px;
+      overflow: auto;
+      user-select: text;
+    }
+    .engine-login-output:empty { display: none; }
+
+    #subtab-agent-cfg { grid-template-columns: minmax(0, 1fr); }
+    #subtab-agent-cfg > .card { min-width: 0; }
+    .engine-connection { border-top: 1px solid var(--border); padding-top: 20px; }
+    .engine-field-label { font-size: 13px; color: var(--text-muted); }
+    .engine-picker { position: relative; min-width: 0; }
+    .engine-picker-trigger {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 13px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      color: var(--text-bright);
+      font: inherit;
+      font-size: 13px;
+      text-align: left;
+      cursor: pointer;
+    }
+    .engine-picker-trigger[aria-expanded="true"] { border-color: var(--border-focus); }
+    .engine-picker-options {
+      position: absolute;
+      z-index: 20;
+      top: calc(100% + 6px);
+      inset-inline: 0;
+      max-height: min(320px, 45vh);
+      overflow-y: auto;
+      padding: 5px;
+      background: #1b1e2b;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+    }
+    .engine-picker-option {
+      display: block;
+      width: 100%;
+      padding: 10px 12px;
+      border: 0;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--text-bright);
+      font: inherit;
+      font-size: 13px;
+      text-align: left;
+      cursor: pointer;
+    }
+    .engine-picker-option[aria-selected="true"] {
+      background: rgba(99, 102, 241, 0.18);
+      color: #c7d2fe;
+      font-weight: 600;
+    }
+    .engine-picker-option:hover, .engine-picker-option:focus-visible {
+      background: rgba(129, 140, 248, 0.16);
+      outline: none;
+    }
+    .engine-picker-trigger:focus-visible, .engine-refresh:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 3px;
+    }
+    .engine-refresh { padding: 8px; }
+    .engine-login-details { margin-top: 16px; color: var(--text-muted); font-size: 12px; }
+    .engine-login-details summary { cursor: pointer; }
+    #engineLoginCodeFields { margin-top: 16px; }
+    #engineLoginCodeFields .btn-action { margin-top: 8px; }
+    #engineAuthStatus { margin: 12px 0; }
+    #engineAuthSecretFields { margin-bottom: 12px; }
+    #engineLoginFields > .btn-action { margin: 0 8px 8px 0; }
+    .engine-picker-trigger:disabled { opacity: 0.6; cursor: wait; }
+    .engine-login-navigation { display: flex; gap: 8px; align-items: center; margin-top: 12px; }

@@ -130,6 +130,7 @@
     const CHAT_STORAGE_KEY = 'sentinel_chat_history_v1';
 
     promptInput.addEventListener('keydown', (e) => {
+      if (e.isComposing || e.keyCode === 229) return;
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         sendChat();
@@ -175,24 +176,33 @@
       chatList.innerHTML = `
         <div class="message-row agent">
           <div class="avatar ai">AI</div>
-          <div class="bubble">Xin chào! Tôi là Trợ lý Home Sentinel. Tôi kết nối trực tiếp với Local LLM trên NAS và có cơ chế tự động dự phòng sang Gemini/Claude. Bạn cần tôi hỗ trợ gì?</div>
+          <div class="bubble">Xin chào! Tôi là Trợ lý Home Sentinel. Bạn có thể chọn AI engine trong Cài đặt để bắt đầu trò chuyện. Bạn cần tôi hỗ trợ gì?</div>
         </div>
       `;
     }
 
+    let chatInFlight = false;
+
     async function sendChat() {
       const text = promptInput.value.trim();
-      if (!text) return;
+      if (!text || chatInFlight) return;
+      chatInFlight = true;
 
       appendBubble('user', text, true);
       promptInput.value = '';
 
-      const agentBubble = appendBubble('agent', '…', false);
+      const agentBubble = appendBubble('agent', 'Đang xử lý… 0s', false);
+      const timer = startChatTimer(agentBubble);
+      let handler = null;
 
       try {
+        if (await trySearchFlow(text, agentBubble, timer)) return;
         const res = await fetch('/v2/ask', {
           method: 'POST',
-          headers: {'Content-Type': 'application/json'},
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Request-Context': webRequestContext()
+          },
           body: JSON.stringify({
             request_id: 'web-' + Date.now(),
             session_id: 'web_session',
@@ -202,7 +212,6 @@
           })
         });
 
-        agentBubble.textContent = '';
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
         let buffer = '';
@@ -218,12 +227,13 @@
             if (!line.trim()) continue;
             try {
               const event = JSON.parse(line);
-              if (event.type === 'progress') {
-                agentBubble.textContent = 'Đang xử lý...';
-              } else if (event.type === 'presentation') {
+              if (event.type === 'presentation') {
+                timer.stop();
+                handler = event.payload.handler || null;
                 fullAnswer = event.payload.speech_text || event.payload.text || '';
                 agentBubble.textContent = fullAnswer || 'Đã xử lý xong yêu cầu.';
               } else if (event.type === 'error') {
+                timer.stop();
                 fullAnswer = 'Lỗi: ' + (event.payload.message || 'Không thể xử lý');
                 agentBubble.textContent = fullAnswer;
               }
@@ -232,6 +242,7 @@
           chatList.scrollTop = chatList.scrollHeight;
         }
 
+        timer.stop();
         if (!fullAnswer || !agentBubble.textContent.trim()) {
           fullAnswer = agentBubble.textContent.trim() || 'Tôi đã nhận được yêu cầu của bạn.';
           agentBubble.textContent = fullAnswer;
@@ -240,8 +251,12 @@
         const history = getChatHistory();
         history.push({ sender: 'agent', text: fullAnswer });
         saveChatHistory(history);
+        addBubbleMeta(agentBubble, handler, timer.seconds());
       } catch (err) {
+        timer.stop();
         agentBubble.textContent = 'Lỗi kết nối: ' + err.message;
+      } finally {
+        chatInFlight = false;
       }
     }
 

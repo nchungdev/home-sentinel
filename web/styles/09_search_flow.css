@@ -1,0 +1,76 @@
+.search-flow-groups {
+  display: grid;
+  gap: 14px;
+  margin-top: 14px;
+}
+.search-flow-groups section {
+  border: 1px solid var(--border, #303342);
+  border-radius: 12px;
+  padding: 14px;
+}
+.search-flow-groups p {
+  margin: 6px 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.search-flow-item {
+  margin-top: 12px;
+}
+.search-flow-item a {
+  color: #a9adff;
+  text-decoration: underline;
+}
+.search-flow-item a:focus-visible {
+  outline: 2px solid #a9adff;
+  outline-offset: 4px;
+}
+.catalog-panel {
+  margin-top: 12px;
+  border-top: 1px solid #303342;
+  padding-top: 12px;
+}
+.catalog-panel button, .catalog-panel select, .search-flow-item > button {
+  padding: 8px 12px;
+  border: 1px solid #42465b;
+  border-radius: 8px;
+  background: #202334;
+  color: #edeefe;
+  cursor: pointer;
+}
+.catalog-panel button:focus-visible, .search-flow-item > button:focus-visible {
+  outline: 2px solid #a9adff;
+  outline-offset: 3px;
+}
+.catalog-panel button:disabled {
+  opacity: .45;
+  cursor: default;
+}
+.catalog-panel strong, .catalog-panel select {
+  display: block;
+  margin: 12px 0;
+}
+.catalog-episodes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+  gap: 8px;
+}
+.catalog-pagination {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 12px 0;
+}
+.catalog-playback input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px;
+  color: #edeefe;
+  border: 1px solid #42465b;
+  border-radius: 8px;
+  background: #11131e;
+}
+.catalog-playback a, .catalog-playback button {
+  display: inline-block;
+  margin: 10px 10px 0 0;
+}

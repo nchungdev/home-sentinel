@@ -130,4 +130,8 @@
       background: var(--primary-hover);
       transform: scale(1.05);
     }
-
+    .bubble-meta {
+      margin-top: 6px;
+      font-size: 11px;
+      color: var(--text-muted);
+    }

@@ -2,6 +2,8 @@
 
 Home Sentinel is an autonomous AI agent server for smart homes and Android TV / Google TV. It serves as the intelligent backend coordinating Home Assistant, Tapo PTZ security cameras, local/cloud LLMs, Android TV ADB control, and media servers.
 
+See [repository layout](repository-layout.md) for source boundaries and optional workers.
+
 ---
 
 ## 1. Six-Layer Pipeline Architecture
@@ -35,26 +37,26 @@ The core request pipeline follows a structured, deterministic 6-tier architectur
 
 ### Layer Details
 
-1. **Transport (`agent/pkg/transport/`)**:
+1. **Transport (`internal/transport/`)**:
    - Handles HTTP POST `/v2/ask` streaming using NDJSON (`application/x-ndjson`).
    - Body size limits, Bearer token verification, allowed IP whitelisting.
    - Real-time event streaming: `accepted` $\rightarrow$ `progress` $\rightarrow$ `presentation` $\rightarrow$ `client_action` $\rightarrow$ `completed`.
 
-2. **Understanding (`agent/pkg/understanding/`)**:
+2. **Understanding (`internal/understanding/`)**:
    - Normalizes Vietnamese diacritics, common speech-to-text phonetic variations.
    - Classifies intents (`home.control`, `media.search`, `camera.ptz`, `system.status`, `general.chat`).
    - Extracts slots: target device, room, action (`turn_on`, `turn_off`, `preset`).
 
-3. **Resolution (`agent/pkg/resolution/`)**:
+3. **Resolution (`internal/resolution/`)**:
    - Fuzzy matches colloquial device names against live Home Assistant entity registry.
    - Queries Plex media bridge for movie/show titles and deep links.
    - Builds deterministic `ActionPlan` containing typed `ActionStep`s.
 
-4. **Arbitration (`agent/pkg/arbitration/`)**:
+4. **Arbitration (`internal/arbitration/`)**:
    - Resolves conflicts between simultaneous automations, physical sensors, and user commands.
    - Manages admission control and cooldown windows.
 
-5. **Execution (`agent/pkg/adapters/`, `agent/cmd/agent_server/`)**:
+5. **Execution (`internal/adapters/`, `cmd/sentinel/`)**:
    - **Home Assistant**: Direct REST calls (`/api/services/<domain>/<service>`).
    - **Camera Tapo**: RTSP 16 kHz PCM microphone stream, ONVIF PTZ preset recall, and `./bin/tapo_speaker` two-way audio.
    - **Android TV**: Network ADB commands (Wakeup `224` + `3`, Sleep `223`) and WebSocket payloads (`/ws/duinch`).
@@ -69,7 +71,7 @@ The core request pipeline follows a structured, deterministic 6-tier architectur
 
 ## 2. Automation Engine (When / And If / Then Do)
 
-The automation system (`agent/pkg/automation/`) follows the authentic **Home Assistant 3-block model**:
+The automation system (`internal/automation/`) follows the authentic **Home Assistant 3-block model**:
 
 ```json
 {

@@ -1,0 +1,16 @@
+services:
+  media-mcp:
+    image: ghcr.io/tbxark/mcp-proxy:v1.1.0
+    container_name: media-mcp
+    restart: unless-stopped
+    ports:
+      - "${MCP_BIND:-0.0.0.0}:9090:9090"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./config.json:/config/config.json:ro
+      - npm-cache:/root/.npm
+    command: ["--config", "/config/config.json"]
+
+volumes:
+  npm-cache:

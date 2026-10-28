@@ -1,0 +1,2140 @@
+{
+  "schema_version": 1,
+  "researched_at": "2026-10-27",
+  "language": "vi-VN",
+  "scope": "Additional smart-home, camera, presence and audio acceptance scenarios; not a feature claim.",
+  "execution_status": "not_run",
+  "sources": {
+    "HA_TRIGGER": {
+      "title": "Home Assistant automation triggers",
+      "url": "https://www.home-assistant.io/docs/automation/trigger/"
+    },
+    "HA_MODES": {
+      "title": "Home Assistant automation modes",
+      "url": "https://www.home-assistant.io/docs/automation/modes/"
+    },
+    "HA_PERSON": {
+      "title": "Home Assistant person integration",
+      "url": "https://www.home-assistant.io/integrations/person/"
+    },
+    "HA_AUTOMATION": {
+      "title": "Home Assistant automation overview",
+      "url": "https://www.home-assistant.io/docs/automation/"
+    },
+    "LOCAL_CAMERA": {
+      "title": "Camera integration invariants",
+      "path": "internal/integrations/camera/AGENTS.md"
+    },
+    "LOCAL_VISION": {
+      "title": "Presence/debounce and event dispatch",
+      "path": "workers/vision/"
+    },
+    "LOCAL_AUDIO": {
+      "title": "YAMNet classification worker",
+      "path": "workers/yamnet/server.py"
+    },
+    "LOCAL_RULES": {
+      "title": "Current Sentinel automation configuration and code",
+      "path": "internal/automation/"
+    },
+    "DESIGN": {
+      "title": "Proposed Sentinel acceptance scenarios, not existing features"
+    }
+  },
+  "cases": [
+    {
+      "id": "HC-001",
+      "group": "Điều khiển và trạng thái smarthome",
+      "priority": "P0",
+      "trigger": "Bật đèn chỗ tôi đang ngồi",
+      "preconditions": "TV gắn với phòng khách; không có định vị chính xác ghế",
+      "expected": {
+        "domain": "home",
+        "intent": "resolve_target",
+        "skills": [
+          "home.entity_resolve",
+          "home.control"
+        ],
+        "response": "Dùng phòng đã gán nếu duy nhất; nếu còn mơ hồ thì hỏi",
+        "assertions": [
+          "Không suy vị trí người từ vị trí server",
+          "Không bật đèn phòng khác"
+        ],
+        "authorization": "Quyền control và ngữ cảnh phòng được phép"
+      },
+      "evidence": [
+        "HA_AUTOMATION",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-002",
+      "group": "Điều khiển và trạng thái smarthome",
+      "priority": "P0",
+      "trigger": "Tắt tất cả đèn tầng một",
+      "preconditions": "HA có area/floor và nhiều loại thiết bị",
+      "expected": {
+        "domain": "home",
+        "intent": "area_control",
+        "skills": [
+          "home.entity_resolve",
+          "home.control"
+        ],
+        "response": "Chọn đúng tập light thuộc tầng một, báo thành công/thất bại theo thiết bị",
+        "assertions": [
+          "Không tắt ổ cắm/khóa cửa",
+          "Không báo toàn bộ thành công khi một entity lỗi"
+        ],
+        "authorization": "Quyền control từng entity"
+      },
+      "evidence": [
+        "HA_AUTOMATION",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-003",
+      "group": "Điều khiển và trạng thái smarthome",
+      "priority": "P0",
+      "trigger": "Giảm đèn xuống còn 20 phần trăm",
+      "preconditions": "Đèn đang chọn chỉ hỗ trợ on/off",
+      "expected": {
+        "domain": "home",
+        "intent": "set_brightness",
+        "skills": [
+          "home.capabilities",
+          "home.control"
+        ],
+        "response": "Báo không hỗ trợ chỉnh sáng; giữ trạng thái hiện tại",
+        "assertions": [
+          "Không coi bật/tắt liên tục là dim",
+          "Không giả đã đặt 20 phần trăm"
+        ],
+        "authorization": "Quyền đọc capability, control khi hỗ trợ"
+      },
+      "evidence": [
+        "HA_AUTOMATION",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-004",
+      "group": "Điều khiển và trạng thái smarthome",
+      "priority": "P1",
+      "trigger": "Đổi đèn sang vàng ấm",
+      "preconditions": "Đèn hỗ trợ nhiệt độ màu, không RGB",
+      "expected": {
+        "domain": "home",
+        "intent": "set_color_temperature",
+        "skills": [
+          "home.capabilities",
+          "home.control"
+        ],
+        "response": "Đặt mức ấm trong dải nhiệt độ màu được hỗ trợ",
+        "assertions": [
+          "Không gửi RGB ngoài capability",
+          "Không thay độ sáng ngoài yêu cầu"
+        ],
+        "authorization": "Quyền control"
+      },
+      "evidence": [
+        "HA_AUTOMATION",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-005",
+      "group": "Điều khiển và trạng thái smarthome",
+      "priority": "P0",
+      "trigger": "Bật điều hòa 26 độ rồi giảm quạt",
+      "preconditions": "Climate chỉ hỗ trợ một số fan mode",
+      "expected": {
+        "domain": "home",
+        "intent": "multi_property_control",
+        "skills": [
+          "home.capabilities",
+          "home.control"
+        ],
+        "response": "Đặt nhiệt độ và chọn fan mode hợp lệ; hỏi nếu giảm không xác định được",
+        "assertions": [
+          "Tách kết quả từng thuộc tính",
+          "Không gửi mode tự tạo"
+        ],
+        "authorization": "Quyền climate control"
+      },
+      "evidence": [
+        "HA_AUTOMATION",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-006",
+      "group": "Điều khiển và trạng thái smarthome",
+      "priority": "P1",
+      "trigger": "Đóng rèm nhưng chừa một khe",
+      "preconditions": "Không có mức phần trăm đã lưu cho một khe",
+      "expected": {
+        "domain": "home",
+        "intent": "clarify_position",
+        "skills": [
+          "clarification.ask"
+        ],
+        "response": "Hỏi mức mở mong muốn hoặc đề xuất mức để người dùng chọn",
+        "assertions": [
+          "Không tự gán vị trí khi không có preset",
+          "Không đảo nghĩa phần trăm mở"
+        ],
+        "authorization": "Chưa thực hiện control khi cần làm rõ"
+      },
+      "evidence": [
+        "HA_AUTOMATION",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-007",
+      "group": "Điều khiển và trạng thái smarthome",
+      "priority": "P0",
+      "trigger": "Tắt ổ cắm máy lọc nước",
+      "preconditions": "Có hai entity trùng tên ở hai phòng",
+      "expected": {
+        "domain": "home",
+        "intent": "clarify_target",
+        "skills": [
+          "home.entity_resolve",
+          "clarification.ask"
+        ],
+        "response": "Cho chọn đúng phòng/thiết bị trước khi tắt",
+        "assertions": [
+          "Không chọn theo thứ tự entity",
+          "Không gửi cả hai"
+        ],
+        "authorization": "Quyền control sau khi chọn rõ"
+      },
+      "evidence": [
+        "HA_AUTOMATION",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-008",
+      "group": "Điều khiển và trạng thái smarthome",
+      "priority": "P0",
+      "trigger": "Kiểm tra cửa ban công đã đóng chưa",
+      "preconditions": "Có contact sensor và cover cùng vị trí",
+      "expected": {
+        "domain": "home",
+        "intent": "read_state",
+        "skills": [
+          "home.state"
+        ],
+        "response": "Đọc sensor phù hợp, hiển thị timestamp và trạng thái",
+        "assertions": [
+          "Không đồng nhất trạng thái motor stopped với cửa đã đóng"
+        ],
+        "authorization": "Quyền đọc sensor"
+      },
+      "evidence": [
+        "HA_AUTOMATION",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-009",
+      "group": "Điều khiển và trạng thái smarthome",
+      "priority": "P0",
+      "trigger": "Tôi vừa tắt bằng công tắc tường",
+      "preconditions": "Thiết bị gửi state mới sau hành động tay",
+      "expected": {
+        "domain": "home",
+        "intent": "sync_state",
+        "skills": [
+          "home.state"
+        ],
+        "response": "UI cập nhật state mới từ HA",
+        "assertions": [
+          "Không dùng cache cũ ghi đè thao tác tay",
+          "Không tự bật lại vì mục tiêu cũ"
+        ],
+        "authorization": "Quyền đọc state; automation override theo policy"
+      },
+      "evidence": [
+        "HA_AUTOMATION",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-010",
+      "group": "Điều khiển và trạng thái smarthome",
+      "priority": "P1",
+      "trigger": "Thiết bị nào trong phòng đang bật?",
+      "preconditions": "HA area rõ; một số entity unavailable",
+      "expected": {
+        "domain": "home",
+        "intent": "list_active_devices",
+        "skills": [
+          "home.state"
+        ],
+        "response": "Danh sách đang bật và nhóm chưa đọc được trạng thái",
+        "assertions": [
+          "Không coi unavailable là off",
+          "Không liệt kê entity không được phép đọc"
+        ],
+        "authorization": "Quyền đọc theo entity/area"
+      },
+      "evidence": [
+        "HA_AUTOMATION",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-011",
+      "group": "Ngữ cảnh sinh hoạt và lịch hẹn",
+      "priority": "P0",
+      "trigger": "Bật chế độ xem phim",
+      "preconditions": "Scene đã tồn tại, có đèn/rèm, không có lệnh mở khóa",
+      "expected": {
+        "domain": "home",
+        "intent": "activate_scene",
+        "skills": [
+          "home.scene"
+        ],
+        "response": "Gọi scene rõ tên; đọc lại kết quả nếu có hỗ trợ",
+        "assertions": [
+          "Không tự sáng tác hành động scene",
+          "Không coi HTTP accepted là mọi thiết bị đã đạt state"
+        ],
+        "authorization": "Quyền kích hoạt scene đã cấu hình"
+      },
+      "evidence": [
+        "HA_TRIGGER",
+        "HA_MODES",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-012",
+      "group": "Ngữ cảnh sinh hoạt và lịch hẹn",
+      "priority": "P1",
+      "trigger": "Khi phim tạm dừng thì bật đèn nhẹ",
+      "preconditions": "Chưa có rule tương ứng",
+      "expected": {
+        "domain": "automation",
+        "intent": "prepare_rule",
+        "skills": [
+          "automation.prepare"
+        ],
+        "response": "Hiện bản rule trigger player paused, conditions và đèn đích; lưu khi user chọn",
+        "assertions": [
+          "Không tự triển khai rule còn thiếu entity",
+          "Không dùng sự kiện buffer như pause chủ động"
+        ],
+        "authorization": "Quyền tạo automation; cần đích và thông số rõ"
+      },
+      "evidence": [
+        "HA_TRIGGER",
+        "HA_MODES",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-013",
+      "group": "Ngữ cảnh sinh hoạt và lịch hẹn",
+      "priority": "P1",
+      "trigger": "Khi xem tiếp thì trả đèn như cũ",
+      "preconditions": "Đèn có snapshot trước khi pause; có thay đổi tay sau đó",
+      "expected": {
+        "domain": "automation",
+        "intent": "restore_scene_state",
+        "skills": [
+          "automation.evaluate",
+          "home.control"
+        ],
+        "response": "Chỉ khôi phục theo policy có xét thay đổi tay",
+        "assertions": [
+          "Không ghi đè chỉnh tay mới hơn",
+          "Snapshot theo phiên phim"
+        ],
+        "authorization": "Rule đã được bật trước đó"
+      },
+      "evidence": [
+        "HA_TRIGGER",
+        "HA_MODES",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-014",
+      "group": "Ngữ cảnh sinh hoạt và lịch hẹn",
+      "priority": "P0",
+      "trigger": "Tắt quạt sau 20 phút",
+      "preconditions": "Một quạt rõ; scheduler đã cấu hình",
+      "expected": {
+        "domain": "home",
+        "intent": "schedule_action",
+        "skills": [
+          "timer.schedule"
+        ],
+        "response": "Tạo lịch một lần gắn target và trả thời điểm dự kiến",
+        "assertions": [
+          "Không tắt ngay",
+          "Không tạo lặp hàng ngày"
+        ],
+        "authorization": "Quyền control và lập lịch"
+      },
+      "evidence": [
+        "HA_TRIGGER",
+        "HA_MODES",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-015",
+      "group": "Ngữ cảnh sinh hoạt và lịch hẹn",
+      "priority": "P0",
+      "trigger": "Hủy lịch tắt quạt vừa đặt",
+      "preconditions": "Có timer ID trong context",
+      "expected": {
+        "domain": "home",
+        "intent": "cancel_scheduled_action",
+        "skills": [
+          "timer.cancel"
+        ],
+        "response": "Hủy đúng timer và phản hồi trạng thái hủy",
+        "assertions": [
+          "Không hủy lịch của thiết bị/profile khác",
+          "Không báo hủy nếu action đã xảy ra"
+        ],
+        "authorization": "Quyền sửa timer của người dùng"
+      },
+      "evidence": [
+        "HA_TRIGGER",
+        "HA_MODES",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-016",
+      "group": "Ngữ cảnh sinh hoạt và lịch hẹn",
+      "priority": "P1",
+      "trigger": "Mỗi tối 10 giờ tắt đèn sân",
+      "preconditions": "Timezone và target rõ",
+      "expected": {
+        "domain": "automation",
+        "intent": "prepare_schedule",
+        "skills": [
+          "automation.prepare"
+        ],
+        "response": "Rule lịch hằng ngày có timezone, target, enabled state rõ",
+        "assertions": [
+          "Không dùng timezone của server thay user",
+          "Không tạo hai rule trùng khi bấm lại"
+        ],
+        "authorization": "Quyền tạo automation"
+      },
+      "evidence": [
+        "HA_TRIGGER",
+        "HA_MODES",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-017",
+      "group": "Ngữ cảnh sinh hoạt và lịch hẹn",
+      "priority": "P0",
+      "trigger": "Chúc ngủ ngon",
+      "preconditions": "Có scene ngủ đã cấu hình; chưa biết tên này là chào hay lệnh",
+      "expected": {
+        "domain": "home",
+        "intent": "resolve_scene_alias",
+        "skills": [
+          "home.scene",
+          "clarification.ask"
+        ],
+        "response": "Thực hiện scene khi alias rõ trong context; nếu không thì hỏi",
+        "assertions": [
+          "Không tắt điện cả nhà từ câu chào chung"
+        ],
+        "authorization": "Alias/scene được người dùng cấu hình"
+      },
+      "evidence": [
+        "HA_TRIGGER",
+        "HA_MODES",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-018",
+      "group": "Ngữ cảnh sinh hoạt và lịch hẹn",
+      "priority": "P0",
+      "trigger": "Tôi ra khỏi nhà",
+      "preconditions": "Có rule away; một người khác vẫn home",
+      "expected": {
+        "domain": "home",
+        "intent": "prepare_away",
+        "skills": [
+          "home.state",
+          "automation.evaluate"
+        ],
+        "response": "Đánh giá occupancy cả nhà trước các hành động phụ thuộc vắng người",
+        "assertions": [
+          "Không tắt thiết bị đang phục vụ người còn ở",
+          "Không suy whole-home away từ một người"
+        ],
+        "authorization": "Rule away đã bật; quyền theo action"
+      },
+      "evidence": [
+        "HA_TRIGGER",
+        "HA_MODES",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-019",
+      "group": "Ngữ cảnh sinh hoạt và lịch hẹn",
+      "priority": "P0",
+      "trigger": "Tôi về rồi",
+      "preconditions": "Tín hiệu user hợp lệ; có scene chào và giờ yên tĩnh",
+      "expected": {
+        "domain": "home",
+        "intent": "arrival_scene",
+        "skills": [
+          "automation.evaluate",
+          "home.scene"
+        ],
+        "response": "Chào bằng UI hoặc hành động theo giờ; tránh phát loa nếu policy quiet",
+        "assertions": [
+          "Không phát TTS lớn mặc định",
+          "Không mở khóa tự động"
+        ],
+        "authorization": "Rule arrival đã cấu hình"
+      },
+      "evidence": [
+        "HA_TRIGGER",
+        "HA_MODES",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-020",
+      "group": "Ngữ cảnh sinh hoạt và lịch hẹn",
+      "priority": "P1",
+      "trigger": "Tạm ngừng tự tắt đèn trong một giờ",
+      "preconditions": "Rule chỉ áp dụng phòng khách",
+      "expected": {
+        "domain": "automation",
+        "intent": "temporary_override",
+        "skills": [
+          "automation.override"
+        ],
+        "response": "Override có hạn, hiển thị thời điểm hết hạn",
+        "assertions": [
+          "Không disable vĩnh viễn",
+          "Không tắt các automation phòng khác"
+        ],
+        "authorization": "Quyền chỉnh rule đích"
+      },
+      "evidence": [
+        "HA_TRIGGER",
+        "HA_MODES",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-021",
+      "group": "Hiện diện theo phòng và vùng camera",
+      "priority": "P0",
+      "trigger": "Camera thấy người đi vào vùng sofa",
+      "preconditions": "Person tồn tại liên tục đủ enter debounce đã cấu hình",
+      "expected": {
+        "domain": "presence",
+        "intent": "zone_enter",
+        "skills": [
+          "vision.presence",
+          "event.publish"
+        ],
+        "response": "Phát enter cho zone một lần, kèm thời điểm/nguồn",
+        "assertions": [
+          "Không phát enter lại mỗi frame",
+          "Không suy ra danh tính"
+        ],
+        "authorization": "Nguồn camera và receiver đã cấu hình"
+      },
+      "evidence": [
+        "LOCAL_CAMERA",
+        "LOCAL_VISION",
+        "HA_PERSON",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-022",
+      "group": "Hiện diện theo phòng và vùng camera",
+      "priority": "P0",
+      "trigger": "Người đi ngang sofa chưa đủ debounce",
+      "preconditions": "Person detection chỉ kéo dài thời gian ngắn",
+      "expected": {
+        "domain": "presence",
+        "intent": "debounce_enter",
+        "skills": [
+          "vision.presence"
+        ],
+        "response": "Chưa phát occupancy enter",
+        "assertions": [
+          "Không kích hoạt scene chỉ từ một frame"
+        ],
+        "authorization": "Quan sát camera được phép"
+      },
+      "evidence": [
+        "LOCAL_CAMERA",
+        "LOCAL_VISION",
+        "HA_PERSON",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-023",
+      "group": "Hiện diện theo phòng và vùng camera",
+      "priority": "P0",
+      "trigger": "Người rời sofa rồi quay lại trước hạn leave",
+      "preconditions": "Đang occupied; chưa đủ leave debounce",
+      "expected": {
+        "domain": "presence",
+        "intent": "debounce_leave",
+        "skills": [
+          "vision.presence"
+        ],
+        "response": "Giữ occupied, hủy pending leave khi trở lại",
+        "assertions": [
+          "Không tắt TV/đèn trong khoảng trống ngắn"
+        ],
+        "authorization": "Rule rời vùng đã cấu hình nếu có"
+      },
+      "evidence": [
+        "LOCAL_CAMERA",
+        "LOCAL_VISION",
+        "HA_PERSON",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-024",
+      "group": "Hiện diện theo phòng và vùng camera",
+      "priority": "P0",
+      "trigger": "Không còn ai trong vùng đủ leave debounce",
+      "preconditions": "Stream vẫn khỏe; dữ liệu liên tục và mới",
+      "expected": {
+        "domain": "presence",
+        "intent": "zone_leave",
+        "skills": [
+          "vision.presence",
+          "event.publish"
+        ],
+        "response": "Phát leave sau ngưỡng; chuyển observed_empty",
+        "assertions": [
+          "Không suy cả nhà trống từ một zone"
+        ],
+        "authorization": "Receiver được cấu hình"
+      },
+      "evidence": [
+        "LOCAL_CAMERA",
+        "LOCAL_VISION",
+        "HA_PERSON",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-025",
+      "group": "Hiện diện theo phòng và vùng camera",
+      "priority": "P0",
+      "trigger": "Camera bị che khi đang có người",
+      "preconditions": "Mất khả năng quan sát; không có sensor bổ sung",
+      "expected": {
+        "domain": "presence",
+        "intent": "observation_unavailable",
+        "skills": [
+          "vision.health",
+          "presence.fuse"
+        ],
+        "response": "Trạng thái unknown/stale, không phát kết luận vắng",
+        "assertions": [
+          "Không biến thiếu khung hình thành leave"
+        ],
+        "authorization": "Quyền đọc camera health"
+      },
+      "evidence": [
+        "LOCAL_CAMERA",
+        "LOCAL_VISION",
+        "HA_PERSON",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-026",
+      "group": "Hiện diện theo phòng và vùng camera",
+      "priority": "P0",
+      "trigger": "Hai người vào, một người rời phòng",
+      "preconditions": "Headcount còn ít nhất một người, vùng vẫn quan sát được",
+      "expected": {
+        "domain": "presence",
+        "intent": "occupancy_update",
+        "skills": [
+          "vision.presence"
+        ],
+        "response": "Giữ occupied, cập nhật count có độ tin cậy",
+        "assertions": [
+          "Không phát empty khi chỉ giảm số người"
+        ],
+        "authorization": "Quan sát zone được phép"
+      },
+      "evidence": [
+        "LOCAL_CAMERA",
+        "LOCAL_VISION",
+        "HA_PERSON",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-027",
+      "group": "Hiện diện theo phòng và vùng camera",
+      "priority": "P1",
+      "trigger": "Người ngồi yên lâu xem phim",
+      "preconditions": "Motion pre-filter ít thay đổi nhưng có occupancy đã xác nhận",
+      "expected": {
+        "domain": "presence",
+        "intent": "maintain_occupancy",
+        "skills": [
+          "vision.presence",
+          "presence.fuse"
+        ],
+        "response": "Duy trì/revalidate theo thiết kế không coi bất động là vắng",
+        "assertions": [
+          "Không tắt đèn chỉ vì motion bằng không"
+        ],
+        "authorization": "Rule occupancy đã cấu hình"
+      },
+      "evidence": [
+        "LOCAL_CAMERA",
+        "LOCAL_VISION",
+        "HA_PERSON",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-028",
+      "group": "Hiện diện theo phòng và vùng camera",
+      "priority": "P0",
+      "trigger": "Mèo nhảy lên sofa",
+      "preconditions": "Detector xác định animal; không có person",
+      "expected": {
+        "domain": "presence",
+        "intent": "ignore_non_person",
+        "skills": [
+          "vision.presence"
+        ],
+        "response": "Không tạo person enter",
+        "assertions": [
+          "Không bật scene người ngồi sofa vì vật nuôi"
+        ],
+        "authorization": "Quan sát zone được phép"
+      },
+      "evidence": [
+        "LOCAL_CAMERA",
+        "LOCAL_VISION",
+        "HA_PERSON",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-029",
+      "group": "Hiện diện theo phòng và vùng camera",
+      "priority": "P1",
+      "trigger": "Người đứng sát ranh giới hai vùng",
+      "preconditions": "Bounding box dao động qua biên; policy vùng có cấu hình",
+      "expected": {
+        "domain": "presence",
+        "intent": "zone_boundary",
+        "skills": [
+          "vision.presence"
+        ],
+        "response": "Áp dụng policy vùng và debounce ổn định",
+        "assertions": [
+          "Không spam enter/leave liên tục",
+          "Không đếm một người hai lần nếu yêu cầu loại trùng"
+        ],
+        "authorization": "Zone policy đã chốt"
+      },
+      "evidence": [
+        "LOCAL_CAMERA",
+        "LOCAL_VISION",
+        "HA_PERSON",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-030",
+      "group": "Hiện diện theo phòng và vùng camera",
+      "priority": "P0",
+      "trigger": "Điện thoại away nhưng camera vẫn thấy người",
+      "preconditions": "Phone tracker mới báo away, camera có person mới",
+      "expected": {
+        "domain": "presence",
+        "intent": "conflicting_evidence",
+        "skills": [
+          "presence.fuse",
+          "home.state"
+        ],
+        "response": "Giữ tách trạng thái người theo tracker và occupancy phòng; thể hiện xung đột",
+        "assertions": [
+          "Không ghi đè person identity từ headcount",
+          "Không kích hoạt all-away ngầm"
+        ],
+        "authorization": "Các nguồn presence được cấp quyền"
+      },
+      "evidence": [
+        "LOCAL_CAMERA",
+        "LOCAL_VISION",
+        "HA_PERSON",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-031",
+      "group": "Xem và điều khiển camera",
+      "priority": "P0",
+      "trigger": "Mở camera sân lên TV phòng khách",
+      "preconditions": "Hai TV online, camera rõ tên",
+      "expected": {
+        "domain": "camera",
+        "intent": "view_on_device",
+        "skills": [
+          "camera.resolve",
+          "device.resolve",
+          "camera.view"
+        ],
+        "response": "Chỉ TV đích nhận phiên xem",
+        "assertions": [
+          "Không broadcast toàn bộ TV",
+          "Không dùng web client làm đích mặc định"
+        ],
+        "authorization": "Quyền xem camera và gửi TV đích"
+      },
+      "evidence": [
+        "LOCAL_CAMERA",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-032",
+      "group": "Xem và điều khiển camera",
+      "priority": "P1",
+      "trigger": "Cho xem bốn camera cùng lúc",
+      "preconditions": "TV báo giới hạn decoder; có substream",
+      "expected": {
+        "domain": "camera",
+        "intent": "multiview",
+        "skills": [
+          "camera.capabilities",
+          "camera.view"
+        ],
+        "response": "Dùng số stream/chất lượng trong giới hạn hoặc đề xuất layout ít hơn",
+        "assertions": [
+          "Không mở bốn main stream vô điều kiện",
+          "Focus vẫn dùng remote"
+        ],
+        "authorization": "Quyền xem từng camera"
+      },
+      "evidence": [
+        "LOCAL_CAMERA",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-033",
+      "group": "Xem và điều khiển camera",
+      "priority": "P0",
+      "trigger": "Quay camera sang trái một chút",
+      "preconditions": "PTZ hỗ trợ relative move; giới hạn tốc độ đã đặt",
+      "expected": {
+        "domain": "camera",
+        "intent": "ptz_move",
+        "skills": [
+          "camera.capabilities",
+          "camera.control"
+        ],
+        "response": "Gửi bước PTZ hữu hạn và dừng đúng protocol",
+        "assertions": [
+          "Không quay liên tục vì thiếu stop",
+          "Không dịch chuyển camera không PTZ"
+        ],
+        "authorization": "Quyền camera control"
+      },
+      "evidence": [
+        "LOCAL_CAMERA",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-034",
+      "group": "Xem và điều khiển camera",
+      "priority": "P0",
+      "trigger": "Quay về vị trí cửa chính",
+      "preconditions": "Preset tồn tại trên camera đang chọn",
+      "expected": {
+        "domain": "camera",
+        "intent": "recall_preset",
+        "skills": [
+          "camera.control"
+        ],
+        "response": "Gọi đúng preset ID, báo kết quả",
+        "assertions": [
+          "Không áp preset ID của camera khác"
+        ],
+        "authorization": "Quyền camera control"
+      },
+      "evidence": [
+        "LOCAL_CAMERA",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-035",
+      "group": "Xem và điều khiển camera",
+      "priority": "P1",
+      "trigger": "Theo dõi người trong sân",
+      "preconditions": "Camera/worker chưa có capability tracking",
+      "expected": {
+        "domain": "camera",
+        "intent": "request_tracking",
+        "skills": [
+          "camera.capabilities"
+        ],
+        "response": "Báo chưa hỗ trợ, có thể chọn xem/PTZ thủ công",
+        "assertions": [
+          "Không giả đang theo dõi chỉ vì có person detection"
+        ],
+        "authorization": "Quyền control nếu tracking được triển khai"
+      },
+      "evidence": [
+        "LOCAL_CAMERA",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-036",
+      "group": "Xem và điều khiển camera",
+      "priority": "P0",
+      "trigger": "Dừng quay camera",
+      "preconditions": "Có PTZ session đang hoạt động",
+      "expected": {
+        "domain": "camera",
+        "intent": "ptz_stop",
+        "skills": [
+          "camera.control"
+        ],
+        "response": "Gửi stop đến camera của phiên điều khiển",
+        "assertions": [
+          "Không dừng player thay motor"
+        ],
+        "authorization": "Quyền camera control"
+      },
+      "evidence": [
+        "LOCAL_CAMERA",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-037",
+      "group": "Xem và điều khiển camera",
+      "priority": "P0",
+      "trigger": "Nói qua camera rằng tôi ra ngay",
+      "preconditions": "Camera có two-way audio; target rõ",
+      "expected": {
+        "domain": "camera",
+        "intent": "speak",
+        "skills": [
+          "camera.speak"
+        ],
+        "response": "Phát đúng nội dung qua camera đã chọn, báo kết quả truyền",
+        "assertions": [
+          "Không phát cùng câu qua mọi loa",
+          "Không báo người ngoài đã nghe chắc chắn"
+        ],
+        "authorization": "User yêu cầu truyền lời rõ ràng; quyền camera speak"
+      },
+      "evidence": [
+        "LOCAL_CAMERA",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-038",
+      "group": "Xem và điều khiển camera",
+      "priority": "P0",
+      "trigger": "Bật mic để nghe camera",
+      "preconditions": "Camera có audio; user có quyền nghe",
+      "expected": {
+        "domain": "camera",
+        "intent": "listen",
+        "skills": [
+          "camera.capabilities",
+          "camera.listen"
+        ],
+        "response": "Mở audio stream và chỉ báo đang nghe",
+        "assertions": [
+          "Không giả có âm thanh nếu stream chỉ video",
+          "Không ghi âm tự động"
+        ],
+        "authorization": "Quyền nghe camera"
+      },
+      "evidence": [
+        "LOCAL_CAMERA",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-039",
+      "group": "Xem và điều khiển camera",
+      "priority": "P0",
+      "trigger": "Tắt chế độ riêng tư camera",
+      "preconditions": "Camera hỗ trợ privacy; user có quyền",
+      "expected": {
+        "domain": "camera",
+        "intent": "set_privacy",
+        "skills": [
+          "camera.control",
+          "camera.state"
+        ],
+        "response": "Tắt privacy và xác minh trạng thái mới nếu đọc được",
+        "assertions": [
+          "Không chỉ đổi badge UI",
+          "Không giả lệnh thành công khi camera timeout"
+        ],
+        "authorization": "Quyền thay đổi privacy"
+      },
+      "evidence": [
+        "LOCAL_CAMERA",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-040",
+      "group": "Xem và điều khiển camera",
+      "priority": "P1",
+      "trigger": "Chụp ảnh camera cửa lúc này",
+      "preconditions": "Snapshot capability có; đích lưu theo cấu hình",
+      "expected": {
+        "domain": "camera",
+        "intent": "snapshot",
+        "skills": [
+          "camera.snapshot"
+        ],
+        "response": "Ảnh có timestamp/camera ID; lưu nếu đích đã được chỉ định",
+        "assertions": [
+          "Không gửi ảnh ra dịch vụ khác",
+          "Không giữ lâu hơn policy lưu trữ"
+        ],
+        "authorization": "Quyền snapshot và lưu ảnh nếu yêu cầu"
+      },
+      "evidence": [
+        "LOCAL_CAMERA",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-041",
+      "group": "Sự kiện cửa và an ninh",
+      "priority": "P0",
+      "trigger": "Chuông cửa reo khi đang xem phim",
+      "preconditions": "Doorbell event hợp lệ; TV đích đã đăng ký",
+      "expected": {
+        "domain": "security",
+        "intent": "doorbell_notify",
+        "skills": [
+          "event.validate",
+          "notification.route",
+          "camera.view"
+        ],
+        "response": "Hiện thông báo/camera nhỏ theo cấu hình, cho mở lớn",
+        "assertions": [
+          "Không chiếm màn hình ngoài policy",
+          "Không tự mở khóa"
+        ],
+        "authorization": "Rule chuông cửa đã cấu hình"
+      },
+      "evidence": [
+        "LOCAL_CAMERA",
+        "HA_TRIGGER",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-042",
+      "group": "Sự kiện cửa và an ninh",
+      "priority": "P1",
+      "trigger": "Cửa trước mở lúc nửa đêm",
+      "preconditions": "Contact sensor mới; khung giờ rule qua ngày",
+      "expected": {
+        "domain": "security",
+        "intent": "door_open_alert",
+        "skills": [
+          "home.state",
+          "automation.evaluate",
+          "notification.route"
+        ],
+        "response": "Cảnh báo có nguồn và thời điểm nếu condition đúng",
+        "assertions": [
+          "Không dùng giờ UTC sai ngày",
+          "Không gọi đó là đột nhập chắc chắn"
+        ],
+        "authorization": "Rule cảnh báo đã bật"
+      },
+      "evidence": [
+        "LOCAL_CAMERA",
+        "HA_TRIGGER",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-043",
+      "group": "Sự kiện cửa và an ninh",
+      "priority": "P0",
+      "trigger": "Có người trong vùng cấm khi away",
+      "preconditions": "Zone polygon và lịch rule đã chốt; có enter đã debounce",
+      "expected": {
+        "domain": "security",
+        "intent": "restricted_zone_alert",
+        "skills": [
+          "vision.presence",
+          "automation.evaluate",
+          "notification.route"
+        ],
+        "response": "Cảnh báo quan sát người ở vùng, giữ bằng chứng theo policy",
+        "assertions": [
+          "Không xác định người lạ chỉ từ person detection",
+          "Không tự báo cơ quan bên ngoài"
+        ],
+        "authorization": "Rule và receiver được cấu hình"
+      },
+      "evidence": [
+        "LOCAL_CAMERA",
+        "HA_TRIGGER",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-044",
+      "group": "Sự kiện cửa và an ninh",
+      "priority": "P1",
+      "trigger": "Có người đứng trước cửa lâu",
+      "preconditions": "Rule dwell time đã đặt, người vẫn quan sát liên tục",
+      "expected": {
+        "domain": "security",
+        "intent": "loitering_alert",
+        "skills": [
+          "vision.presence",
+          "automation.evaluate"
+        ],
+        "response": "Một cảnh báo sau dwell threshold, cooldown theo sự kiện",
+        "assertions": [
+          "Không lặp mỗi frame",
+          "Không reset timer do jitter ngắn"
+        ],
+        "authorization": "Rule dwell-time đã bật"
+      },
+      "evidence": [
+        "LOCAL_CAMERA",
+        "HA_TRIGGER",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-045",
+      "group": "Sự kiện cửa và an ninh",
+      "priority": "P0",
+      "trigger": "Mở khóa thất bại sau nhiều lần thử",
+      "preconditions": "Integration cung cấp attempt events; lock state chưa đổi",
+      "expected": {
+        "domain": "security",
+        "intent": "lock_attempt_alert",
+        "skills": [
+          "home.state",
+          "event.validate",
+          "notification.route"
+        ],
+        "response": "Cảnh báo attempt và trạng thái lock đọc được",
+        "assertions": [
+          "Không coi attempt thành unlocked",
+          "Không retry unlock vô hạn"
+        ],
+        "authorization": "Quyền đọc sự kiện khóa; rule đã bật"
+      },
+      "evidence": [
+        "LOCAL_CAMERA",
+        "HA_TRIGGER",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-046",
+      "group": "Sự kiện cửa và an ninh",
+      "priority": "P1",
+      "trigger": "Cửa mở lâu quá",
+      "preconditions": "Contact mở liên tục quá thời gian rule",
+      "expected": {
+        "domain": "security",
+        "intent": "door_left_open",
+        "skills": [
+          "automation.evaluate",
+          "home.state"
+        ],
+        "response": "Nhắc một lần theo cooldown; đóng cửa thì clear",
+        "assertions": [
+          "Không nhắc sau khi nhận close mới hơn"
+        ],
+        "authorization": "Rule đã cấu hình"
+      },
+      "evidence": [
+        "LOCAL_CAMERA",
+        "HA_TRIGGER",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-047",
+      "group": "Sự kiện cửa và an ninh",
+      "priority": "P0",
+      "trigger": "User xác nhận đây là khách",
+      "preconditions": "Context gắn một event ID chuông cửa",
+      "expected": {
+        "domain": "security",
+        "intent": "acknowledge_event",
+        "skills": [
+          "event.acknowledge"
+        ],
+        "response": "Đánh dấu event đã xem/xử lý theo UI",
+        "assertions": [
+          "Không thêm danh tính vào nhận diện khuôn mặt",
+          "Không tự mở khóa"
+        ],
+        "authorization": "Quyền xác nhận event"
+      },
+      "evidence": [
+        "LOCAL_CAMERA",
+        "HA_TRIGGER",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-048",
+      "group": "Sự kiện cửa và an ninh",
+      "priority": "P1",
+      "trigger": "Xem lại sự kiện trước cửa lúc 8 giờ",
+      "preconditions": "NVR có recording và ngày chưa rõ",
+      "expected": {
+        "domain": "camera",
+        "intent": "event_history",
+        "skills": [
+          "camera.history",
+          "clarification.ask"
+        ],
+        "response": "Hỏi ngày nếu mơ hồ; tra clip từ recording source",
+        "assertions": [
+          "Không hứa có video nếu chỉ có event metadata"
+        ],
+        "authorization": "Quyền xem lịch sử và recording"
+      },
+      "evidence": [
+        "LOCAL_CAMERA",
+        "HA_TRIGGER",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-049",
+      "group": "Sự kiện cửa và an ninh",
+      "priority": "P0",
+      "trigger": "Cảm biến khói báo động, camera không thấy gì",
+      "preconditions": "Smoke event từ sensor được cấu hình; camera không chứng minh an toàn",
+      "expected": {
+        "domain": "security",
+        "intent": "sensor_alarm",
+        "skills": [
+          "event.validate",
+          "notification.route"
+        ],
+        "response": "Hiển thị cảnh báo sensor rõ nguồn; action chỉ theo rule đã cho phép",
+        "assertions": [
+          "Không hạ cảnh báo vì camera trống",
+          "Không tuyên bố đã kiểm soát sự cố"
+        ],
+        "authorization": "Rule cảnh báo và thiết bị nhận đã cấu hình"
+      },
+      "evidence": [
+        "LOCAL_CAMERA",
+        "HA_TRIGGER",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-050",
+      "group": "Sự kiện cửa và an ninh",
+      "priority": "P0",
+      "trigger": "Bật riêng tư camera nhưng sensor cửa báo mở",
+      "preconditions": "Privacy camera đang bật; contact sensor được phép hoạt động",
+      "expected": {
+        "domain": "security",
+        "intent": "privacy_respecting_alert",
+        "skills": [
+          "home.state",
+          "notification.route"
+        ],
+        "response": "Thông báo sensor theo rule; giữ camera privacy",
+        "assertions": [
+          "Không tự bật lại camera để xác minh"
+        ],
+        "authorization": "Rule sensor không vượt quyền privacy"
+      },
+      "evidence": [
+        "LOCAL_CAMERA",
+        "HA_TRIGGER",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-051",
+      "group": "Âm thanh và phối hợp nhiều cảm biến",
+      "priority": "P0",
+      "trigger": "YAMNet nhận tiếng vỗ tay ở sofa",
+      "preconditions": "Có occupancy sofa mới; rule clap đã bật và debounce riêng",
+      "expected": {
+        "domain": "audio",
+        "intent": "clap_trigger",
+        "skills": [
+          "audio.classify",
+          "presence.fuse",
+          "automation.evaluate"
+        ],
+        "response": "Tạo clap event hợp lệ rồi gọi action theo rule",
+        "assertions": [
+          "Không coi top label là lệnh bật/tắt trực tiếp",
+          "Không chạy nếu thiếu điều kiện rule"
+        ],
+        "authorization": "Rule và target được user cấu hình"
+      },
+      "evidence": [
+        "LOCAL_AUDIO",
+        "LOCAL_RULES",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-052",
+      "group": "Âm thanh và phối hợp nhiều cảm biến",
+      "priority": "P0",
+      "trigger": "Phim trên TV phát tiếng vỗ tay",
+      "preconditions": "Có playback audio và YAMNet clap; chưa có echo/source verification",
+      "expected": {
+        "domain": "audio",
+        "intent": "ambiguous_sound",
+        "skills": [
+          "audio.classify",
+          "event.arbitrate"
+        ],
+        "response": "Không kích hoạt action clap khi chưa phân biệt được nguồn theo policy",
+        "assertions": [
+          "Không tắt/mở TV lặp vì âm thanh tự phát"
+        ],
+        "authorization": "Cần rule phân biệt nguồn; không mặc định tin classifier"
+      },
+      "evidence": [
+        "LOCAL_AUDIO",
+        "LOCAL_RULES",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-053",
+      "group": "Âm thanh và phối hợp nhiều cảm biến",
+      "priority": "P0",
+      "trigger": "TV phát câu mở cửa",
+      "preconditions": "ASR nghe thấy câu nhưng không có phiên người dùng được xác nhận",
+      "expected": {
+        "domain": "audio",
+        "intent": "untrusted_command",
+        "skills": [
+          "speech.classify",
+          "event.arbitrate"
+        ],
+        "response": "Bỏ lệnh hành động hoặc yêu cầu tương tác người dùng",
+        "assertions": [
+          "Không mở cửa từ thoại phim",
+          "Không coi transcript là authorization"
+        ],
+        "authorization": "Chỉ session input được phép mới gọi action"
+      },
+      "evidence": [
+        "LOCAL_AUDIO",
+        "LOCAL_RULES",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-054",
+      "group": "Âm thanh và phối hợp nhiều cảm biến",
+      "priority": "P1",
+      "trigger": "Nghe tiếng chuông báo nhưng chưa biết nguồn",
+      "preconditions": "YAMNet báo alarm class; không có smoke sensor xác nhận",
+      "expected": {
+        "domain": "audio",
+        "intent": "possible_alarm",
+        "skills": [
+          "audio.classify",
+          "notification.route"
+        ],
+        "response": "Thông báo có âm thanh giống cảnh báo, kèm độ tin cậy",
+        "assertions": [
+          "Không khẳng định có cháy",
+          "Không tự coi đã an toàn khi điểm giảm"
+        ],
+        "authorization": "Rule thông báo audio đã bật"
+      },
+      "evidence": [
+        "LOCAL_AUDIO",
+        "LOCAL_RULES",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-055",
+      "group": "Âm thanh và phối hợp nhiều cảm biến",
+      "priority": "P1",
+      "trigger": "Micro phát hiện tiếng nói khi phòng tối",
+      "preconditions": "Không có wake interaction; có occupancy unknown",
+      "expected": {
+        "domain": "audio",
+        "intent": "speech_observation",
+        "skills": [
+          "audio.classify",
+          "presence.fuse"
+        ],
+        "response": "Cập nhật bằng chứng activity theo policy, không biến thành lệnh",
+        "assertions": [
+          "Không bật đèn vì mọi tiếng nói nếu chưa có rule"
+        ],
+        "authorization": "Quyền thu nhận audio theo cấu hình"
+      },
+      "evidence": [
+        "LOCAL_AUDIO",
+        "LOCAL_RULES",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-056",
+      "group": "Âm thanh và phối hợp nhiều cảm biến",
+      "priority": "P0",
+      "trigger": "Tiếng động mạnh rồi camera mất hình",
+      "preconditions": "Hai quan sát gần nhau nhưng không đủ kết luận sự cố",
+      "expected": {
+        "domain": "security",
+        "intent": "correlate_observations",
+        "skills": [
+          "event.correlate",
+          "notification.route"
+        ],
+        "response": "Thông báo mất camera kèm quan sát âm thanh nếu rule bật",
+        "assertions": [
+          "Không tuyên bố phá hoại",
+          "Không bỏ qua mất tín hiệu"
+        ],
+        "authorization": "Rule tương quan đã cấu hình"
+      },
+      "evidence": [
+        "LOCAL_AUDIO",
+        "LOCAL_RULES",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-057",
+      "group": "Âm thanh và phối hợp nhiều cảm biến",
+      "priority": "P1",
+      "trigger": "Cảm biến cửa mở cùng person enter",
+      "preconditions": "Hai event có event/source timestamp khác nhau nhỏ",
+      "expected": {
+        "domain": "presence",
+        "intent": "arrival_correlation",
+        "skills": [
+          "event.correlate",
+          "automation.evaluate"
+        ],
+        "response": "Gộp thành một arrival theo cửa sổ thời gian rule",
+        "assertions": [
+          "Không chạy scene chào hai lần"
+        ],
+        "authorization": "Rule arrival đã bật"
+      },
+      "evidence": [
+        "LOCAL_AUDIO",
+        "LOCAL_RULES",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-058",
+      "group": "Âm thanh và phối hợp nhiều cảm biến",
+      "priority": "P0",
+      "trigger": "Camera thấy có người nhưng mic yên lặng",
+      "preconditions": "Vision còn mới, audio không phát speech",
+      "expected": {
+        "domain": "presence",
+        "intent": "fuse_presence",
+        "skills": [
+          "presence.fuse"
+        ],
+        "response": "Giữ occupied theo quan sát vision",
+        "assertions": [
+          "Không coi im lặng là vắng người"
+        ],
+        "authorization": "Nguồn presence được phép"
+      },
+      "evidence": [
+        "LOCAL_AUDIO",
+        "LOCAL_RULES",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-059",
+      "group": "Âm thanh và phối hợp nhiều cảm biến",
+      "priority": "P0",
+      "trigger": "YAMNet mất kết nối",
+      "preconditions": "TCP inference timeout; camera vẫn hoạt động",
+      "expected": {
+        "domain": "audio",
+        "intent": "worker_unavailable",
+        "skills": [
+          "audio.health"
+        ],
+        "response": "Đánh dấu audio unavailable, giữ chức năng khác",
+        "assertions": [
+          "Không trả is_alarm=false như kết quả inference",
+          "Không crash pipeline camera"
+        ],
+        "authorization": "Quyền đọc worker health"
+      },
+      "evidence": [
+        "LOCAL_AUDIO",
+        "LOCAL_RULES",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-060",
+      "group": "Âm thanh và phối hợp nhiều cảm biến",
+      "priority": "P1",
+      "trigger": "Tiếng vỗ tay được phát hiện liên tiếp",
+      "preconditions": "Nhiều window audio chồng lấn của cùng một tiếng",
+      "expected": {
+        "domain": "audio",
+        "intent": "deduplicate_sound",
+        "skills": [
+          "event.deduplicate",
+          "automation.evaluate"
+        ],
+        "response": "Một trigger logic theo cửa sổ debounce/cooldown",
+        "assertions": [
+          "Không toggle thiết bị nhiều lần do overlap"
+        ],
+        "authorization": "Rule debounce đã cấu hình"
+      },
+      "evidence": [
+        "LOCAL_AUDIO",
+        "LOCAL_RULES",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-061",
+      "group": "Phối hợp TV, người dùng và thông báo",
+      "priority": "P0",
+      "trigger": "Sofa occupied trong lúc TV đang tắt",
+      "preconditions": "Có rule chào/mở TV đã bật; target TV rõ",
+      "expected": {
+        "domain": "automation",
+        "intent": "presence_scene",
+        "skills": [
+          "automation.evaluate",
+          "device.power"
+        ],
+        "response": "Thực hiện action chỉ khi đủ rule, báo kết quả thực tế",
+        "assertions": [
+          "Không tự bật TV chỉ vì vision có người nếu chưa bật rule"
+        ],
+        "authorization": "Rule đã ủy quyền trước"
+      },
+      "evidence": [
+        "LOCAL_RULES",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-062",
+      "group": "Phối hợp TV, người dùng và thông báo",
+      "priority": "P0",
+      "trigger": "Phòng vắng nhưng phim vẫn phát",
+      "preconditions": "Room occupancy empty mới; policy giữ TV khi playback active",
+      "expected": {
+        "domain": "automation",
+        "intent": "idle_room_check",
+        "skills": [
+          "presence.fuse",
+          "player.state",
+          "automation.evaluate"
+        ],
+        "response": "Tôn trọng điều kiện playback và thời gian idle",
+        "assertions": [
+          "Không tắt TV ngay sau một leave event"
+        ],
+        "authorization": "Rule idle đã cấu hình"
+      },
+      "evidence": [
+        "LOCAL_RULES",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-063",
+      "group": "Phối hợp TV, người dùng và thông báo",
+      "priority": "P0",
+      "trigger": "Không ai trong phòng và TV đã dừng đủ lâu",
+      "preconditions": "Healthy observation, idle threshold đã đủ",
+      "expected": {
+        "domain": "automation",
+        "intent": "idle_shutdown",
+        "skills": [
+          "automation.evaluate",
+          "device.power",
+          "home.control"
+        ],
+        "response": "Tắt đúng thiết bị theo rule, kết quả riêng từng action",
+        "assertions": [
+          "Không tắt thiết bị phòng khác",
+          "Không bỏ qua điều kiện sensor stale"
+        ],
+        "authorization": "Rule idle đã bật"
+      },
+      "evidence": [
+        "LOCAL_RULES",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-064",
+      "group": "Phối hợp TV, người dùng và thông báo",
+      "priority": "P1",
+      "trigger": "Thông báo chuông cửa khi TV standby",
+      "preconditions": "Client không hỗ trợ đánh thức hoặc không có quyền",
+      "expected": {
+        "domain": "notification",
+        "intent": "route_alert",
+        "skills": [
+          "device.capabilities",
+          "notification.route"
+        ],
+        "response": "Chọn receiver đã cấu hình khác hoặc ghi chưa giao được",
+        "assertions": [
+          "Không giả đã hiển thị TV",
+          "Không đánh thức mọi TV"
+        ],
+        "authorization": "Rule và receiver đã cấu hình"
+      },
+      "evidence": [
+        "LOCAL_RULES",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-065",
+      "group": "Phối hợp TV, người dùng và thông báo",
+      "priority": "P0",
+      "trigger": "Hai TV đang bật cùng lúc nhận sự kiện camera",
+      "preconditions": "Rule chỉ định TV phòng khách",
+      "expected": {
+        "domain": "notification",
+        "intent": "targeted_delivery",
+        "skills": [
+          "device.resolve",
+          "notification.route"
+        ],
+        "response": "Gửi đúng TV phòng khách, có delivery state",
+        "assertions": [
+          "Không broadcast theo mặc định"
+        ],
+        "authorization": "Quyền gửi tới receiver đích"
+      },
+      "evidence": [
+        "LOCAL_RULES",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-066",
+      "group": "Phối hợp TV, người dùng và thông báo",
+      "priority": "P1",
+      "trigger": "Thông báo không khẩn cấp trong giờ ngủ",
+      "preconditions": "Quiet-hours policy đang áp dụng",
+      "expected": {
+        "domain": "notification",
+        "intent": "quiet_delivery",
+        "skills": [
+          "notification.policy",
+          "notification.route"
+        ],
+        "response": "Hiện yên lặng/hoãn theo policy đã lưu",
+        "assertions": [
+          "Không phát loa hoặc TTS vì mặc định"
+        ],
+        "authorization": "Policy thông báo user đã cấu hình"
+      },
+      "evidence": [
+        "LOCAL_RULES",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-067",
+      "group": "Phối hợp TV, người dùng và thông báo",
+      "priority": "P0",
+      "trigger": "User dismiss cảnh báo trên TV",
+      "preconditions": "Notification ID rõ, nguồn sensor vẫn đang active",
+      "expected": {
+        "domain": "notification",
+        "intent": "dismiss",
+        "skills": [
+          "notification.acknowledge"
+        ],
+        "response": "Ẩn/đánh dấu đã đọc theo scope UI",
+        "assertions": [
+          "Không xóa sensor alarm hoặc tắt bảo vệ tại nguồn"
+        ],
+        "authorization": "Quyền acknowledge notification"
+      },
+      "evidence": [
+        "LOCAL_RULES",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-068",
+      "group": "Phối hợp TV, người dùng và thông báo",
+      "priority": "P0",
+      "trigger": "User đang kéo rèm thủ công khi scene bắt đầu",
+      "preconditions": "Hai action cạnh tranh cùng cover",
+      "expected": {
+        "domain": "automation",
+        "intent": "arbitrate_control",
+        "skills": [
+          "event.arbitrate",
+          "home.state"
+        ],
+        "response": "Áp policy ưu tiên thao tác tay và ghi kết quả bị bỏ/hoãn",
+        "assertions": [
+          "Không gửi lệnh đảo chiều liên tục",
+          "Không báo scene hoàn tất toàn bộ"
+        ],
+        "authorization": "Policy arbitration đã cấu hình"
+      },
+      "evidence": [
+        "LOCAL_RULES",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-069",
+      "group": "Phối hợp TV, người dùng và thông báo",
+      "priority": "P1",
+      "trigger": "Khách yêu cầu xem camera phòng ngủ",
+      "preconditions": "Profile guest không có quyền camera đó",
+      "expected": {
+        "domain": "camera",
+        "intent": "authorize_view",
+        "skills": [
+          "authorization.check"
+        ],
+        "response": "Từ chối quyền, không trả snapshot/stream URL",
+        "assertions": [
+          "Không rò ảnh qua thumbnail hoặc cache",
+          "Không mượn quyền server admin"
+        ],
+        "authorization": "Quyền theo profile hiện tại"
+      },
+      "evidence": [
+        "LOCAL_RULES",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-070",
+      "group": "Phối hợp TV, người dùng và thông báo",
+      "priority": "P1",
+      "trigger": "Tôi muốn biết vì sao đèn vừa bật",
+      "preconditions": "Có trace trigger, condition, tool result",
+      "expected": {
+        "domain": "automation",
+        "intent": "explain_action",
+        "skills": [
+          "automation.trace"
+        ],
+        "response": "Nêu rule, tín hiệu và kết quả thực tế bằng ngôn ngữ dễ hiểu",
+        "assertions": [
+          "Không bịa nguyên nhân khi thiếu trace",
+          "Không lộ credentials trong trace"
+        ],
+        "authorization": "Quyền đọc trace liên quan"
+      },
+      "evidence": [
+        "LOCAL_RULES",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-071",
+      "group": "Lỗi, cạnh tranh và phục hồi",
+      "priority": "P0",
+      "trigger": "Webhook camera gửi lặp cùng event",
+      "preconditions": "Producer có event ID; consumer retry sau timeout",
+      "expected": {
+        "domain": "event",
+        "intent": "idempotent_delivery",
+        "skills": [
+          "event.validate",
+          "event.deduplicate"
+        ],
+        "response": "Một logical event và action; retry có delivery status",
+        "assertions": [
+          "Không bật scene lại mỗi lần nhận retry"
+        ],
+        "authorization": "Event producer được xác thực"
+      },
+      "evidence": [
+        "HA_MODES",
+        "LOCAL_CAMERA",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-072",
+      "group": "Lỗi, cạnh tranh và phục hồi",
+      "priority": "P0",
+      "trigger": "Leave cũ đến sau enter mới",
+      "preconditions": "Event có source ID, timestamp và thứ tự khi hỗ trợ",
+      "expected": {
+        "domain": "presence",
+        "intent": "out_of_order_event",
+        "skills": [
+          "event.order",
+          "presence.fuse"
+        ],
+        "response": "Loại/đánh dấu event cũ theo ordering policy",
+        "assertions": [
+          "Không chuyển phòng trống vì leave trễ"
+        ],
+        "authorization": "Chỉ nguồn được phép cập nhật state"
+      },
+      "evidence": [
+        "HA_MODES",
+        "LOCAL_CAMERA",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-073",
+      "group": "Lỗi, cạnh tranh và phục hồi",
+      "priority": "P0",
+      "trigger": "Đồng hồ camera lệch nhiều phút",
+      "preconditions": "Timestamp producer không đáng tin; có received_at",
+      "expected": {
+        "domain": "event",
+        "intent": "clock_skew",
+        "skills": [
+          "event.validate",
+          "event.order"
+        ],
+        "response": "Giữ source time và receive time, đánh dấu độ mới chưa chắc",
+        "assertions": [
+          "Không dùng timestamp lệch làm dữ liệu live chắc chắn"
+        ],
+        "authorization": "Nguồn được cấu hình; kiểm tra freshness"
+      },
+      "evidence": [
+        "HA_MODES",
+        "LOCAL_CAMERA",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-074",
+      "group": "Lỗi, cạnh tranh và phục hồi",
+      "priority": "P0",
+      "trigger": "HA mất kết nối khi gọi tắt đèn",
+      "preconditions": "Không biết action đã được HA nhận chưa",
+      "expected": {
+        "domain": "home",
+        "intent": "uncertain_action_result",
+        "skills": [
+          "home.control",
+          "home.state"
+        ],
+        "response": "Báo trạng thái chưa xác nhận, read-after-reconnect khi khả thi",
+        "assertions": [
+          "Không báo đã tắt",
+          "Không retry action nhạy cảm mù quáng"
+        ],
+        "authorization": "Quyền control/read theo target"
+      },
+      "evidence": [
+        "HA_MODES",
+        "LOCAL_CAMERA",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-075",
+      "group": "Lỗi, cạnh tranh và phục hồi",
+      "priority": "P0",
+      "trigger": "Một scene thành công một phần",
+      "preconditions": "Hai đèn thành công, rèm thất bại",
+      "expected": {
+        "domain": "home",
+        "intent": "partial_execution",
+        "skills": [
+          "home.scene",
+          "home.state"
+        ],
+        "response": "Báo kết quả từng thành phần và tùy chọn thử lại phần lỗi",
+        "assertions": [
+          "Không báo scene thành công toàn bộ",
+          "Không rollback gây tác dụng phụ ngoài policy"
+        ],
+        "authorization": "Quyền scene/action đã cấu hình"
+      },
+      "evidence": [
+        "HA_MODES",
+        "LOCAL_CAMERA",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-076",
+      "group": "Lỗi, cạnh tranh và phục hồi",
+      "priority": "P0",
+      "trigger": "Server khởi động lại khi đang đếm idle",
+      "preconditions": "Không có dữ liệu tươi sau restart; timer có hoặc không persist",
+      "expected": {
+        "domain": "automation",
+        "intent": "recover_state",
+        "skills": [
+          "automation.recover",
+          "presence.fuse"
+        ],
+        "response": "Khôi phục có kiểm tra freshness hoặc bắt đầu quan sát lại",
+        "assertions": [
+          "Không coi uptime mới bằng thời gian phòng vắng",
+          "Không tự tắt ngay"
+        ],
+        "authorization": "Rule đang bật trước restart"
+      },
+      "evidence": [
+        "HA_MODES",
+        "LOCAL_CAMERA",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-077",
+      "group": "Lỗi, cạnh tranh và phục hồi",
+      "priority": "P0",
+      "trigger": "Redis chứa occupancy cũ nhưng camera đã offline",
+      "preconditions": "Cached state quá freshness budget",
+      "expected": {
+        "domain": "presence",
+        "intent": "stale_cache",
+        "skills": [
+          "cache.lookup",
+          "presence.fuse"
+        ],
+        "response": "Hiển thị stale/unknown; không dùng để tắt thiết bị",
+        "assertions": [
+          "TTL cache không thay thế độ mới observation",
+          "Không coi giá trị cuối là live"
+        ],
+        "authorization": "Quyền đọc scope presence"
+      },
+      "evidence": [
+        "HA_MODES",
+        "LOCAL_CAMERA",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-078",
+      "group": "Lỗi, cạnh tranh và phục hồi",
+      "priority": "P1",
+      "trigger": "Camera đổi mật khẩu hoặc token hết hạn",
+      "preconditions": "API trả auth error, stream cũng không truy cập được",
+      "expected": {
+        "domain": "camera",
+        "intent": "reauth_required",
+        "skills": [
+          "camera.health",
+          "account.status"
+        ],
+        "response": "Báo cần cập nhật credentials đúng camera",
+        "assertions": [
+          "Không log mật khẩu",
+          "Không thử lại liên tục gây lockout"
+        ],
+        "authorization": "Chỉ admin cấu hình được cập nhật credentials"
+      },
+      "evidence": [
+        "HA_MODES",
+        "LOCAL_CAMERA",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-079",
+      "group": "Lỗi, cạnh tranh và phục hồi",
+      "priority": "P0",
+      "trigger": "Nhiều trigger đến khi action trước chưa xong",
+      "preconditions": "Mode rule đã chọn single/restart/queued/parallel với giới hạn",
+      "expected": {
+        "domain": "automation",
+        "intent": "execution_mode",
+        "skills": [
+          "automation.evaluate",
+          "event.arbitrate"
+        ],
+        "response": "Thực hiện đúng mode và giới hạn queue/concurrency của rule",
+        "assertions": [
+          "Không chạy song song mặc định",
+          "Không kéo queue vô hạn"
+        ],
+        "authorization": "Rule/mode đã được lưu trước"
+      },
+      "evidence": [
+        "HA_MODES",
+        "LOCAL_CAMERA",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    },
+    {
+      "id": "HC-080",
+      "group": "Lỗi, cạnh tranh và phục hồi",
+      "priority": "P0",
+      "trigger": "User thu hồi quyền camera khi đang xem",
+      "preconditions": "Phiên xem đã cấp trước đó; quyền mới không cho phép",
+      "expected": {
+        "domain": "camera",
+        "intent": "revoke_access",
+        "skills": [
+          "authorization.check",
+          "camera.session_revoke"
+        ],
+        "response": "Dừng phiên hoặc vô hiệu resource token theo chính sách có hiệu lực",
+        "assertions": [
+          "Không cho tiếp tục xem vô hạn bằng URL cũ",
+          "Không phục vụ ảnh cache vượt quyền"
+        ],
+        "authorization": "Thay đổi quyền từ quản trị viên được phép"
+      },
+      "evidence": [
+        "HA_MODES",
+        "LOCAL_CAMERA",
+        "DESIGN"
+      ],
+      "execution_status": "not_run"
+    }
+  ]
+}
