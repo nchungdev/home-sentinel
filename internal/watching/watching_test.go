@@ -42,6 +42,23 @@ func TestHistoryKeepsNewestEventPerTitle(t *testing.T) {
 	}
 }
 
+func TestHistoryKeepsPositionWhenSessionResetsToZero(t *testing.T) {
+	history := NewHistory(filepath.Join(t.TempDir(), "history.json"))
+	now := time.Now().UnixMilli()
+
+	if err := history.Record([]Event{event("a.pkg", "Show", 450, 1000, now-10)}); err != nil {
+		t.Fatal(err)
+	}
+	if err := history.Record([]Event{event("a.pkg", "Show", 0, 0, now)}); err != nil {
+		t.Fatal(err)
+	}
+
+	recent := history.Since(time.Now().Add(-time.Hour))
+	if len(recent) != 1 || recent[0].PositionMs != 450 || recent[0].DurationMs != 1000 {
+		t.Fatalf("want position 450 of 1000 kept, got %+v", recent)
+	}
+}
+
 func TestHistoryRejectsEventsWithoutTitle(t *testing.T) {
 	history := NewHistory("")
 	err := history.Record([]Event{{PackageName: "a.pkg"}})

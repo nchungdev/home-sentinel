@@ -68,11 +68,20 @@ func (h *History) replace(event Event) {
 			continue
 		}
 		if event.At >= existing.At {
-			h.entries[index] = event
+			h.entries[index] = keepPosition(event, existing)
 		}
 		return
 	}
 	h.entries = append(h.entries, event)
+}
+
+func keepPosition(event, earlier Event) Event {
+	if event.PositionMs > 0 || earlier.PositionMs <= 0 {
+		return event
+	}
+	event.PositionMs = earlier.PositionMs
+	event.DurationMs = max(event.DurationMs, earlier.DurationMs)
+	return event
 }
 
 func (h *History) load() {
