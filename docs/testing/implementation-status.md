@@ -28,8 +28,8 @@ LangGraph is not installed. Existing Go application boundaries are retained.
 | Technical references | Topic/domain mapping and host filtering for official-doc results | TV-065 and technical routing subset |
 | Film information | TMDb title search and details with director/creator fields | TV-011/012/014 |
 | Media read tasks | Per-source Plex/Jellyfin/*arr/YouTube adapters, when configured | Search portion of TV-001/002/003/009 |
-| Search cache | Memory default; optional Redis, TTL, fallback on cache errors | TV-093 |
-| Web UI | Progressive source groups; safe text/link rendering; old route for unsupported skills | Search presentation subset |
+| Search cache | Per-source media and web results; memory default, optional Redis, two-minute TTL and cache error fallback | TV-093 |
+| Web UI | Persistent local chat history; progressive content tabs and compact source rows | Search presentation subset |
 | Stationary person | Periodic detector recheck; no motion is not an empty observation | HC-027 |
 | Camera disconnect | Stale-frame rejection; observation gaps do not count toward leave debounce | Observation continuity subset of HC-025/HC-076 |
 

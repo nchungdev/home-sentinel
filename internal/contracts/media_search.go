@@ -43,8 +43,23 @@ type MediaSourceResults struct {
 	SourceID  string      `json:"source_id"`
 	Status    string      `json:"status"`
 	Searched  bool        `json:"searched"`
+	Cache     string      `json:"cache,omitempty"`
 	Items     []MediaItem `json:"items"`
 	ErrorCode string      `json:"error_code,omitempty"`
+}
+
+type MediaContentSection struct {
+	SourceID  string      `json:"source_id"`
+	Status    string      `json:"status"`
+	Searched  bool        `json:"searched"`
+	Cache     string      `json:"cache,omitempty"`
+	Items     []MediaItem `json:"items"`
+	ErrorCode string      `json:"error_code,omitempty"`
+}
+
+type MediaContentType struct {
+	Type     string                `json:"type"`
+	Sections []MediaContentSection `json:"sections"`
 }
 
 type MediaSearchResponse struct {
@@ -54,4 +69,5 @@ type MediaSearchResponse struct {
 	Query        string                  `json:"query"`
 	Capabilities []MediaSourceCapability `json:"capabilities"`
 	Sources      []MediaSourceResults    `json:"sources"`
+	ContentTypes []MediaContentType      `json:"content_types"`
 }

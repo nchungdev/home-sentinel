@@ -25,12 +25,25 @@
         'Chưa lấy được dữ liệu từ nguồn';
     }
 
-    const LAST_TAB_SOURCE = 'internet';
+    const CONTENT_TYPES = {
+      movie: 'Phim', series: 'Series', videos: 'Videos', other: 'Khác'
+    };
 
-    function createSourceTabs() {
+    function flowContentType(item) {
+      const kind = (item.kind || '').toLowerCase();
+      if (['movie', 'film'].includes(kind)) return 'movie';
+      if (['show', 'series', 'season', 'episode', 'tv'].includes(kind)) return 'series';
+      if (['video', 'clip', 'clips'].includes(kind)) return 'videos';
+      if (['wiki', 'web', 'web_link', 'information', 'article'].includes(kind)) return 'other';
+      return 'other';
+    }
+
+    function createContentTabs() {
       const bar = document.createElement('div');
       bar.className = 'search-flow-tabs';
       bar.setAttribute('role', 'tablist');
+      const panels = document.createElement('div');
+      panels.className = 'search-flow-groups';
       const entries = [];
       function select(entry) {
         for (const other of entries) {
@@ -45,12 +58,23 @@
         select(next);
         next.tab.focus();
       }
-      function add(source, panel, count) {
+      function ensure(contentType) {
+        const existing = entries.find(entry => entry.contentType === contentType);
+        if (existing) return existing;
+
+        const panel = document.createElement('div');
+        panel.className = 'search-flow-content-panel';
+        panels.appendChild(panel);
         const tab = document.createElement('button');
         const entry = { tab, panel };
         tab.type = 'button';
         tab.setAttribute('role', 'tab');
-        tab.textContent = flowSourceLabel(source) + ' (' + count + ')';
+        entry.contentType = contentType;
+        entry.count = 0;
+        tab.textContent = (contentType === 'all' ? 'Tất cả' :
+          CONTENT_TYPES[contentType] || contentType) + ' (0)';
+        tab.setAttribute('aria-selected', 'false');
+        tab.tabIndex = -1;
         panel.setAttribute('role', 'tabpanel');
         tab.addEventListener('click', () => select(entry));
         tab.addEventListener('keydown', event => {
@@ -59,18 +83,33 @@
           else return;
           event.preventDefault();
         });
-        entry.source = source;
-        const lastEntry = entries.find(candidate => candidate.source === LAST_TAB_SOURCE);
-        if (lastEntry && source !== LAST_TAB_SOURCE) {
-          entries.splice(entries.indexOf(lastEntry), 0, entry);
-          bar.insertBefore(tab, lastEntry.tab);
-        } else {
-          entries.push(entry);
-          bar.appendChild(tab);
-        }
-        select(entries.find(candidate => candidate.tab.getAttribute('aria-selected') === 'true') || entry);
+        entries.push(entry);
+        bar.appendChild(tab);
+        select(entries.find(candidate =>
+          candidate.tab.getAttribute('aria-selected') === 'true') || entry);
+        return entry;
       }
-      return { bar, add };
+      function add(contentType, source, item, createCard) {
+        const entry = ensure(contentType);
+        if (!entry.sections) entry.sections = new Map();
+        let row = entry.sections.get(source);
+        if (!row) {
+          const section = document.createElement('section');
+          const heading = document.createElement('h4');
+          row = document.createElement('div');
+          row.className = 'search-flow-results';
+          heading.textContent = flowSourceLabel(source);
+          section.append(heading, row);
+          entry.sections.set(source, row);
+          entry.panel.appendChild(section);
+        }
+        row.appendChild(createCard(item));
+        entry.count++;
+        entry.tab.textContent = (contentType === 'all' ? 'Tất cả' :
+          CONTENT_TYPES[contentType] || contentType) + ' (' + entry.count + ')';
+      }
+      ensure('all');
+      return { bar, panels, add };
     }
 
     async function trySearchFlow(text, bubble, timer) {
@@ -87,9 +126,30 @@
       }
 
       const summary = document.createElement('div');
-      const groups = document.createElement('div');
-      groups.className = 'search-flow-groups';
-      const tabs = createSourceTabs();
+      const tabs = createContentTabs();
+      const viewSwitch = document.createElement('div');
+      viewSwitch.className = 'search-flow-view-switch';
+      viewSwitch.setAttribute('role', 'group');
+      viewSwitch.setAttribute('aria-label', 'Chế độ kết quả');
+      const resultButton = document.createElement('button');
+      resultButton.type = 'button';
+      resultButton.textContent = 'Result';
+      resultButton.setAttribute('aria-pressed', 'true');
+      viewSwitch.appendChild(resultButton);
+      const rawButton = document.createElement('button');
+      rawButton.type = 'button';
+      rawButton.textContent = 'Raw';
+      rawButton.disabled = true;
+      rawButton.setAttribute('aria-pressed', 'false');
+      viewSwitch.appendChild(rawButton);
+      const rawEvents = [];
+      rawButton.addEventListener('click', () => {
+        if (!rawEvents.length) return;
+        const rawURL = URL.createObjectURL(new Blob(
+          [JSON.stringify(rawEvents, null, 2)], { type: 'application/json' }));
+        window.open(rawURL, '_blank', 'noopener');
+        setTimeout(() => URL.revokeObjectURL(rawURL), 60_000);
+      });
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '', initialized = false, total = 0, finalText = '', terminal = false;
@@ -115,10 +175,11 @@
         if (initialized) return;
         initialized = true;
         timer.stop();
-        bubble.replaceChildren(summary, sourceStatus, tabs.bar, groups);
+        bubble.replaceChildren(summary, sourceStatus, viewSwitch, tabs.bar, tabs.panels);
       }
       function accept(event) {
         initialize();
+        rawEvents.push(event);
         if (event.type === 'plan_ready') {
           const understanding = event.plan.understanding;
           if (understanding.needs_input) {
@@ -139,36 +200,63 @@
           else clearSourceStatus(result.source);
           if (result.status === 'ok' || result.status === 'empty') checked++;
           if (!result.items.length) return;
-          const section = document.createElement('section');
-          for (const item of result.items) {
+          function createCard(item) {
             const card = document.createElement('div');
-            card.className = 'search-flow-item';
+            const contentType = flowContentType(item);
+            card.className = 'search-flow-item' +
+              (contentType === 'videos' ? ' search-flow-item--video' : '');
+            const poster = flowLink(item.poster);
+            if (poster) {
+              const image = document.createElement('img');
+              image.className = 'search-flow-poster';
+              image.src = poster;
+              image.alt = item.title;
+              image.loading = 'lazy';
+              image.referrerPolicy = 'no-referrer';
+              card.appendChild(image);
+            } else {
+              const placeholder = document.createElement('div');
+              placeholder.className = 'search-flow-poster search-flow-poster--empty';
+              placeholder.setAttribute('aria-hidden', 'true');
+              card.appendChild(placeholder);
+            }
+            const details = document.createElement('div');
+            details.className = 'search-flow-item-details';
             const destination = flowLink(item.url);
             const detailAction = (item.actions || []).find(action => action.type === 'catalog_detail');
-            const title = document.createElement(detailAction ? 'button' : destination ? 'a' : 'strong');
+            const titleTag = detailAction ? 'button' : destination ? 'a' : 'strong';
+            const title = document.createElement(titleTag);
+            title.className = 'search-flow-item-title';
             title.textContent = item.title;
             if (detailAction) {
               title.type = 'button';
-              title.addEventListener('click', () => catalogOpenTitle(detailAction.item_id, title, card));
+              title.addEventListener('click', () =>
+                catalogOpenTitle(detailAction.item_id, title, card));
             } else if (destination) {
               title.href = destination;
               title.target = '_blank';
               title.rel = 'noopener noreferrer';
             }
-            const content = document.createElement('p');
-            content.textContent = item.content || '';
-            card.append(title, content);
-            section.appendChild(card);
+            const metadata = document.createElement('p');
+            metadata.className = 'search-flow-item-meta';
+            metadata.textContent = [item.year || '', item.content || ''].filter(Boolean).join(' · ');
+            details.appendChild(title);
+            if (metadata.textContent) details.appendChild(metadata);
+            card.appendChild(details);
+            return card;
           }
-          total += result.items.length;
-          groups.appendChild(section);
-          tabs.add(result.source, section, result.items.length);
+          for (const item of result.items) {
+            tabs.add('all', result.source, item, createCard);
+            tabs.add(flowContentType(item), result.source, item, createCard);
+            total++;
+          }
           summary.textContent = 'Đã nhận ' + total + ' kết quả; đang kiểm tra các nguồn còn lại…';
         }
         if (event.type === 'response_completed') {
           terminal = true;
+          rawButton.disabled = false;
           if (event.status !== 'needs_input') {
-            finalText = total ? 'Tìm được ' + total + ' kết quả, chia theo nguồn.' :
+            finalText = total ? 'Tìm được ' + total + ' kết quả, chia theo loại nội dung.' :
               checked ? 'Không tìm thấy kết quả trong các nguồn đã kiểm tra.' :
               statusLines.size ? 'Chưa truy cập được nguồn tìm kiếm. Bạn có thể thử lại.' :
               'Chưa có nguồn tìm kiếm khả dụng. Hãy cấu hình nguồn rồi thử lại.';

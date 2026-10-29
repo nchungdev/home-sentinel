@@ -5,6 +5,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/nchungdev/home-sentinel/internal/cache"
 	"github.com/nchungdev/home-sentinel/internal/contracts"
 )
 
@@ -117,6 +118,64 @@ func TestUnavailableAndFailedSourcesDoNotEraseResults(t *testing.T) {
 	}
 	if len(report.Sources[2].Items) != 1 {
 		t.Fatal("failed source erased another source's results")
+	}
+}
+
+func TestSearchGroupsResultsByContentTypeAndSource(t *testing.T) {
+	service := New(
+		controlledSource{id: "phimapi", search: func(context.Context) ([]contracts.MediaItem, error) {
+			return []contracts.MediaItem{
+				{ID: "movie", Kind: "movie"},
+				{ID: "series", Kind: "show"},
+			}, nil
+		}},
+		controlledSource{id: "youtube", search: func(context.Context) ([]contracts.MediaItem, error) {
+			return []contracts.MediaItem{{ID: "clip", Kind: "video"}}, nil
+		}},
+		controlledSource{id: "internet", search: func(context.Context) ([]contracts.MediaItem, error) {
+			return []contracts.MediaItem{
+				{ID: "wiki", Kind: "web", URL: "https://vi.wikipedia.org/wiki/Naruto"},
+				{ID: "info", Kind: "web", URL: "https://example.com/naruto"},
+			}, nil
+		}},
+	)
+
+	report := service.Search(context.Background(), "naruto")
+	grouped := make(map[string][]contracts.MediaContentSection)
+	for _, contentType := range report.ContentTypes {
+		grouped[contentType.Type] = contentType.Sections
+	}
+	for contentType, sourceID := range map[string]string{
+		"movie": "phimapi", "series": "phimapi", "videos": "youtube",
+		"other": "internet",
+	} {
+		sections := grouped[contentType]
+		expectedItems := 1
+		if contentType == "other" {
+			expectedItems = 2
+		}
+		if len(sections) != 1 || sections[0].SourceID != sourceID ||
+			len(sections[0].Items) != expectedItems {
+			t.Errorf("unexpected %q group: %+v", contentType, sections)
+		}
+	}
+}
+
+func TestSearchCachesSuccessfulSourceResults(t *testing.T) {
+	searchCount := 0
+	source := controlledSource{id: "source", search: func(context.Context) ([]contracts.MediaItem, error) {
+		searchCount++
+		return []contracts.MediaItem{{ID: "one", Title: "Result"}}, nil
+	}}
+	service := New(source)
+	service.SetCache(cache.NewMemory(10))
+
+	first := service.SearchSource(context.Background(), "source", "naruto")
+	second := service.SearchSource(context.Background(), "source", "naruto")
+	if searchCount != 1 || first.Cache != "miss" || second.Cache != "hit" ||
+		len(second.Items) != 1 {
+		t.Fatalf("source result cache did not serve a hit: count=%d first=%+v second=%+v",
+			searchCount, first, second)
 	}
 }
 

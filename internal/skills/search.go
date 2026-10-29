@@ -24,9 +24,9 @@ func (s MediaSearch) Execute(ctx context.Context, task requestflow.Task) request
 		return result
 	}
 	media := s.Service.SearchSource(ctx, task.Source, task.Query)
-	result.Status, result.ErrorCode = media.Status, media.ErrorCode
+	result.Status, result.ErrorCode, result.Cache = media.Status, media.ErrorCode, media.Cache
 	for _, entry := range relevantFirst(task.Source, task.Query, media.Items) {
-		item := requestflow.Item{ID: entry.ID, Kind: "media_title", Title: entry.Title,
+		item := requestflow.Item{ID: entry.ID, Kind: entry.Kind, Title: entry.Title,
 			URL: entry.URL, Content: entry.Summary, Poster: entry.Poster, Year: entry.Year,
 			Season: valueOf(entry.Season), Episode: valueOf(entry.Episode)}
 		for _, action := range entry.Actions {

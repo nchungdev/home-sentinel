@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/nchungdev/home-sentinel/internal/cache"
 	"github.com/nchungdev/home-sentinel/internal/contracts"
 )
 
@@ -35,10 +36,11 @@ type capabilityCache struct {
 }
 
 type Service struct {
-	sources []Source
-	mutex   sync.Mutex
-	cache   map[int]capabilityCache
-	canPlay func(string) bool
+	sources     []Source
+	mutex       sync.Mutex
+	cache       map[int]capabilityCache
+	searchCache cache.Store
+	canPlay     func(string) bool
 }
 
 func New(sources ...Source) *Service {
@@ -91,7 +93,10 @@ type sourceUpdate struct {
 func (s *Service) searchSource(ctx context.Context, index int, query string, updates chan<- sourceUpdate) {
 	capability := s.inspect(ctx, index, false)
 	updates <- sourceUpdate{index: index, capability: &capability}
-	result := contracts.MediaSourceResults{SourceID: capability.ID, Status: "skipped", Items: []contracts.MediaItem{}}
+	result := contracts.MediaSourceResults{
+		SourceID: capability.ID, Status: "skipped", Cache: "bypassed",
+		Items: []contracts.MediaItem{},
+	}
 	if !capability.Available {
 		result.ErrorCode = capability.Status
 		updates <- sourceUpdate{index: index, result: &result}
@@ -99,18 +104,30 @@ func (s *Service) searchSource(ctx context.Context, index int, query string, upd
 	}
 	sourceContext, cancel := context.WithTimeout(ctx, searchTimeout)
 	defer cancel()
-	items, err := s.sources[index].Search(sourceContext, query)
-	for itemIndex := range items {
-		actions := []contracts.MediaAction{}
-		for _, action := range items[itemIndex].Actions {
-			if action.Type == "play" && (s.canPlay == nil || !s.canPlay(action.URL)) {
-				continue
-			}
-			actions = append(actions, action)
-		}
-		items[itemIndex].Actions = actions
+	var items []contracts.MediaItem
+	cached := false
+	cacheKey := ""
+	if s.searchCache != nil {
+		result.Cache = "miss"
+		cacheKey = cache.Key("media", sourceCacheIdentity(s.sources[index]), query, "vi")
+		items, cached = getSearchCache(sourceContext, s.searchCache, cacheKey)
 	}
+	if cached {
+		result.Cache = "hit"
+	}
+	var err error
+	if !cached {
+		items, err = s.sources[index].Search(sourceContext, query)
+		if err == nil && s.searchCache != nil {
+			putSearchCache(sourceContext, s.searchCache, cacheKey, items)
+		}
+	}
+	if items == nil {
+		items = []contracts.MediaItem{}
+	}
+	filterPlayableActions(items, s.canPlay)
 	result.Searched = true
+	result.Items = items
 	if err != nil {
 		result.Status, result.ErrorCode = "error", "search_failed"
 		if errors.Is(err, ErrAuthRequired) {
@@ -125,7 +142,7 @@ func (s *Service) searchSource(ctx context.Context, index int, query string, upd
 	} else {
 		result.Status = "empty"
 		if len(items) > 0 {
-			result.Status, result.Items = "ok", items
+			result.Status = "ok"
 		}
 	}
 	updates <- sourceUpdate{index: index, result: &result}
@@ -135,7 +152,8 @@ func (s *Service) Search(ctx context.Context, query string) contracts.MediaSearc
 	response := contracts.MediaSearchResponse{Version: 1, Query: query,
 		RequestID: rand.Text(), Status: "running",
 		Capabilities: make([]contracts.MediaSourceCapability, len(s.sources)),
-		Sources:      make([]contracts.MediaSourceResults, len(s.sources))}
+		Sources:      make([]contracts.MediaSourceResults, len(s.sources)),
+		ContentTypes: []contracts.MediaContentType{}}
 	for index, source := range s.sources {
 		response.Capabilities[index] = source.Info()
 		response.Sources[index] = contracts.MediaSourceResults{
@@ -143,6 +161,7 @@ func (s *Service) Search(ctx context.Context, query string) contracts.MediaSearc
 	}
 	sequence := 0
 	emit := func(event contracts.MediaSearchEvent) {
+		response.ContentTypes = contentTypes(response.Sources)
 		sequence++
 		event.Version, event.RequestID, event.Sequence = 1, response.RequestID, sequence
 		event.Status, event.Snapshot = response.Status, &response
@@ -206,5 +225,7 @@ func (s *Service) Request(ctx context.Context, sourceID, itemID string, options 
 	}
 	return contracts.MediaItem{}, fmt.Errorf("nguồn không hỗ trợ yêu cầu thư viện")
 }
+
+func (s *Service) SetCache(store cache.Store) { s.searchCache = store }
 
 func (s *Service) SetPlayable(check func(string) bool) { s.canPlay = check }

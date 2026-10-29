@@ -292,4 +292,6 @@
       return bubble;
     }
 
+    renderSavedChat();
+
     // CLIENT LOGS CONSOLE (TV Launcher & Clients)

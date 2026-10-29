@@ -25,6 +25,7 @@ func (s *Server) searchRunner() requestflow.Runner {
 			"movie.metadata":       newMetadataSkill(),
 		}
 		if s.MediaSearch != nil {
+			s.MediaSearch.SetCache(store)
 			media := skills.MediaSearch{Service: s.MediaSearch}
 			for _, name := range []string{"library.search", "catalog.search", "video.search"} {
 				registry[name] = media

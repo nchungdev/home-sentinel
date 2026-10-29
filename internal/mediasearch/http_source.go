@@ -3,6 +3,8 @@ package mediasearch
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -107,6 +109,11 @@ func (s *httpSource) Capability(ctx context.Context) contracts.MediaSourceCapabi
 	capability.Available, capability.Status = true, "ready"
 	capability.Actions = []string{"open_url"}
 	return capability
+}
+
+func (s *httpSource) CacheIdentity() string {
+	tokenDigest := sha256.Sum256([]byte(s.apiKey))
+	return s.id + ":" + strings.TrimRight(s.baseURL, "/") + ":" + hex.EncodeToString(tokenDigest[:])
 }
 
 func (s *httpSource) link(path string) string {

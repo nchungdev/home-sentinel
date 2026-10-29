@@ -29,6 +29,7 @@ func (s *Server) handleMediaSearch(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "query too long", 400)
 		return
 	}
+	s.searchRunner()
 	if r.URL.Query().Get("format") == "json" {
 		writeJSON(w, map[string]any{"ok": true, "result": s.MediaSearch.Search(r.Context(), query)})
 		return

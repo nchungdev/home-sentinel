@@ -66,10 +66,7 @@ func (s *phimAPISource) Search(ctx context.Context, query string) ([]contracts.M
 			continue
 		}
 		target := "https://www.kkphim2.com/phim/" + url.PathEscape(entry.Slug)
-		kind := "movie"
-		if entry.Type == "series" {
-			kind = "show"
-		}
+		kind := phimAPIContentKind(entry.Type, entry.Episode)
 		summary := []string{entry.OriginName}
 		if entry.Year > 0 {
 			summary = append(summary, strconv.Itoa(entry.Year))
@@ -95,4 +92,17 @@ func (s *phimAPISource) Search(ctx context.Context, query string) ([]contracts.M
 	}
 
 	return items, nil
+}
+
+func phimAPIContentKind(providerType, episode string) string {
+	if strings.EqualFold(providerType, "series") {
+		return "show"
+	}
+	if strings.EqualFold(strings.TrimSpace(episode), "full") {
+		return "movie"
+	}
+	if strings.TrimSpace(episode) != "" {
+		return "show"
+	}
+	return "movie"
 }
