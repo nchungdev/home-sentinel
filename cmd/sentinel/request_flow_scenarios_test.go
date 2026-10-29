@@ -25,12 +25,12 @@ func TestRequestFlowHTTPScenarios(t *testing.T) {
 	}{
 		{"Ai đạo diễn Interstellar?", "media", "lookup", 2},
 		{"Tìm thông tin về phim Interstellar", "media", "lookup", 2},
-		{"Tìm Interstellar để xem", "media", "find_to_watch", 12},
+		{"Tìm Interstellar để xem", "media", "find_to_watch", 2},
 		{"Thêm phim Interstellar vào thư viện", "media", "request_library", 4},
 		{"Tìm cách sửa lỗi Windows", "technical", "lookup", 2},
 		{"Thời tiết hôm nay", "general", "lookup", 1},
 		{"Tóm tắt https://example.com/article", "web", "summarize_url", 1},
-		{"Interstellar", "media", "find_to_watch", 12},
+		{"Interstellar", "media", "find_to_watch", 2},
 		{"bạn nghĩ sao về chuyện này hôm qua nhỉ?", "general", "clarify", 0},
 	}
 	for _, test := range tests {

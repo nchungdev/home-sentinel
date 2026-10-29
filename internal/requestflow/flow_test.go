@@ -14,8 +14,7 @@ func TestPlansRouteByPurpose(t *testing.T) {
 		{"Ai đạo diễn Interstellar?", "lookup",
 			map[string]bool{"movie.metadata": true, "web.search": true}},
 		{"Tìm Interstellar để xem", "find_to_watch",
-			map[string]bool{"library.search": true, "catalog.search": true,
-				"video.search": true, "web.search": true}},
+			map[string]bool{"movie.metadata": true, "video.search": true}},
 		{"Tìm cách sửa lỗi Windows", "lookup",
 			map[string]bool{"documentation.search": true, "web.search": true}},
 		{"Tóm tắt https://example.com/article", "summarize_url",
@@ -23,8 +22,7 @@ func TestPlansRouteByPurpose(t *testing.T) {
 		{"Thêm phim Interstellar vào thư viện", "request_library",
 			map[string]bool{"library.check": true, "request.prepare": true}},
 		{"Interstellar", "find_to_watch",
-			map[string]bool{"library.search": true, "catalog.search": true,
-				"video.search": true, "web.search": true}},
+			map[string]bool{"movie.metadata": true, "video.search": true}},
 		{"bạn nghĩ sao về chuyện này hôm qua nhỉ?", "clarify", map[string]bool{}},
 		{"xin chào", "chat", map[string]bool{"answer.compose": true}},
 	}
@@ -60,8 +58,8 @@ func TestPlaceholderNeverClaimsLiveResults(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(events[0].Plan.Tasks) != 12 {
-		t.Fatal("missing media source placeholders")
+	if len(events[0].Plan.Tasks) != 2 {
+		t.Fatal("expected TMDB and YouTube search tasks")
 	}
 	started, finished := map[string]bool{}, map[string]bool{}
 	for index, event := range events {
@@ -83,7 +81,7 @@ func TestPlaceholderNeverClaimsLiveResults(t *testing.T) {
 			}
 		}
 	}
-	if len(finished) != 12 || events[len(events)-1].Status != "unavailable" {
+	if len(finished) != 2 || events[len(events)-1].Status != "unavailable" {
 		t.Fatal("placeholder claimed successful completion")
 	}
 }

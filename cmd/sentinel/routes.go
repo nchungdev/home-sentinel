@@ -64,6 +64,8 @@ func registerTVRoutes(mux *http.ServeMux, server *Server) {
 func registerSystemRoutes(mux *http.ServeMux, server *Server) {
 	mux.HandleFunc("/v2/catalog/titles/{id}", server.handleCatalogTitle)
 	mux.HandleFunc("/v2/catalog/episodes/{id}/playback", server.handleCatalogPlayback)
+	mux.HandleFunc("/v2/media/tmdb/{kind}/{id}", server.handleTMDBMediaDetail)
+	mux.HandleFunc("/v2/media/tmdb/{kind}/{id}/discover", server.handleTMDBMediaDiscovery)
 	mux.HandleFunc("/v2/flow/preview", server.handleRequestFlow)
 	mux.HandleFunc("/v2/flow", server.handleLiveRequestFlow)
 	mux.HandleFunc("/api/media/sources", server.handleMediaSources)

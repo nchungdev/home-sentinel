@@ -2,6 +2,7 @@ package mediasearch
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -26,6 +27,15 @@ type phimAPIResponse struct {
 			Language   string `json:"lang"`
 			Poster     string `json:"poster_url"`
 			Thumb      string `json:"thumb_url"`
+			TMDB       struct {
+				ID     json.RawMessage `json:"id"`
+				Type   string          `json:"type"`
+				Season json.RawMessage `json:"season"`
+			} `json:"tmdb"`
+			IMDb struct {
+				ID json.RawMessage `json:"id"`
+			} `json:"imdb"`
+			AlternativeNames []string `json:"alternative_names"`
 		} `json:"items"`
 		ImageDomain string `json:"APP_DOMAIN_CDN_IMAGE"`
 	} `json:"data"`
@@ -49,10 +59,24 @@ func (s *phimAPISource) Capability(ctx context.Context) contracts.MediaSourceCap
 	return capability
 }
 
+// identitySearchLimit widens the PhimAPI candidate pool for identity matching, where the
+// provider's relevance order often pushes the canonical entry past the display limit.
+const identitySearchLimit = 24
+
 func (s *phimAPISource) Search(ctx context.Context, query string) ([]contracts.MediaItem, error) {
+	return s.search(ctx, query, resultLimit)
+}
+
+func (s *phimAPISource) SearchWide(ctx context.Context, query string) ([]contracts.MediaItem, error) {
+	return s.search(ctx, query, identitySearchLimit)
+}
+
+func (s *phimAPISource) search(
+	ctx context.Context, query string, limit int,
+) ([]contracts.MediaItem, error) {
 	var response phimAPIResponse
 	path := "/v1/api/tim-kiem?" + url.Values{
-		"keyword": {query}, "limit": {strconv.Itoa(resultLimit)},
+		"keyword": {query}, "limit": {strconv.Itoa(limit)},
 	}.Encode()
 	if err := s.do(ctx, http.MethodGet, path, nil, &response); err != nil {
 		return nil, err
@@ -67,6 +91,18 @@ func (s *phimAPISource) Search(ctx context.Context, query string) ([]contracts.M
 		}
 		target := "https://www.kkphim2.com/phim/" + url.PathEscape(entry.Slug)
 		kind := phimAPIContentKind(entry.Type, entry.Episode)
+		if entry.TMDB.Type == "movie" {
+			kind = "movie"
+		} else if entry.TMDB.Type == "tv" {
+			kind = "show"
+		}
+		externalIDs := make(map[string]string)
+		if id := providerID(entry.TMDB.ID); id != "" {
+			externalIDs["tmdb"] = id
+		}
+		if id := providerID(entry.IMDb.ID); id != "" {
+			externalIDs["imdb"] = id
+		}
 		summary := []string{entry.OriginName}
 		if entry.Year > 0 {
 			summary = append(summary, strconv.Itoa(entry.Year))
@@ -76,22 +112,42 @@ func (s *phimAPISource) Search(ctx context.Context, query string) ([]contracts.M
 				summary = append(summary, label)
 			}
 		}
+		var season *int
+		if value, err := strconv.Atoi(providerID(entry.TMDB.Season)); err == nil && value > 0 {
+			season = &value
+		}
 		items = append(items, contracts.MediaItem{
 			ID: "phimapi:" + entry.Slug, Title: entry.Name, Kind: kind, Year: entry.Year,
+			Season: season,
 			URL: target, Summary: strings.Join(summary, " · "), Availability: "external",
-			Poster: phimAPIImage(response.Data.ImageDomain, entry.Poster, entry.Thumb),
+			Poster:   phimAPIImage(response.Data.ImageDomain, entry.Poster, entry.Thumb),
+			Original: entry.OriginName, AlternativeTitles: entry.AlternativeNames,
+			ExternalIDs: externalIDs,
 			Actions: []contracts.MediaAction{
 				{Type: "catalog_detail", Label: "Chọn tập", SourceID: "phimapi",
 					ItemID: "phimapi:" + entry.Slug, Enabled: true},
 				linkAction("Mở trang phim", target),
 			},
 		})
-		if len(items) == resultLimit {
+		if len(items) == limit {
 			break
 		}
 	}
 
 	return items, nil
+}
+
+func providerID(value json.RawMessage) string {
+	var text string
+	if json.Unmarshal(value, &text) == nil {
+		return text
+	}
+	var number int64
+	if json.Unmarshal(value, &number) == nil && number > 0 {
+		return strconv.FormatInt(number, 10)
+	}
+
+	return ""
 }
 
 func phimAPIContentKind(providerType, episode string) string {

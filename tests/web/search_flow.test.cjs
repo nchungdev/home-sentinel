@@ -7,7 +7,7 @@ const vm = require('node:vm');
 class Element {
   constructor(tag) {
     this.tag = tag; this.children = []; this.textContent = ''; this.attributes = {};
-    this.listeners = {};
+    this.listeners = {}; this.dataset = {};
   }
   append(...items) { items.forEach(item => this.appendChild(item)); }
   appendChild(item) { item.parent = this; this.children.push(item); }
@@ -25,7 +25,7 @@ class Element {
   set innerHTML(value) { throw new Error('Unsafe HTML sink used'); }
 }
 
-function environment(events, contentType = 'application/x-ndjson') {
+function environment(events, contentType = 'application/x-ndjson', fetchHandler) {
   const history = [];
   const opened = [];
   const blobs = [];
@@ -38,18 +38,29 @@ function environment(events, contentType = 'application/x-ndjson') {
   }
   const encoder = new TextEncoder();
   const context = vm.createContext({
-    URL: TestURL, TextDecoder, Blob, window: { open: (...args) => opened.push(args) },
+    URL: TestURL, TextDecoder, Blob, AbortController,
+    window: { open: (...args) => opened.push(args), location: { origin: 'http://localhost' } },
     setTimeout: callback => callback(), document: { createElement: tag => new Element(tag) },
-    fetch: async () => ({
-      ok: true, status: 200, headers: { get: () => contentType },
-      json: async () => ({ status: 'legacy_route' }),
-      body: new ReadableStream({ start(controller) {
-        for (const event of events) controller.enqueue(encoder.encode(JSON.stringify(event) + '\n'));
-        controller.close();
-      } })
-    }),
+    fetch: async (url, options) => {
+      const overridden = fetchHandler && await fetchHandler(url, options);
+      if (overridden) return overridden;
+      return {
+        ok: true, status: 200, headers: { get: () => contentType },
+        json: async () => ({ status: 'legacy_route' }),
+        body: new ReadableStream({ start(controller) {
+          for (const event of events) {
+            controller.enqueue(encoder.encode(JSON.stringify(event) + '\n'));
+          }
+          controller.close();
+        } })
+      };
+    },
     getChatHistory: () => history, saveChatHistory: () => {}, addBubbleMeta: () => {}
   });
+  const catalogScript = path.join(__dirname, '../../web/scripts/01_catalog.js');
+  vm.runInContext(fs.readFileSync(catalogScript, 'utf8'), context);
+  const mediaScript = path.join(__dirname, '../../web/scripts/01_catalog_media.js');
+  vm.runInContext(fs.readFileSync(mediaScript, 'utf8'), context);
   const script = path.join(__dirname, '../../web/scripts/01_search_flow.js');
   vm.runInContext(fs.readFileSync(script, 'utf8'), context);
   return { context, history, opened, blobs };
@@ -108,6 +119,143 @@ test('unsupported request hands off without modifying the chat bubble', async ()
   assert.equal(await context.trySearchFlow('tắt đèn', bubble, timer), false);
   assert.equal(bubble.textContent, 'original');
 });
+
+test('TMDB result opens detail and does not claim unverified providers', async () => {
+  const requests = [];
+  const { context } = environment([
+    { type: 'plan_ready', plan: { understanding: { entities: {} }, tasks: [] } },
+    { type: 'task_result', result: { source: 'tmdb', status: 'ok', items: [
+      { kind: 'movie', title: 'The Running Man', year: 2025, poster: 'https://image.tmdb.org/poster.jpg',
+        actions: [{ type: 'media_detail', item_id: 'movie/123' }] }
+    ] } },
+    { type: 'task_result', result: { source: 'youtube', status: 'ok', items: [
+      { kind: 'video', title: 'Running Man clip', url: 'https://youtube.com/watch?v=1' }
+    ] } },
+    { type: 'response_completed', status: 'partial' }
+  ], 'application/x-ndjson', async url => {
+    requests.push(url);
+    if (url === '/v2/flow') return null;
+    if (url.endsWith('/discover')) {
+      return {
+        ok: true, json: async () => ({ source: {
+          source_id: 'phimapi', status: 'ok', discovery_method: 'ai_query_expansion',
+          items: [{ title: 'The Running Man', match_method: 'title_year', summary: '2025' }]
+        } })
+      };
+    }
+    return {
+      ok: true, json: async () => ({ title: { title: 'The Running Man', year: 2025,
+        overview: 'Synopsis' }, sources: [
+        { source_id: 'plex', status: 'ok', items: [
+          { title: 'Different localized title', actions: [
+            { type: 'open_url', label: 'Mở Plex', url: 'http://plex.local/item/1' }
+          ] }
+        ] },
+        { source_id: 'jellyfin', status: 'empty', error_code: 'identity_not_verified', items: [] },
+        { source_id: 'phimapi', status: 'ok', items: [
+          { title: 'The Running Man', match_method: 'title_year', summary: '2025' }
+        ] }
+      ] })
+    };
+  });
+  const bubble = new Element('div');
+  await context.trySearchFlow('running man', bubble, timer);
+  const card = bubble.children[4].children[0].children[0].children[1].children[0];
+  const tmdbTitle = card.children[1].children[0];
+  assert.equal(tmdbTitle.tag, 'button');
+  await tmdbTitle.listeners.click();
+  assert.deepEqual(requests, [
+    '/v2/flow', '/v2/media/tmdb/movie/123', '/v2/media/tmdb/movie/123/discover'
+  ]);
+  const detailPanel = findByClass(bubble, 'catalog-panel');
+  const detail = findByClass(detailPanel, 'catalog-detail');
+  const sourceCards = findAllByClass(detail, 'catalog-source-card');
+  assert.deepEqual(sourceCards.map(source => source.dataset.sourceId),
+    ['plex', 'jellyfin', 'phimapi']);
+  const jellyfinCard = sourceCards.find(source => source.dataset.sourceId === 'jellyfin');
+  assert.match(findByClass(jellyfinCard, 'catalog-source-status').textContent,
+    /Không thể xác minh kết quả bằng ID/);
+  const phimapiCard = sourceCards.find(source => source.dataset.sourceId === 'phimapi');
+  assert.equal(findByClass(phimapiCard, 'catalog-source-badge').textContent, 'Có kết quả');
+  assert.match(findByClass(phimapiCard, 'catalog-source-warning').textContent,
+    /AI đã mở rộng truy vấn/);
+  assert.match(findByClass(phimapiCard, 'catalog-media-match-notice').textContent,
+    /ID chưa xác minh/);
+  assert.match(findByClass(detail, 'catalog-source-heading').children[1].textContent,
+    /2\/3 nguồn/);
+});
+
+test('media detail layout uses safe poster URLs and explains unverified source matches', () => {
+  const { context } = environment([]);
+  const content = new Element('div');
+  context.catalogRenderMediaDetail({
+    title: { title: 'Movie', year: 2020, kind: 'movie', poster: 'javascript:alert(1)' },
+    sources: [{ source_id: 'phimapi', status: 'ok', items: [
+      { title: 'Movie', poster: 'https://images.example/poster.jpg',
+        match_method: 'title_year', actions: [] }
+    ] }]
+  }, content, new AbortController().signal);
+  const detail = findByClass(content, 'catalog-detail');
+  assert.equal(findAllByClass(detail, 'catalog-detail-poster').length, 0);
+  assert.equal(findAllByClass(detail, 'catalog-media-item-poster').length, 1);
+  assert.equal(findByClass(detail, 'catalog-media-match-notice').textContent,
+    'Ứng viên theo tên/năm · ID chưa xác minh');
+});
+
+test('AI-discovered results remain visibly unverified', () => {
+  const { context } = environment([]);
+  const content = new Element('div');
+  context.catalogRenderMediaDetail({
+    title: { title: 'One Piece', year: 1999, kind: 'show' },
+    sources: [{ source_id: 'phimapi', status: 'ok',
+      discovery_method: 'ai_query_expansion', items: [
+        { title: 'ワンピース', match_method: 'ai_candidate', actions: [] }
+      ] }]
+  }, content, new AbortController().signal);
+  const detail = findByClass(content, 'catalog-detail');
+  assert.match(findByClass(detail, 'catalog-media-match-notice').textContent,
+    /AI tìm được ứng viên · chưa xác minh/);
+  assert.match(findByClass(detail, 'catalog-source-warning').textContent,
+    /AI đã mở rộng truy vấn/);
+});
+
+test('AI discovery is skipped when PhimAPI already has an ID match', () => {
+  const { context } = environment([]);
+  assert.equal(context.catalogMediaNeedsAIDiscovery({ sources: [
+    { source_id: 'phimapi', status: 'ok', items: [{ match_method: 'external_id' }] }
+  ] }), false);
+  assert.equal(context.catalogMediaNeedsAIDiscovery({ sources: [
+    { source_id: 'phimapi', status: 'ok', items: [{ match_method: 'title_year' }] }
+  ] }), true);
+});
+
+test('media detail surfaces partial alias search failures alongside matched sources', () => {
+  const { context } = environment([]);
+  const content = new Element('div');
+  context.catalogRenderMediaDetail({
+    title: { title: 'Series', year: 2020, kind: 'show' },
+    sources: [{ source_id: 'phimapi', status: 'ok', error_code: 'partial_search_failed',
+      items: [{ title: 'Series', match_method: 'external_id', actions: [] }] }]
+  }, content, new AbortController().signal);
+  const warning = findByClass(content, 'catalog-source-warning');
+  assert.equal(warning.textContent, 'Một số truy vấn tên thay thế không hoàn tất.');
+});
+
+function findByClass(root, className) {
+  if (root.className && root.className.split(/\s+/).includes(className)) return root;
+  for (const child of root.children) {
+    const found = findByClass(child, className);
+    if (found) return found;
+  }
+  return null;
+}
+
+function findAllByClass(root, className) {
+  const found = [];
+  if (root.className && root.className.split(/\s+/).includes(className)) found.push(root);
+  for (const child of root.children) found.push(...findAllByClass(child, className));
+  return found;
+}
 
 test('truncated stream is not presented as complete', async () => {
   const { context } = environment([

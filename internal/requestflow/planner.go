@@ -33,17 +33,25 @@ func BuildPlan(understanding Understanding) Plan {
 		add("request.prepare", "radarr", "api")
 		add("request.prepare", "sonarr", "api")
 	case "find_to_watch":
-		for _, source := range []string{"plex", "jellyfin"} {
-			add("library.search", source, "api")
+		if len(understanding.Sources) == 0 {
+			add("movie.metadata", "tmdb", "tmdb_search")
+			add("video.search", "youtube", "api")
+			break
 		}
-		for _, source := range []string{"radarr", "sonarr", "phimapi", "ophim", "nguonc"} {
-			add("catalog.search", source, "api")
+		for _, source := range understanding.Sources {
+			switch source {
+			case "tmdb":
+				add("movie.metadata", source, "tmdb_search")
+			case "youtube":
+				add("video.search", source, "api")
+			case "plex", "jellyfin":
+				add("library.search", source, "api")
+			case "internet":
+				add("web.search", source, "search_api")
+			default:
+				add("catalog.search", source, "api")
+			}
 		}
-		for _, source := range []string{"motchill", "rophim", "phimtuoitho"} {
-			add("catalog.search", source, "embedded_json_html")
-		}
-		add("video.search", "youtube", "api")
-		add("web.search", "internet", "search_api")
 	case "lookup":
 		switch understanding.Domain {
 		case "media":

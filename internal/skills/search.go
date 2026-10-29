@@ -28,7 +28,8 @@ func (s MediaSearch) Execute(ctx context.Context, task requestflow.Task) request
 	for _, entry := range relevantFirst(task.Source, task.Query, media.Items) {
 		item := requestflow.Item{ID: entry.ID, Kind: entry.Kind, Title: entry.Title,
 			URL: entry.URL, Content: entry.Summary, Poster: entry.Poster, Year: entry.Year,
-			Season: valueOf(entry.Season), Episode: valueOf(entry.Episode)}
+			Season: valueOf(entry.Season), Episode: valueOf(entry.Episode),
+			ExternalIDs: entry.ExternalIDs}
 		for _, action := range entry.Actions {
 			if action.Type == "open_url" || action.Type == "catalog_detail" ||
 				action.Type == "open_app" {

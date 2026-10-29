@@ -95,18 +95,20 @@
       function add(contentType, source, item, createCard) {
         const entry = ensure(contentType);
         if (!entry.sections) entry.sections = new Map();
-        let row = entry.sections.get(source);
+        const sectionEntry = entry.sections.get(source);
+        let section = sectionEntry?.section;
+        let row = sectionEntry?.row;
         if (!row) {
-          const section = document.createElement('section');
+          section = document.createElement('section');
           const heading = document.createElement('h4');
           row = document.createElement('div');
           row.className = 'search-flow-results';
           heading.textContent = flowSourceLabel(source);
           section.append(heading, row);
-          entry.sections.set(source, row);
+          entry.sections.set(source, { section, row });
           entry.panel.appendChild(section);
         }
-        row.appendChild(createCard(item));
+        row.appendChild(createCard(item, section));
         entry.count++;
         entry.tab.textContent = (contentType === 'all' ? 'Tất cả' :
           CONTENT_TYPES[contentType] || contentType) + ' (' + entry.count + ')';
@@ -205,7 +207,7 @@
           else clearSourceStatus(result.source);
           if (result.status === 'ok' || result.status === 'empty') checked++;
           if (!result.items.length) return;
-          function createCard(item) {
+          function createCard(item, detailHost) {
             const card = document.createElement('div');
             const contentType = flowContentType(item);
             card.className = 'search-flow-item' +
@@ -228,15 +230,17 @@
             const details = document.createElement('div');
             details.className = 'search-flow-item-details';
             const destination = flowLink(item.url);
-            const detailAction = (item.actions || []).find(action => action.type === 'catalog_detail');
+            const detailAction = (item.actions || []).find(action =>
+              action.type === 'catalog_detail' || action.type === 'media_detail');
             const titleTag = detailAction ? 'button' : destination ? 'a' : 'strong';
             const title = document.createElement(titleTag);
             title.className = 'search-flow-item-title';
             title.textContent = item.title;
             if (detailAction) {
               title.type = 'button';
-              title.addEventListener('click', () =>
-                catalogOpenTitle(detailAction.item_id, title, card));
+              title.addEventListener('click', () => detailAction.type === 'media_detail' ?
+                catalogOpenMedia(detailAction.item_id, title, detailHost) :
+                catalogOpenTitle(detailAction.item_id, title, detailHost));
             } else if (destination) {
               title.href = destination;
               title.target = '_blank';

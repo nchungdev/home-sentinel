@@ -11,7 +11,11 @@
         catalog_item_not_found: 'Phim hoặc tập không còn trên nguồn.',
         episode_playback_unsupported: 'Tập này chưa có nguồn phát trực tiếp được hỗ trợ.',
         catalog_timeout: 'Nguồn phản hồi quá lâu. Hãy thử lại.',
-        catalog_source_unavailable: 'Chưa truy cập được nguồn phim.'
+        catalog_source_unavailable: 'Chưa truy cập được nguồn phim.',
+        ai_search_unavailable: 'AI tìm kiếm chưa được cấu hình.',
+        ai_search_failed: 'AI không thể gợi ý thêm tên tìm kiếm.',
+        ai_search_timeout: 'AI tìm kiếm phản hồi quá lâu. Hãy thử lại.',
+        ai_invalid_response: 'AI trả về gợi ý không hợp lệ.'
       }[code] || 'Chưa lấy được dữ liệu phim. Hãy thử lại.';
     }
 
@@ -22,14 +26,15 @@
       return data;
     }
 
-    async function catalogOpenTitle(id, trigger, card) {
+    async function catalogOpenTitle(id, trigger, detailHost) {
       trigger.disabled = true;
       const panel = catalogNode('div');
       panel.className = 'catalog-panel';
-      const close = catalogNode('button', 'Quay lại kết quả');
+      const close = catalogNode('button', '‹ Quay lại');
       const content = catalogNode('div', 'Đang lấy danh sách tập…');
       const controller = new AbortController();
       close.type = 'button';
+      close.setAttribute('aria-label', 'Quay lại kết quả');
       close.addEventListener('click', () => {
         controller.abort();
         panel.remove();
@@ -37,7 +42,7 @@
         trigger.focus();
       });
       panel.append(close, content);
-      card.appendChild(panel);
+      detailHost.appendChild(panel);
       close.focus();
       try {
         const data = await catalogJSON('/v2/catalog/titles/' + encodeURIComponent(id),
@@ -46,6 +51,59 @@
         catalogRenderTitle(data.title, content, controller.signal);
       } catch (error) {
         if (error.name !== 'AbortError') content.textContent = error.message;
+      }
+    }
+
+    async function catalogOpenMedia(identifier, trigger, detailHost) {
+      const match = /^(movie|tv)\/([1-9]\d*)$/.exec(identifier || '');
+      if (!match) return;
+      trigger.disabled = true;
+      const panel = catalogNode('div');
+      panel.className = 'catalog-panel';
+      const close = catalogNode('button', '‹ Quay lại');
+      const content = catalogNode('div', 'Đang lấy chi tiết và kiểm tra nguồn…');
+      const controller = new AbortController();
+      close.type = 'button';
+      close.setAttribute('aria-label', 'Quay lại kết quả');
+      close.addEventListener('click', () => {
+        controller.abort();
+        panel.remove();
+        trigger.disabled = false;
+        trigger.focus();
+      });
+      panel.append(close, content);
+      detailHost.appendChild(panel);
+      close.focus();
+      try {
+        const data = await catalogJSON('/v2/media/tmdb/' + match[1] + '/' + match[2],
+          { signal: controller.signal });
+        searchFlowTitle = data.title.title;
+        catalogRenderMediaDetail(data, content, controller.signal);
+        if (catalogMediaNeedsAIDiscovery(data)) {
+          await catalogDiscoverMedia(match[1], match[2], data, content, controller.signal);
+        }
+      } catch (error) {
+        if (error.name !== 'AbortError') content.textContent = error.message;
+      }
+    }
+
+    async function catalogDiscoverMedia(kind, id, data, content, signal) {
+      const status = catalogNode('p', 'Chưa xác minh được ID. ' +
+        'AI đang thử thêm tên tìm kiếm…');
+      status.className = 'catalog-discovery-status';
+      content.appendChild(status);
+      try {
+        const response = await catalogJSON('/v2/media/tmdb/' + kind + '/' + id + '/discover', {
+          method: 'POST', signal
+        });
+        if (signal.aborted) return;
+        const sources = [...(data.sources || [])];
+        const sourceIndex = sources.findIndex(source => source.source_id === 'phimapi');
+        if (sourceIndex < 0) sources.push(response.source);
+        else sources[sourceIndex] = response.source;
+        catalogRenderMediaDetail({ ...data, sources }, content, signal);
+      } catch (error) {
+        if (error.name !== 'AbortError') status.textContent = error.message;
       }
     }
 

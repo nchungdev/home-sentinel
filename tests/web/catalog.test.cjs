@@ -30,6 +30,9 @@ function load(fetch) {
   });
   vm.runInContext(fs.readFileSync(path.join(__dirname, '../../web/scripts/01_catalog.js'), 'utf8'),
     context);
+  vm.runInContext(
+    fs.readFileSync(path.join(__dirname, '../../web/scripts/01_catalog_media.js'), 'utf8'),
+    context);
   return context;
 }
 

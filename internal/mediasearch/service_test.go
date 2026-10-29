@@ -161,6 +161,33 @@ func TestSearchGroupsResultsByContentTypeAndSource(t *testing.T) {
 	}
 }
 
+func TestProviderIDsAreNormalizedWithoutInventingMatches(t *testing.T) {
+	plexIDs := plexExternalIDs([]externalIDEntry{
+		{ID: "tmdb://123"}, {ID: "imdb://tt456"}, {ID: "local://abc"},
+	})
+	jellyfinIDs := jellyfinExternalIDs(map[string]string{
+		"Tmdb": "123", "Imdb": "tt456", "Custom": "not-an-id",
+	})
+	if len(plexIDs) != 2 || plexIDs["tmdb"] != "123" ||
+		plexIDs["imdb"] != "tt456" || len(jellyfinIDs) != 2 ||
+		jellyfinIDs["tmdb"] != "123" || jellyfinIDs["imdb"] != "tt456" {
+		t.Fatalf("provider identity mapping is not exact: plex=%v jellyfin=%v",
+			plexIDs, jellyfinIDs)
+	}
+}
+
+func TestArrItemsExposeOnlyStableProviderIDs(t *testing.T) {
+	source := &arrSource{httpSource: &httpSource{id: "sonarr", name: "Sonarr"}}
+	item, valid := source.item(map[string]any{
+		"id": float64(1), "title": "Show", "tvdbId": float64(22),
+		"tmdbId": float64(33), "imdbId": "tt44",
+	})
+	if !valid || item.Kind != "show" || item.ExternalIDs["tvdb"] != "22" ||
+		item.ExternalIDs["tmdb"] != "33" || item.ExternalIDs["imdb"] != "tt44" {
+		t.Fatalf("Sonarr provider IDs were not normalized: %+v", item)
+	}
+}
+
 func TestSearchCachesSuccessfulSourceResults(t *testing.T) {
 	searchCount := 0
 	source := controlledSource{id: "source", search: func(context.Context) ([]contracts.MediaItem, error) {

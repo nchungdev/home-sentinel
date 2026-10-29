@@ -20,4 +20,6 @@ func (s DocumentationSearch) Configured(task requestflow.Task) bool {
 		len(documentationHosts(strings.ToLower(task.Query))) > 0
 }
 
-func (s MovieMetadata) Configured(requestflow.Task) bool { return s.Token != "" }
+func (s MovieMetadata) Configured(requestflow.Task) bool {
+	return s.BaseURL != "" && (s.Token != "" || s.APIKey != "")
+}

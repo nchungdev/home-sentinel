@@ -7,3 +7,4 @@ __pycache__/
 sentinel_*_config.json
 *.log
 local/
+.env.local

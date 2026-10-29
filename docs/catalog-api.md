@@ -16,6 +16,8 @@ Both endpoints use the server's existing authentication and network policy.
 | --- | --- |
 | `GET /v2/catalog/titles/{id}` | `{ "title": Title }` |
 | `POST /v2/catalog/episodes/{id}/playback` | `{ "episode": Episode, "playback": Descriptor }` |
+| `GET /v2/media/tmdb/{kind}/{id}` | TMDB detail plus identity-verified source results |
+| `POST /v2/media/tmdb/{kind}/{id}/discover` | Bounded AI-assisted PhimAPI discovery fallback |
 
 The POST body is empty or `{}`. Arbitrary URLs are not accepted as parameters.
 URL-encode path IDs. A known title example is `phimapi:naruto-shippuden`.
@@ -23,6 +25,24 @@ Get episode IDs from the title response instead of constructing them on the clie
 
 Search remains `POST /v2/flow`. PhimAPI results now include a `catalog_detail` action with
 `item_id` identifying the title. Older clients can still use the external page URL.
+
+## TMDB identity matching
+
+Opening a TMDB item fetches its detail and searches configured media sources. PhimAPI search
+tries the canonical title and all distinct TMDB aliases in batches of three queries. Exact
+external IDs are labeled `external_id`; a unique title/year/kind candidate is labeled
+`title_year`. Ambiguous or conflicting candidates are not treated as verified matches.
+
+When PhimAPI has no ID-verified result, the web client may call the discovery endpoint. It uses
+the selected LLM engine only to suggest up to five additional search queries, then searches
+PhimAPI and validates results independently. AI-only suggestions are labeled `ai_candidate`;
+they are not identity confirmations and do not update persistent rules or metadata. This
+fallback requires an enabled AI engine and can return no candidates or time out. A result absent
+from PhimAPI's searchable catalog cannot be guaranteed to match.
+
+Discovery errors: 503 `ai_search_unavailable`, 502 `ai_search_failed` or
+`ai_invalid_response`, and 504 `ai_search_timeout`. Partial PhimAPI query failures remain
+visible as `partial_search_failed`.
 
 ## Data
 

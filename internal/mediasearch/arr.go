@@ -61,6 +61,16 @@ func (s *arrSource) item(entry map[string]any) (contracts.MediaItem, bool) {
 	itemID := strconv.Itoa(int(number))
 	year, _ := entry["year"].(float64)
 	overview, _ := entry["overview"].(string)
+	externalIDs := make(map[string]string)
+	if tmdbID, ok := entry["tmdbId"].(float64); ok && tmdbID > 0 {
+		externalIDs["tmdb"] = strconv.Itoa(int(tmdbID))
+	}
+	if tvdbID, ok := entry["tvdbId"].(float64); ok && tvdbID > 0 {
+		externalIDs["tvdb"] = strconv.Itoa(int(tvdbID))
+	}
+	if imdbID, ok := entry["imdbId"].(string); ok && imdbID != "" {
+		externalIDs["imdb"] = imdbID
+	}
 	nativeID, _ := entry["id"].(float64)
 	availability := "requestable"
 	actions := []contracts.MediaAction{{Type: "request_library", Label: "Yêu cầu thêm thư viện",
@@ -74,7 +84,7 @@ func (s *arrSource) item(entry map[string]any) (contracts.MediaItem, bool) {
 	}
 	return contracts.MediaItem{
 		ID: itemID, Title: title, Year: int(year), Summary: overview, Kind: kind,
-		Poster: arrPoster(entry), ExternalIDs: map[string]string{externalKey: itemID},
+		Poster: arrPoster(entry), ExternalIDs: externalIDs,
 		Availability: availability, Actions: actions,
 	}, true
 }

@@ -56,6 +56,7 @@ func newMetadataSkill() skills.MovieMetadata {
 			return http.ErrUseLastResponse
 		}}
 	return skills.MovieMetadata{Token: os.Getenv("TMDB_READ_ACCESS_TOKEN"),
+		APIKey:  os.Getenv("TMDB_API_KEY"),
 		BaseURL: "https://api.themoviedb.org/3", Client: client}
 }
 

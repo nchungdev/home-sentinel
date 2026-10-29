@@ -22,12 +22,12 @@ LangGraph is not installed. Existing Go application boundaries are retained.
 | Area | Actual implementation | Related acceptance cases |
 | --- | --- | --- |
 | Live search API | Authenticated `POST /v2/flow`; preview endpoint stays offline | TV-001/009/071/072/079 |
-| Source selection | Context source allowlist and explicit Plex/Jellyfin source restriction | TV-002/003 |
+| Source selection | TMDb + YouTube for default title search; source-specific search when requested | TV-002/003 |
 | Selected title | `context.title`; metadata/search receive normalized titles | TV-011/012/082 |
 | Internet | SearXNG JSON search with valid URL filtering and source errors | TV-066/069 |
 | Technical references | Topic/domain mapping and host filtering for official-doc results | TV-065 and technical routing subset |
 | Film information | TMDb title search and details with director/creator fields | TV-011/012/014 |
-| Media read tasks | Per-source Plex/Jellyfin/*arr/YouTube adapters, when configured | Search portion of TV-001/002/003/009 |
+| Media read tasks | TMDb/YouTube search; detail checks Plex/Jellyfin/*arr by exact external IDs | Search portion of TV-001/002/003/009 |
 | Search cache | Per-source media and web results; memory default, optional Redis, two-minute TTL and cache error fallback | TV-093 |
 | Web UI | Persistent local chat history; progressive content tabs and compact source rows | Search presentation subset |
 | Stationary person | Periodic detector recheck; no motion is not an empty observation | HC-027 |
@@ -35,6 +35,14 @@ LangGraph is not installed. Existing Go application boundaries are retained.
 
 Case references above indicate the behavior addressed, not an E2E passing score.
 For example, source metadata does not complete the native-TV playback path.
+
+Default title search returns TMDb titles and YouTube videos. Selecting a TMDb title fetches
+its external IDs before checking Plex, Jellyfin, Radarr, Sonarr and PhimAPI. Provider results
+with a shared TMDB, IMDb or TVDB ID and matching media kind are associated as exact matches;
+conflicting shared IDs reject the association. PhimAPI search results expose their own TMDB/IMDb
+IDs where available. If both sides lack shared IDs, a single exact normalized title/alias with
+matching year and media kind among returned search results is shown only as unverified, never as
+an exact identity match.
 
 ## Configuration
 

@@ -26,6 +26,12 @@ type Source interface {
 	Search(context.Context, string) ([]contracts.MediaItem, error)
 }
 
+// wideSearcher is implemented by sources that can return a larger candidate pool for
+// identity matching than the display-oriented Search limit.
+type wideSearcher interface {
+	SearchWide(context.Context, string) ([]contracts.MediaItem, error)
+}
+
 type Requester interface {
 	Request(context.Context, string, RequestOptions) (contracts.MediaItem, error)
 }
@@ -90,7 +96,9 @@ type sourceUpdate struct {
 	result     *contracts.MediaSourceResults
 }
 
-func (s *Service) searchSource(ctx context.Context, index int, query string, updates chan<- sourceUpdate) {
+func (s *Service) searchSource(
+	ctx context.Context, index int, query string, wide bool, updates chan<- sourceUpdate,
+) {
 	capability := s.inspect(ctx, index, false)
 	updates <- sourceUpdate{index: index, capability: &capability}
 	result := contracts.MediaSourceResults{
@@ -107,9 +115,14 @@ func (s *Service) searchSource(ctx context.Context, index int, query string, upd
 	var items []contracts.MediaItem
 	cached := false
 	cacheKey := ""
+	search := s.sources[index].Search
+	namespace := "media:v3"
+	if searcher, ok := s.sources[index].(wideSearcher); ok && wide {
+		search, namespace = searcher.SearchWide, "media-wide:v1"
+	}
 	if s.searchCache != nil {
 		result.Cache = "miss"
-		cacheKey = cache.Key("media:v2", sourceCacheIdentity(s.sources[index]), query, "vi")
+		cacheKey = cache.Key(namespace, sourceCacheIdentity(s.sources[index]), query, "vi")
 		items, cached = getSearchCache(sourceContext, s.searchCache, cacheKey)
 	}
 	if cached {
@@ -117,7 +130,7 @@ func (s *Service) searchSource(ctx context.Context, index int, query string, upd
 	}
 	var err error
 	if !cached {
-		items, err = s.sources[index].Search(sourceContext, query)
+		items, err = search(sourceContext, query)
 		if err == nil && s.searchCache != nil {
 			putSearchCache(sourceContext, s.searchCache, cacheKey, items)
 		}
@@ -171,7 +184,7 @@ func (s *Service) Search(ctx context.Context, query string) contracts.MediaSearc
 		Sources: append([]contracts.MediaSourceCapability(nil), response.Capabilities...)})
 	updates := make(chan sourceUpdate, len(s.sources)*2)
 	for index := range s.sources {
-		go s.searchSource(ctx, index, query, updates)
+		go s.searchSource(ctx, index, query, false, updates)
 	}
 	for completed := 0; completed < len(s.sources); {
 		var update sourceUpdate
