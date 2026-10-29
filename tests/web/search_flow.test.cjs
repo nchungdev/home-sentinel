@@ -133,11 +133,15 @@ test('unavailable sources stay in the status area without result cards', async (
     { type: 'task_result', result: {
       source: 'motchill', status: 'skipped', error_code: 'not_implemented', items: []
     } },
+    { type: 'task_result', result: {
+      source: 'youtube', status: 'skipped', error_code: 'not_configured', items: []
+    } },
     { type: 'response_completed', status: 'unavailable' }
   ]);
   const bubble = new Element('div');
   await context.trySearchFlow('tìm phim', bubble, timer);
   assert.match(bubble.children[1].children[0].textContent, /Nguồn chưa được hỗ trợ/);
+  assert.match(bubble.children[1].children[1].textContent, /YOUTUBE_API_KEY/);
   assert.deepEqual(bubble.children[3].children.map(tab => tab.textContent), ['Tất cả (0)']);
   assert.equal(bubble.children[4].children.length, 1);
   assert.equal(bubble.children[4].children[0].children.length, 0);

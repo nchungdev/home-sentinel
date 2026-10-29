@@ -21,6 +21,32 @@ Set `AGENT_ALLOW` in `~/.config/tv-agent.env` to the TV's and your phone's IPs t
 `AGENT_WORKDIR` is the directory the CLI works in: point it at a folder you are happy for the agent to touch.
 `AGENT_CMD` can be another CLI as long as it takes `-p` and the stream-json flags used in `run_cli`.
 
+## YouTube video search
+
+The media search uses the public YouTube Data API v3. Create an API key in Google Cloud,
+enable YouTube Data API v3, and restrict the key to that API. Keep the key on the server;
+do not put it in the web client or commit it.
+
+For the systemd service, add this line to `~/.config/tv-agent.env`:
+
+```text
+YOUTUBE_API_KEY=your-key
+```
+
+Keep the file private and restart the service:
+
+```bash
+chmod 600 ~/.config/tv-agent.env
+systemctl --user restart tv-agent
+```
+
+For a directly launched development server, set `YOUTUBE_API_KEY` in its process
+environment before starting it. The source reports as unconfigured until the server restarts
+with the key. This enables public video search; it does not use or personalize by a Google
+account.
+
+See the [YouTube Data API search documentation](https://developers.google.com/youtube/v3/docs/search/list).
+
 ## Point the TV at it
 
 Put the server's address in `apps/launcher/app/src/main/res/values/config.xml` (`agent_url`) and its host in

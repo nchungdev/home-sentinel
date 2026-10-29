@@ -48,10 +48,14 @@ func (s *webSource) Search(ctx context.Context, query string) ([]contracts.Media
 
 type youtubeSource struct{ *httpSource }
 
+type youtubeThumbnailVariant struct {
+	URL string `json:"url"`
+}
+
 func (s *youtubeSource) Capability(ctx context.Context) contracts.MediaSourceCapability {
 	capability := s.Info()
-	capability.Status = "auth_required"
 	if s.apiKey == "" {
+		capability.Status = "not_configured"
 		return capability
 	}
 	var response map[string]any
@@ -76,8 +80,9 @@ func (s *youtubeSource) Search(ctx context.Context, query string) ([]contracts.M
 				VideoID string `json:"videoId"`
 			} `json:"id"`
 			Snippet struct {
-				Title       string `json:"title"`
-				Description string `json:"description"`
+				Title       string                             `json:"title"`
+				Description string                             `json:"description"`
+				Thumbnails  map[string]youtubeThumbnailVariant `json:"thumbnails"`
 			} `json:"snippet"`
 		} `json:"items"`
 	}
@@ -93,10 +98,21 @@ func (s *youtubeSource) Search(ctx context.Context, query string) ([]contracts.M
 		}
 		target := "https://www.youtube.com/watch?v=" + url.QueryEscape(entry.ID.VideoID)
 		items = append(items, contracts.MediaItem{ID: entry.ID.VideoID, Title: entry.Snippet.Title,
-			Summary: entry.Snippet.Description, Kind: "video", URL: target, Availability: "external",
+			Summary: entry.Snippet.Description, Kind: "video", URL: target,
+			Poster: youtubeThumbnail(entry.Snippet.Thumbnails), Availability: "external",
 			Actions: []contracts.MediaAction{playAction(target), linkAction("Mở YouTube", target)}})
 	}
 	return items, nil
+}
+
+func youtubeThumbnail(thumbnails map[string]youtubeThumbnailVariant) string {
+	for _, name := range []string{"maxres", "standard", "high", "medium", "default"} {
+		if thumbnail, ok := thumbnails[name]; ok && publicHTTPURL(thumbnail.URL) {
+			return thumbnail.URL
+		}
+	}
+
+	return ""
 }
 
 func (s *httpSource) Info() contracts.MediaSourceCapability {

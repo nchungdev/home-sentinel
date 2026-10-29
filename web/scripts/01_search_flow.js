@@ -16,7 +16,10 @@
         phimapi: 'PhimAPI' }[source] || source;
     }
 
-    function flowErrorLabel(code) {
+    function flowErrorLabel(code, source) {
+      if (source === 'youtube' && code === 'not_configured') {
+        return 'Cần cấu hình YOUTUBE_API_KEY trên máy chủ';
+      }
       return { not_configured: 'Chưa cấu hình nguồn', auth_required: 'Kiểm tra tài khoản, quyền truy cập và cấu hình API',
         not_implemented: 'Nguồn chưa được hỗ trợ', skill_unavailable: 'Chức năng chưa được hỗ trợ',
         source_unavailable: 'Nguồn chưa được hỗ trợ', timeout: 'Nguồn phản hồi quá lâu',
@@ -196,7 +199,9 @@
         }
         if (event.type === 'task_result') {
           const result = event.result;
-          if (result.error_code) setSourceStatus(result.source, flowErrorLabel(result.error_code));
+          if (result.error_code) {
+            setSourceStatus(result.source, flowErrorLabel(result.error_code, result.source));
+          }
           else clearSourceStatus(result.source);
           if (result.status === 'ok' || result.status === 'empty') checked++;
           if (!result.items.length) return;

@@ -109,7 +109,7 @@ func (s *Service) searchSource(ctx context.Context, index int, query string, upd
 	cacheKey := ""
 	if s.searchCache != nil {
 		result.Cache = "miss"
-		cacheKey = cache.Key("media", sourceCacheIdentity(s.sources[index]), query, "vi")
+		cacheKey = cache.Key("media:v2", sourceCacheIdentity(s.sources[index]), query, "vi")
 		items, cached = getSearchCache(sourceContext, s.searchCache, cacheKey)
 	}
 	if cached {
