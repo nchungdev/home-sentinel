@@ -25,6 +25,7 @@ func (s *plexSource) Search(ctx context.Context, query string) ([]contracts.Medi
 					Type    string `json:"type"`
 					Summary string `json:"summary"`
 					Thumb   string `json:"thumb"`
+					Origin  string `json:"originalTitle"`
 				} `json:"Metadata"`
 			} `json:"Hub"`
 		} `json:"MediaContainer"`
@@ -49,6 +50,7 @@ func (s *plexSource) Search(ctx context.Context, query string) ([]contracts.Medi
 			items = append(items, contracts.MediaItem{
 				ID: entry.ID, Title: entry.Title, Year: entry.Year, Kind: entry.Type,
 				Summary: entry.Summary, URL: target, Poster: s.poster(entry.Thumb),
+				Original:     entry.Origin,
 				Availability: "in_library", Actions: actions,
 			})
 			if len(items) == resultLimit {

@@ -19,6 +19,7 @@ type MediaItem struct {
 	Summary      string            `json:"summary,omitempty"`
 	URL          string            `json:"url,omitempty"`
 	Poster       string            `json:"poster,omitempty"`
+	Original     string            `json:"original_title,omitempty"`
 	ParentID     string            `json:"parent_id,omitempty"`
 	Season       *int              `json:"season,omitempty"`
 	Episode      *int              `json:"episode,omitempty"`
