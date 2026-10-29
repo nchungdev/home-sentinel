@@ -1,11 +1,12 @@
+    #view-tvmodes { padding: 16px 24px; width: 100%; max-width: 100%; box-sizing: border-box; }
     .tvm-bar { justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
-    .tvm-hint { font-size: 12.5px; color: var(--text-muted); max-width: 560px; }
+    .tvm-hint { font-size: 12.5px; color: var(--text-muted); max-width: 620px; }
     .tvm-bar-actions { display: flex; align-items: center; gap: 10px; margin-left: auto; }
     .tvm-status { font-size: 12px; color: var(--text-muted); }
-    .tvm-list { display: flex; flex-direction: column; gap: 14px; margin-top: 14px; }
+    .tvm-list { display: flex; flex-direction: column; gap: 14px; margin-top: 14px; width: 100%; }
     .tvm-empty { padding: 40px; text-align: center; color: var(--text-muted); font-size: 13px; }
     .tvm-card { border: 1px solid rgba(255, 255, 255, .08); border-radius: 14px; padding: 16px;
-      background: rgba(255, 255, 255, .03); display: flex; flex-direction: column; gap: 10px; }
+      background: rgba(255, 255, 255, .03); display: flex; flex-direction: column; gap: 14px; }
     .tvm-head { display: flex; align-items: center; gap: 10px; }
     .tvm-card input, .tvm-card select { background: rgba(0, 0, 0, .25); color: inherit;
       border: 1px solid rgba(255, 255, 255, .1); border-radius: 10px; padding: 9px 11px;
@@ -15,14 +16,42 @@
     .tvm-desc { width: 100%; }
     .tvm-active { font-size: 11px; padding: 4px 8px; border-radius: 6px;
       background: rgba(52, 211, 153, .18); color: #34d399; }
-    .tvm-actions { display: flex; flex-direction: column; gap: 8px; }
-    .tvm-row { display: flex; gap: 8px; align-items: center; }
-    .tvm-entity { flex: 1; }
-    .tvm-service { width: 90px; }
-    .tvm-extra { width: 130px; }
-    .tvm-add { align-self: flex-start; }
+    .tvm-actions { display: flex; flex-direction: column; gap: 12px; }
+    .tvm-action-group { display: flex; flex-direction: column; gap: 12px; padding: 14px;
+      border: 1px solid var(--border); border-radius: 12px; background: rgba(0, 0, 0, .12); }
+    .tvm-action-controls, .tvm-device-toolbar, .tvm-add-row {
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    }
+    .tvm-action-controls { justify-content: space-between; }
+    .tvm-action-controls select { flex: 1; min-width: 180px; }
+    .tvm-device-toolbar { justify-content: space-between; }
+    .tvm-device-count { font-size: 12px; color: var(--text-muted); }
+    .tvm-device-search { width: min(220px, 100%); }
+    .tvm-checklist {
+      max-height: 340px; min-height: 120px; overflow-y: auto;
+      background: rgba(0, 0, 0, .2); border: 1px solid var(--border); border-radius: 10px;
+      padding: 12px; display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); gap: 10px;
+    }
+    .tvm-device {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      padding: 7px 9px; border: 1px solid rgba(255, 255, 255, .06); border-radius: 8px;
+      background: rgba(255, 255, 255, .03); cursor: pointer; font-size: 12px;
+      color: var(--text-bright); min-width: 0;
+    }
+    .tvm-device.checked {
+      background: rgba(99, 102, 241, .11);
+      border-color: rgba(99, 102, 241, .42);
+    }
+    .tvm-device-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tvm-device-state { font-size: 10px; color: var(--text-muted); flex-shrink: 0; }
+    .tvm-add-row { align-self: flex-start; }
+    .tvm-new-domain { min-width: 150px !important; }
     .tvm-card .mi { font-size: 16px; }
     @media (max-width: 640px) {
-      .tvm-row { flex-wrap: wrap; }
-      .tvm-entity { flex-basis: 100%; }
+      #view-tvmodes { padding: 12px; }
+      .tvm-head { flex-wrap: wrap; }
+      .tvm-bar-actions { width: 100%; margin-left: 0; flex-wrap: wrap; }
+      .tvm-device-toolbar { align-items: stretch; }
+      .tvm-device-search { width: 100%; }
     }

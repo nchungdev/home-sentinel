@@ -1,19 +1,23 @@
     <!-- 2.5. AUTOMATION VIEW (MÔ HÌNH KỊCH BẢN TỰ ĐỘNG HÓA TỔNG QUÁT THEO CHUẨN HOME ASSISTANT) -->
     <div id="view-automation" class="view-content setting-view">
-      <div class="subtabs-bar" style="justify-content:space-between; align-items:center; flex-shrink:0;">
-        <div style="display:flex; align-items:center; gap:8px; overflow-x:auto;">
-          <div id="autoTabsBar" style="display:flex; align-items:center; gap:8px;"></div>
-          <button class="btn-add-tab" onclick="addNewAutomationRule()" title="Thêm kịch bản tự động hóa mới" style="flex-shrink:0;">
-            <span class="mi" style="font-size:16px;">add</span> Thêm kịch bản
+      <div class="subtabs-bar auto-tabs-bar">
+        <div id="autoTabsBar" class="auto-tabs"></div>
+        <button class="btn-add-tab" onclick="addNewAutomationRule()"
+          title="Thêm kịch bản tự động hóa mới">
+          <span class="mi" style="font-size:16px;">add</span> Thêm kịch bản
+        </button>
+      </div>
+      <div class="auto-toolbar">
+        <span id="autoSaveStatus" class="auto-save-status">
+          Lưu vào configs/automation.json
+        </span>
+        <div class="auto-toolbar-actions">
+          <button class="btn-modern" onclick="loadAutomationConfigAndDevices()">
+            <span class="mi">refresh</span> Tải lại thiết bị
           </button>
-        </div>
-        <div style="display:flex; align-items:center; gap:10px; margin-left:auto; flex-shrink:0;">
-          <span id="autoSaveStatus" style="font-size:12px; color:var(--text-muted);">Lưu vào configs/automation.json</span>
-          <button class="btn-modern" style="padding:8px 14px; font-size:12.5px;" onclick="loadAutomationConfigAndDevices()">
-            <span class="mi" style="font-size:16px;">refresh</span> Tải lại thiết bị
-          </button>
-          <button class="btn-modern primary" id="btnSaveAutomation" style="padding:8px 18px; font-size:13px;" onclick="saveAllAutomationRulesUI()">
-            <span class="mi" style="font-size:16px;">save</span> Lưu Kịch Bản
+          <button class="btn-modern primary" id="btnSaveAutomation"
+            onclick="saveAllAutomationRulesUI()">
+            <span class="mi">save</span> Lưu Kịch Bản
           </button>
         </div>
       </div>

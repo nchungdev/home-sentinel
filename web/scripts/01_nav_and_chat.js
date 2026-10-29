@@ -89,6 +89,7 @@
     function switchNav(name, el) {
       document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
       document.querySelectorAll('.view-content').forEach(v => v.classList.remove('active'));
+      if (typeof closeChatHistory === 'function') closeChatHistory();
 
       if (el) el.classList.add('active');
       const target = document.getElementById('view-' + name);
@@ -102,6 +103,12 @@
         'setting': 'Settings'
       };
       document.getElementById('viewHeaderTitle').textContent = titles[name] || 'Home Sentinel';
+      const mainView = document.querySelector('.main-view');
+      const chatHeader = document.getElementById('chatHeaderContent');
+      const viewHeaderTitle = document.getElementById('viewHeaderTitle');
+      mainView.classList.toggle('is-agent-view', name === 'agent');
+      chatHeader.hidden = name !== 'agent';
+      viewHeaderTitle.hidden = name === 'agent';
 
       try {
         localStorage.setItem('sentinel_active_nav', name);
@@ -129,10 +136,9 @@
       }
     }
 
-    // CHAT & HISTORY (LocalStorage)
+    // CHAT & HISTORY
     const promptInput = document.getElementById('promptInput');
     const chatList = document.getElementById('chatList');
-    const CHAT_STORAGE_KEY = 'sentinel_chat_history_v1';
 
     promptInput.addEventListener('keydown', (e) => {
       if (e.isComposing || e.keyCode === 229) return;
@@ -147,43 +153,8 @@
       sendChat();
     }
 
-    function getChatHistory() {
-      try {
-        const raw = localStorage.getItem(CHAT_STORAGE_KEY);
-        return raw ? JSON.parse(raw) : [];
-      } catch (e) {
-        return [];
-      }
-    }
-
-    function saveChatHistory(history) {
-      try {
-        if (history.length > 50) history = history.slice(history.length - 50);
-        localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(history));
-      } catch (e) {}
-    }
-
     function renderSavedChat() {
-      const history = getChatHistory();
-      if (!history || history.length === 0) return;
-
-      // Giữ tin nhắn chào ban đầu và append các tin nhắn cũ
-      history.forEach(item => {
-        appendBubble(item.sender, item.text, false);
-      });
-    }
-
-    function clearChatHistory() {
-      if (!confirm('Bạn có chắc muốn xóa toàn bộ lịch sử đoạn chat này không?')) return;
-      try {
-        localStorage.removeItem(CHAT_STORAGE_KEY);
-      } catch (e) {}
-      chatList.innerHTML = `
-        <div class="message-row agent">
-          <div class="avatar ai">AI</div>
-          <div class="bubble">Xin chào! Tôi là Trợ lý Home Sentinel. Bạn có thể chọn AI engine trong Cài đặt để bắt đầu trò chuyện. Bạn cần tôi hỗ trợ gì?</div>
-        </div>
-      `;
+      initializeChatSessions();
     }
 
     let chatInFlight = false;
@@ -192,6 +163,7 @@
       const text = promptInput.value.trim();
       if (!text || chatInFlight) return;
       chatInFlight = true;
+      const sessionID = activeChatSessionID();
 
       appendBubble('user', text, true);
       promptInput.value = '';
@@ -201,7 +173,7 @@
       let handler = null;
 
       try {
-        if (await trySearchFlow(text, agentBubble, timer)) return;
+        if (await trySearchFlow(text, agentBubble, timer, sessionID)) return;
         const res = await fetch('/v2/ask', {
           method: 'POST',
           headers: {
@@ -210,7 +182,7 @@
           },
           body: JSON.stringify({
             request_id: 'web-' + Date.now(),
-            session_id: 'web_session',
+            session_id: sessionID,
             text: text,
             locale: 'vi-VN',
             input_type: 'text'
@@ -253,9 +225,9 @@
           agentBubble.textContent = fullAnswer;
         }
 
-        const history = getChatHistory();
+        const history = getChatHistory(sessionID);
         history.push({ sender: 'agent', text: fullAnswer });
-        saveChatHistory(history);
+        saveChatHistory(history, sessionID);
         addBubbleMeta(agentBubble, handler, timer.seconds());
       } catch (err) {
         timer.stop();

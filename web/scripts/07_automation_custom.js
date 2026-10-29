@@ -63,9 +63,21 @@
             <button class="btn-action" id="btn-edit-${escapeHtml(rule.id)}" style="padding:6px 12px; font-size:12px;" onclick="toggleEditScenario('${escapeHtml(rule.id)}')">
               <span class="mi" style="font-size:15px;">${isEditing ? 'check' : 'edit'}</span> ${isEditing ? 'Xong & Lưu' : 'Chỉnh sửa'}
             </button>
-            <label class="ha-toggle-label">
-              <input type="checkbox" id="rule-enabled-${escapeHtml(rule.id)}" ${rule.enabled !== false ? 'checked' : ''} onchange="toggleRuleEnabled('${escapeHtml(rule.id)}', this.checked)"> Bật kịch bản
-            </label>
+            <button type="button" class="btn-action ha-toggle-button ${
+              rule.enabled !== false ? 'is-enabled' : 'is-disabled'
+            }" id="rule-enabled-${escapeHtml(rule.id)}"
+              title="${rule.enabled !== false ? 'Tắt' : 'Bật'} kịch bản"
+              aria-label="${
+                rule.enabled !== false ? 'Tắt' : 'Bật'
+              } kịch bản ${escapeHtml(rule.name)}"
+              aria-pressed="${rule.enabled !== false}"
+              onclick="toggleRuleEnabled('${escapeHtml(rule.id)}', ${
+                rule.enabled === false ? 'true' : 'false'
+              }, this)">
+              <span class="mi" aria-hidden="true">${
+                rule.enabled !== false ? 'toggle_on' : 'toggle_off'
+              }</span>
+            </button>
             ${(currentAutoCfg.rules || []).length > 1 ? `
               <button class="btn-action btn-delete" style="padding:6px 10px; font-size:12px;" onclick="deleteAutomationRule('${escapeHtml(rule.id)}')">
                 <span class="mi" style="font-size:15px;">delete</span>

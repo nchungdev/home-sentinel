@@ -1,0 +1,256 @@
+    @media (max-width: 760px) {
+      body {
+        height: 100dvh;
+        min-height: 100dvh;
+        flex-direction: column;
+      }
+
+      .sidebar {
+        position: fixed;
+        z-index: 100;
+        inset: auto 0 0;
+        width: 100%;
+        min-width: 0;
+        height: calc(68px + env(safe-area-inset-bottom));
+        padding: 6px 8px env(safe-area-inset-bottom);
+        flex-direction: row;
+        align-items: stretch;
+        border: 0;
+        border-top: 1px solid var(--border);
+        background: rgba(15, 17, 24, .97);
+        backdrop-filter: blur(16px);
+      }
+
+      .sidebar > div:first-child {
+        display: flex;
+        flex: 1;
+        min-width: 0;
+      }
+
+      .brand { display: none; }
+
+      .nav-list {
+        flex-direction: row;
+        align-items: stretch;
+        justify-content: space-around;
+        gap: 2px;
+        min-width: 0;
+        padding: 0;
+      }
+
+      .nav-item {
+        flex: 1;
+        min-width: 0;
+        flex-direction: column;
+        justify-content: center;
+        gap: 3px;
+        padding: 5px 2px;
+        font-size: 10px;
+        line-height: 1.15;
+        text-align: center;
+        white-space: nowrap;
+      }
+
+      .nav-item .mi { font-size: 20px; }
+
+      .nav-bottom {
+        width: 58px;
+        flex-shrink: 0;
+        justify-content: center;
+        padding: 0;
+        border: 0;
+      }
+
+      .nav-bottom .nav-item {
+        flex: initial;
+        padding-inline: 0;
+      }
+
+      .main-view {
+        flex: 0 0 calc(100dvh - 68px - env(safe-area-inset-bottom));
+        width: 100%;
+        min-height: 0;
+        height: calc(100dvh - 68px - env(safe-area-inset-bottom));
+      }
+
+      .main-header {
+        min-height: 54px;
+        flex-shrink: 0;
+        padding: 10px 16px;
+      }
+
+      .main-header h3 {
+        font-size: 14px;
+        line-height: 1.3;
+      }
+
+      .view-content {
+        min-height: 0;
+        height: auto;
+        overscroll-behavior: contain;
+      }
+
+      .view-content.setting-view.active {
+        height: auto;
+        padding: 12px;
+        padding-bottom: 20px;
+      }
+
+      .client-logs-view {
+        height: auto;
+        padding: 12px;
+      }
+
+      #view-automation .auto-tabs-bar {
+        flex-wrap: wrap;
+        overflow: visible;
+        gap: 8px;
+      }
+
+      .auto-tabs {
+        flex: 1 1 100%;
+        width: 100%;
+        padding-bottom: 2px;
+      }
+
+      .auto-toolbar {
+        align-items: flex-start;
+        gap: 8px;
+        padding: 10px 0 12px;
+      }
+
+      .auto-save-status { flex: 1 1 100%; }
+
+      .auto-toolbar-actions {
+        width: 100%;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 8px;
+      }
+
+      .auto-toolbar-actions .btn-modern,
+      .auto-toolbar-actions .btn-modern.primary {
+        min-width: 0;
+        padding: 10px 8px;
+        font-size: 12px;
+      }
+
+      .tvm-bar {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+        overflow: visible;
+        margin: 0 0 12px;
+        padding: 12px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: var(--surface);
+      }
+
+      .tvm-hint {
+        max-width: none;
+        font-size: 12px;
+        line-height: 1.5;
+      }
+
+      .tvm-bar-actions {
+        width: 100%;
+        margin: 0;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 8px;
+      }
+
+      .tvm-status {
+        grid-column: 1 / -1;
+        line-height: 1.4;
+      }
+
+      .tvm-status:empty { display: none; }
+
+      .tvm-bar-actions .btn-modern {
+        min-width: 0;
+        padding: 10px 8px;
+        font-size: 12px;
+      }
+
+      .tvm-bar-actions .btn-modern.primary { grid-column: 1 / -1; }
+      .tvm-list { gap: 10px; margin-top: 0; }
+      .tvm-card { min-width: 0; padding: 12px; gap: 12px; }
+
+      .tvm-head {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .tvm-icon { width: 42px; }
+      .tvm-name { flex: 1; min-width: 90px; }
+      .tvm-active { align-self: center; }
+
+      .tvm-head [data-run] {
+        white-space: nowrap;
+        padding: 8px 10px;
+        font-size: 12px;
+      }
+
+      .tvm-head [data-remove] {
+        padding: 8px 10px;
+      }
+
+      .tvm-desc { width: 100%; }
+
+      .tvm-action-group {
+        min-width: 0;
+        padding: 10px;
+        gap: 10px;
+      }
+
+      .tvm-action-controls { gap: 6px; }
+      .tvm-action-controls strong { flex: 1; min-width: 0; }
+      .tvm-action-controls select { flex: 0 1 100px; min-width: 90px; }
+      .tvm-extra { width: 100px; }
+
+      .tvm-device-toolbar {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 8px;
+      }
+
+      .tvm-device-count,
+      .tvm-device-search { grid-column: 1 / -1; }
+      .tvm-device-search { width: 100%; }
+
+      .tvm-checklist {
+        grid-template-columns: minmax(0, 1fr);
+        max-height: 280px;
+        min-height: 0;
+        padding: 8px;
+        gap: 6px;
+      }
+
+      .tvm-add-row { width: 100%; }
+      .tvm-new-domain { flex: 1; min-width: 0 !important; }
+    }
+
+    @media (min-width: 481px) and (max-width: 760px) {
+      .tvm-bar-actions { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .tvm-bar-actions .btn-modern.primary { grid-column: auto; }
+      .tvm-bar-actions .btn-modern { white-space: nowrap; }
+    }
+
+    @media (max-width: 380px) {
+      .tvm-head { display: grid; grid-template-columns: 42px minmax(0, 1fr) auto; }
+      .tvm-icon { grid-area: 1 / 1; }
+      .tvm-name { grid-area: 1 / 2 / 2 / 4; width: 100%; }
+      .tvm-active { grid-area: 2 / 1; }
+      .tvm-head [data-run] { grid-area: 2 / 2; justify-self: start; }
+      .tvm-head [data-remove] { grid-area: 2 / 3; }
+      .nav-item { font-size: 9px; }
+      .nav-item .mi { font-size: 18px; }
+      .nav-bottom { width: 52px; }
+      .main-header { padding-inline: 12px; }
+      .status-badge { gap: 5px; font-size: 10px; }
+      .tvm-bar-actions .btn-modern { font-size: 11px; }
+    }

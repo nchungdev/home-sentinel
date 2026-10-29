@@ -31,9 +31,35 @@
   </aside>
 
   <!-- MAIN VIEW -->
-  <main class="main-view">
+  <main class="main-view is-agent-view">
     <div class="main-header">
-      <h3 id="viewHeaderTitle">Agent Chat</h3>
+      <h3 id="viewHeaderTitle" hidden>Agent Chat</h3>
+      <div class="chat-header-content" id="chatHeaderContent">
+        <div class="chat-header-copy">
+          <h3 id="chatHeaderTitle">Xin chào 👋</h3>
+          <p id="chatHeaderSubtitle">Bạn muốn bắt đầu từ đâu?</p>
+        </div>
+        <div class="chat-header-actions">
+          <button type="button" class="chat-header-icon-button"
+            onclick="createChatSession()" title="Cuộc trò chuyện mới"
+            aria-label="Cuộc trò chuyện mới">
+            <span class="mi" aria-hidden="true">add</span>
+          </button>
+          <button type="button" class="chat-header-icon-button"
+            id="chatHistoryToggle" onclick="toggleChatHistory(event)"
+            title="Lịch sử trò chuyện" aria-label="Lịch sử trò chuyện"
+            aria-haspopup="dialog" aria-expanded="false"
+            aria-controls="chatHistoryPopover">
+            <span class="mi" aria-hidden="true">chat_bubble_outline</span>
+          </button>
+          <div class="chat-history-popover" id="chatHistoryPopover" hidden
+            role="dialog" aria-label="Cuộc trò chuyện gần đây">
+            <div class="chat-history-heading">Cuộc trò chuyện gần đây</div>
+            <div class="chat-session-list" id="chatSessionList"></div>
+            <div class="chat-session-status" id="chatSessionStatus" aria-live="polite"></div>
+          </div>
+        </div>
+      </div>
       <div class="status-badge">
         <span class="pulse-dot"></span>
         <span>Sentinel</span>
@@ -42,29 +68,14 @@
 
     <!-- 1. AGENT VIEW (MINIMALIST MODERN CHAT) -->
     <div id="view-agent" class="view-content agent-view active">
-      <div class="chips-bar" style="justify-content: space-between;">
-        <div style="display:flex; gap:8px; overflow-x:auto;">
-          <div class="chip" onclick="quickSend('trạng thái nhà')"><span class="mi" style="font-size:15px;">home</span> Trạng thái nhà</div>
-          <div class="chip" onclick="quickSend('bật đèn phòng khách')"><span class="mi" style="font-size:15px;">lightbulb</span> Bật đèn PK</div>
-          <div class="chip" onclick="quickSend('tắt đèn phòng khách')"><span class="mi" style="font-size:15px;">flashlight_off</span> Tắt đèn PK</div>
-          <div class="chip" onclick="quickSend('bật quạt phòng ngủ')"><span class="mi" style="font-size:15px;">mode_fan</span> Bật quạt</div>
-          <div class="chip" onclick="quickSend('tìm phim avatar')"><span class="mi" style="font-size:15px;">movie</span> Tìm phim</div>
-        </div>
-        <div class="chip" style="color:var(--text-muted); flex-shrink:0;" onclick="clearChatHistory()"><span class="mi" style="font-size:15px;">delete</span> Xóa lịch sử</div>
-      </div>
+      <section class="chat-workspace" aria-label="Hội thoại">
+        <div class="chat-messages" id="chatList"></div>
 
-      <div class="chat-messages" id="chatList">
-        <div class="message-row agent">
-          <div class="avatar ai">AI</div>
-          <div class="bubble">Xin chào! Tôi là Trợ lý Home Sentinel. Bạn có thể chọn AI engine trong Cài đặt để bắt đầu trò chuyện. Bạn cần tôi hỗ trợ gì?</div>
+        <div class="chat-input-wrapper">
+          <div class="input-pill">
+            <textarea id="promptInput" rows="1" placeholder="Hỏi điều gì đó hoặc ra lệnh điều khiển nhà..."></textarea>
+            <button class="btn-send-round" onclick="sendChat()"><span class="mi">send</span></button>
+          </div>
         </div>
-      </div>
-
-      <div class="chat-input-wrapper">
-        <div class="input-pill">
-          <textarea id="promptInput" rows="1" placeholder="Hỏi điều gì đó hoặc ra lệnh điều khiển nhà..."></textarea>
-          <button class="btn-send-round" onclick="sendChat()"><span class="mi">send</span></button>
-        </div>
-      </div>
+      </section>
     </div>
-

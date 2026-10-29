@@ -170,9 +170,18 @@
       renderAllAutomationUI(ruleId);
     }
 
-    function toggleRuleEnabled(ruleId, isChecked) {
+    function toggleRuleEnabled(ruleId, isEnabled, button) {
       const rule = (currentAutoCfg.rules || []).find(r => r.id === ruleId);
-      if (rule) { rule.enabled = isChecked; saveAllAutomationRulesUI(); }
+      if (!rule) return;
+      rule.enabled = isEnabled;
+      button.classList.toggle('is-enabled', isEnabled);
+      button.classList.toggle('is-disabled', !isEnabled);
+      button.title = `${isEnabled ? 'Tắt' : 'Bật'} kịch bản`;
+      const stateLabel = isEnabled ? 'Tắt' : 'Bật';
+      button.setAttribute('aria-label', `${stateLabel} kịch bản ${rule.name}`);
+      button.setAttribute('aria-pressed', String(isEnabled));
+      button.querySelector('.mi').textContent = isEnabled ? 'toggle_on' : 'toggle_off';
+      saveAllAutomationRulesUI();
     }
 
     function deleteAutomationRule(ruleId) {

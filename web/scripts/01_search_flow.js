@@ -117,7 +117,7 @@
       return { bar, panels, add };
     }
 
-    async function trySearchFlow(text, bubble, timer) {
+    async function trySearchFlow(text, bubble, timer, sessionID) {
       const response = await fetch('/v2/flow', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text, context: { title: searchFlowTitle } })
@@ -283,9 +283,9 @@
       }
       if (buffer.trim()) accept(JSON.parse(buffer));
       if (!terminal) throw new Error('Kết nối kết thúc trước khi hoàn tất tìm kiếm');
-      const history = getChatHistory();
+      const history = getChatHistory(sessionID);
       history.push({ sender: 'agent', text: finalText });
-      saveChatHistory(history);
+      saveChatHistory(history, sessionID);
       addBubbleMeta(bubble, { route: 'search', intent: 'source.search' }, timer.seconds());
       return true;
     }

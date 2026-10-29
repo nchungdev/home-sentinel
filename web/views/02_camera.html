@@ -1,7 +1,7 @@
     <!-- 2. CAMERA VIEW - 3 CỘT ĐỘC LẬP HIỆN ĐẠI -->
-    <div id="view-camera" class="view-content camera-view">
+    <div id="view-camera" class="view-content camera-view camera-panel-controls">
       <!-- CỘT 1: CAMERA STREAM + TERMINAL LOG -->
-      <div class="camera-col">
+      <div class="camera-col camera-primary-col">
         <div class="camera-screen">
           <div class="stream-feed" style="position:relative; cursor:pointer;" onclick="toggleCameraPlayback()">
             <div class="camera-live-badge" id="camLiveBadge" style="display:none;">
@@ -29,6 +29,21 @@
           </div>
         </div>
 
+        <div class="camera-mobile-tabs" aria-label="Bảng Camera">
+          <button type="button" class="camera-mobile-tab active" data-camera-panel="controls"
+            aria-pressed="true"
+            onclick="switchCameraMobilePanel('controls')">
+            <span class="mi" aria-hidden="true">videocam</span>
+            Điều khiển
+          </button>
+          <button type="button" class="camera-mobile-tab" data-camera-panel="logs"
+            aria-pressed="false"
+            onclick="switchCameraMobilePanel('logs')">
+            <span class="mi" aria-hidden="true">terminal</span>
+            Nhật ký
+          </button>
+        </div>
+
         <!-- TERMINAL CONSOLE LOG (CANH ĐỀU VỚI KHỐI CAMERA SCREEN) -->
         <div class="terminal-card">
           <div class="terminal-header">
@@ -51,7 +66,7 @@
       </div>
 
       <!-- CỘT 2: CONTROL (PTZ REMOTE & PRIVACY) + VOICE BROADCAST (TTS) -->
-      <div class="camera-col">
+      <div class="camera-col camera-controls-col">
         <!-- PHẦN TRÊN: ĐIỀU KHIỂN CAMERA & PRIVACY -->
         <div class="card" style="align-items: center; text-align: center; padding: 14px 18px; gap: 12px; flex-shrink: 0;">
           <div class="card-title" style="align-self: flex-start; margin-bottom: 2px;">Điều Khiển Camera (PTZ)</div>
@@ -205,4 +220,3 @@
         </div>
       </div>
     </div>
-

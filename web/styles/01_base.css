@@ -142,6 +142,31 @@
       font-weight: 600;
       color: var(--text-bright);
     }
+    .chat-header-content {
+      display: flex;
+      flex: 1;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      min-width: 0;
+    }
+    .chat-header-content[hidden] { display: none; }
+    .chat-header-copy { min-width: 0; }
+    .chat-header-copy h3 {
+      overflow: hidden;
+      color: var(--text-bright);
+      font-size: 16px;
+      font-weight: 600;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .chat-header-copy p {
+      margin-top: 3px;
+      color: var(--text-muted);
+      font-size: 11px;
+      line-height: 1.3;
+    }
+    .is-agent-view .main-header .status-badge { display: none; }
     .status-badge {
       display: flex;
       align-items: center;
@@ -167,4 +192,3 @@
     .view-content.active {
       display: flex !important;
     }
-

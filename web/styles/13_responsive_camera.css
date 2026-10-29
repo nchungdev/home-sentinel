@@ -1,0 +1,89 @@
+    .camera-mobile-tabs { display: none; }
+
+    @media (max-width: 992px) {
+      .view-content.camera-view.active {
+        display: flex !important;
+        flex: 1 1 0;
+        flex-direction: column;
+        height: 0;
+        min-height: 0;
+        overflow-x: hidden;
+        overflow-y: auto;
+      }
+
+      .camera-col {
+        height: auto;
+        overflow: visible;
+      }
+
+      .camera-primary-col { display: contents; }
+      .camera-controls-col { display: none; padding: 0; }
+      .camera-view.camera-panel-controls .camera-controls-col { display: flex; }
+      .camera-view:not(.camera-panel-logs) .terminal-card { display: none; }
+      .camera-view.camera-panel-logs .terminal-card { display: flex; }
+      .camera-view.camera-panel-logs .camera-screen { display: none; }
+
+      .camera-view.camera-panel-logs .terminal-card {
+        flex: 1 1 0;
+        min-height: 0;
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+        box-shadow: none;
+      }
+
+      .camera-view.camera-panel-logs .log-terminal {
+        flex: 1 1 0;
+        height: auto;
+        min-height: 0;
+        border: 0;
+        background: #07090e;
+      }
+
+      .camera-screen {
+        flex: none;
+        min-height: 0;
+        aspect-ratio: 16 / 10;
+      }
+
+      .camera-mobile-tabs {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .camera-mobile-tab {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: 42px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: var(--surface);
+        color: var(--text-muted);
+        font: inherit;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      .camera-mobile-tab.active {
+        border-color: rgba(99, 102, 241, .55);
+        background: rgba(99, 102, 241, .16);
+        color: var(--text-bright);
+      }
+
+      .camera-mobile-tab .mi { font-size: 18px; }
+    }
+
+    @media (max-width: 760px) {
+      .view-content.camera-view.active {
+        gap: 12px;
+        padding: 12px;
+      }
+
+      .camera-col { padding: 0; }
+      .stream-feed { min-height: 0; }
+      .remote-container { margin: 8px 0; }
+    }

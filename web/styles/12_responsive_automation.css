@@ -1,0 +1,27 @@
+    @media (max-width: 760px) {
+      #view-automation .ha-auto-card {
+        min-width: 0;
+        padding: 14px 12px;
+      }
+
+      #view-automation .ha-auto-card .ha-ha-top-row {
+        min-width: 0;
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      #view-automation .ha-ha-section,
+      #view-automation .ha-step-card,
+      #view-automation .auto-editable-field {
+        min-width: 0;
+      }
+
+      #view-automation .ha-ha-section { padding: 12px; }
+      #view-automation .ha-step-card { padding: 10px; }
+      #view-automation .ha-ha-section-header,
+      #view-automation .ha-step-header { flex-wrap: wrap; }
+
+      #view-automation .ha-checklist-grid {
+        grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
+        padding: 8px;
+      }
+    }
