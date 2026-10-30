@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -93,4 +94,137 @@ func (s *Server) handleMediaRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, map[string]any{"ok": true, "item": item})
+}
+
+type mediaConfig struct {
+	TMDBApiKey     string `json:"tmdb_api_key"`
+	YouTubeApiKey  string `json:"youtube_api_key"`
+	PlexURL        string `json:"plex_url"`
+	PlexToken      string `json:"plex_token"`
+	JellyfinURL    string `json:"jellyfin_url"`
+	JellyfinApiKey string `json:"jellyfin_api_key"`
+	RadarrURL      string `json:"radarr_url"`
+	RadarrApiKey   string `json:"radarr_api_key"`
+	SonarrURL      string `json:"sonarr_url"`
+	SonarrApiKey   string `json:"sonarr_api_key"`
+	SearXNGURL     string `json:"searxng_url"`
+}
+
+func (s *Server) handleMediaConfig(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		writeJSON(w, map[string]any{
+			"ok": true,
+			"config": mediaConfig{
+				TMDBApiKey:     envDefault("TMDB_API_KEY", ""),
+				YouTubeApiKey:  envDefault("YOUTUBE_API_KEY", ""),
+				PlexURL:        envDefault("PLEX_URL", "http://127.0.0.1:32400"),
+				PlexToken:      envDefault("PLEX_TOKEN", ""),
+				JellyfinURL:    envDefault("JELLYFIN_URL", "http://127.0.0.1:8096"),
+				JellyfinApiKey: envDefault("JELLYFIN_API_KEY", ""),
+				RadarrURL:      envDefault("RADARR_URL", "http://127.0.0.1:7878"),
+				RadarrApiKey:   envDefault("RADARR_API_KEY", ""),
+				SonarrURL:      envDefault("SONARR_URL", "http://127.0.0.1:8989"),
+				SonarrApiKey:   envDefault("SONARR_API_KEY", ""),
+				SearXNGURL:     envDefault("SEARXNG_URL", ""),
+			},
+		})
+	case http.MethodPost:
+		var cfg mediaConfig
+		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 16384)).Decode(&cfg); err != nil {
+			http.Error(w, "bad json", http.StatusBadRequest)
+			return
+		}
+
+		setIfPresent := func(key, val string) {
+			if strings.TrimSpace(val) != "" {
+				_ = os.Setenv(key, strings.TrimSpace(val))
+			}
+		}
+
+		setIfPresent("TMDB_API_KEY", cfg.TMDBApiKey)
+		setIfPresent("YOUTUBE_API_KEY", cfg.YouTubeApiKey)
+		setIfPresent("PLEX_URL", cfg.PlexURL)
+		setIfPresent("PLEX_TOKEN", cfg.PlexToken)
+		setIfPresent("JELLYFIN_URL", cfg.JellyfinURL)
+		setIfPresent("JELLYFIN_API_KEY", cfg.JellyfinApiKey)
+		setIfPresent("RADARR_URL", cfg.RadarrURL)
+		setIfPresent("RADARR_API_KEY", cfg.RadarrApiKey)
+		setIfPresent("SONARR_URL", cfg.SonarrURL)
+		setIfPresent("SONARR_API_KEY", cfg.SonarrApiKey)
+		setIfPresent("SEARXNG_URL", cfg.SearXNGURL)
+
+		saveMediaConfigEnv(cfg)
+
+		s.MediaSearch = mediasearch.FromEnvironment(nil)
+
+		writeJSON(w, map[string]any{
+			"ok":      true,
+			"sources": s.MediaSearch.Discover(r.Context(), true),
+		})
+	default:
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func saveMediaConfigEnv(cfg mediaConfig) {
+	envPath := "env.local"
+	if _, err := os.Stat("/home/chungnh/.config/tv-agent.env"); err == nil {
+		envPath = "/home/chungnh/.config/tv-agent.env"
+	}
+
+	content, _ := os.ReadFile(envPath)
+	lines := strings.Split(string(content), "\n")
+	envMap := make(map[string]string)
+	order := []string{}
+
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		k, v, found := strings.Cut(line, "=")
+		if found {
+			k = strings.TrimSpace(k)
+			envMap[k] = strings.TrimSpace(v)
+			order = append(order, k)
+		}
+	}
+
+	updateKey := func(k, v string) {
+		if strings.TrimSpace(v) == "" {
+			return
+		}
+		if _, exists := envMap[k]; !exists {
+			order = append(order, k)
+		}
+		envMap[k] = strings.TrimSpace(v)
+	}
+
+	updateKey("TMDB_API_KEY", cfg.TMDBApiKey)
+	updateKey("YOUTUBE_API_KEY", cfg.YouTubeApiKey)
+	updateKey("PLEX_URL", cfg.PlexURL)
+	updateKey("PLEX_TOKEN", cfg.PlexToken)
+	updateKey("JELLYFIN_URL", cfg.JellyfinURL)
+	updateKey("JELLYFIN_API_KEY", cfg.JellyfinApiKey)
+	updateKey("RADARR_URL", cfg.RadarrURL)
+	updateKey("RADARR_API_KEY", cfg.RadarrApiKey)
+	updateKey("SONARR_URL", cfg.SonarrURL)
+	updateKey("SONARR_API_KEY", cfg.SonarrApiKey)
+	updateKey("SEARXNG_URL", cfg.SearXNGURL)
+
+	var newLines []string
+	for _, k := range order {
+		if v, ok := envMap[k]; ok {
+			newLines = append(newLines, k+"="+v)
+		}
+	}
+	_ = os.WriteFile(envPath, []byte(strings.Join(newLines, "\n")+"\n"), 0600)
+}
+
+func envDefault(key, fallback string) string {
+	if val := os.Getenv(key); val != "" {
+		return val
+	}
+	return fallback
 }

@@ -26,64 +26,97 @@
       return data;
     }
 
-    async function catalogOpenTitle(id, trigger, detailHost) {
-      trigger.disabled = true;
-      const panel = catalogNode('div');
-      panel.className = 'catalog-panel';
-      const close = catalogNode('button', '‹ Quay lại');
-      const content = catalogNode('div', 'Đang lấy danh sách tập…');
-      const controller = new AbortController();
+    function catalogOpenModal(trigger, host) {
+      const overlay = catalogNode('div');
+      overlay.className = 'catalog-modal-overlay';
+      overlay.setAttribute('role', 'dialog');
+      overlay.setAttribute('aria-modal', 'true');
+
+      const modal = catalogNode('div');
+      modal.className = 'catalog-modal';
+
+      const header = catalogNode('header');
+      header.className = 'catalog-modal-header';
+
+      const close = catalogNode('button', '✕ Quay lại');
       close.type = 'button';
-      close.setAttribute('aria-label', 'Quay lại kết quả');
-      close.addEventListener('click', () => {
+      close.className = 'catalog-modal-close';
+      close.setAttribute('aria-label', 'Đóng cửa sổ');
+      header.appendChild(close);
+
+      const content = catalogNode('div');
+      content.className = 'catalog-modal-body';
+
+      modal.append(header, content);
+      overlay.appendChild(modal);
+
+      const controller = new AbortController();
+      const bodyNode = (typeof document !== 'undefined' && document.body) || host || null;
+      const originalOverflow = bodyNode && bodyNode.style ? bodyNode.style.overflow : '';
+      if (bodyNode && bodyNode.style) bodyNode.style.overflow = 'hidden';
+
+      function destroy() {
         controller.abort();
-        panel.remove();
-        trigger.disabled = false;
-        trigger.focus();
+        overlay.remove();
+        if (bodyNode && bodyNode.style) bodyNode.style.overflow = originalOverflow;
+        if (trigger) {
+          trigger.disabled = false;
+          if (typeof trigger.focus === 'function') trigger.focus();
+        }
+      }
+
+      close.addEventListener('click', destroy);
+      overlay.addEventListener('click', event => {
+        if (event.target === overlay) destroy();
       });
-      panel.append(close, content);
-      detailHost.appendChild(panel);
+      const onKeyDown = event => {
+        if (event.key === 'Escape') destroy();
+      };
+      if (typeof document !== 'undefined' && document.addEventListener) {
+        document.addEventListener('keydown', onKeyDown);
+      }
+      controller.signal.addEventListener('abort', () => {
+        if (typeof document !== 'undefined' && document.removeEventListener) {
+          document.removeEventListener('keydown', onKeyDown);
+        }
+      });
+
+      if (bodyNode) bodyNode.appendChild(overlay);
       close.focus();
+
+      return { overlay, content, controller, close: destroy };
+    }
+
+    async function catalogOpenTitle(id, trigger, detailHost) {
+      if (trigger) trigger.disabled = true;
+      const modal = catalogOpenModal(trigger, detailHost);
+      modal.content.textContent = 'Đang lấy danh sách tập…';
       try {
         const data = await catalogJSON('/v2/catalog/titles/' + encodeURIComponent(id),
-          { signal: controller.signal });
+          { signal: modal.controller.signal });
         searchFlowTitle = data.title.name;
-        catalogRenderTitle(data.title, content, controller.signal);
+        catalogRenderTitle(data.title, modal.content, modal.controller.signal);
       } catch (error) {
-        if (error.name !== 'AbortError') content.textContent = error.message;
+        if (error.name !== 'AbortError') modal.content.textContent = error.message;
       }
     }
 
     async function catalogOpenMedia(identifier, trigger, detailHost) {
       const match = /^(movie|tv)\/([1-9]\d*)$/.exec(identifier || '');
       if (!match) return;
-      trigger.disabled = true;
-      const panel = catalogNode('div');
-      panel.className = 'catalog-panel';
-      const close = catalogNode('button', '‹ Quay lại');
-      const content = catalogNode('div', 'Đang lấy chi tiết và kiểm tra nguồn…');
-      const controller = new AbortController();
-      close.type = 'button';
-      close.setAttribute('aria-label', 'Quay lại kết quả');
-      close.addEventListener('click', () => {
-        controller.abort();
-        panel.remove();
-        trigger.disabled = false;
-        trigger.focus();
-      });
-      panel.append(close, content);
-      detailHost.appendChild(panel);
-      close.focus();
+      if (trigger) trigger.disabled = true;
+      const modal = catalogOpenModal(trigger, detailHost);
+      modal.content.textContent = 'Đang lấy chi tiết và kiểm tra nguồn…';
       try {
         const data = await catalogJSON('/v2/media/tmdb/' + match[1] + '/' + match[2],
-          { signal: controller.signal });
+          { signal: modal.controller.signal });
         searchFlowTitle = data.title.title;
-        catalogRenderMediaDetail(data, content, controller.signal);
+        catalogRenderMediaDetail(data, modal.content, modal.controller.signal);
         if (catalogMediaNeedsAIDiscovery(data)) {
-          await catalogDiscoverMedia(match[1], match[2], data, content, controller.signal);
+          await catalogDiscoverMedia(match[1], match[2], data, modal.content, modal.controller.signal);
         }
       } catch (error) {
-        if (error.name !== 'AbortError') content.textContent = error.message;
+        if (error.name !== 'AbortError') modal.content.textContent = error.message;
       }
     }
 
@@ -109,15 +142,17 @@
 
     function catalogRenderTitle(title, content, signal) {
       const heading = catalogNode('strong', title.name);
+      heading.className = 'catalog-title-heading';
       const groups = [...new Set(title.episodes.map(episode => episode.group))];
+      let selectedGroup = groups[0] || '';
+
+      const serverBar = catalogNode('div');
+      serverBar.className = 'catalog-server-sources';
+
       const groupSelect = catalogNode('select');
       groupSelect.setAttribute('aria-label', 'Nguồn phát');
-      groupSelect.disabled = groups.length < 2;
-      for (const group of groups) {
-        const option = catalogNode('option', group || 'Nguồn mặc định');
-        option.value = group;
-        groupSelect.appendChild(option);
-      }
+      if (groupSelect.style) groupSelect.style.display = 'none';
+
       const episodeList = catalogNode('div');
       episodeList.className = 'catalog-episodes';
       const previous = catalogNode('button', 'Trang trước');
@@ -126,8 +161,31 @@
       const playback = catalogNode('div');
       playback.className = 'catalog-playback';
       let page = 0;
+
+      function renderServerButtons() {
+        serverBar.replaceChildren();
+        if (groups.length > 1) {
+          const label = catalogNode('span', 'Nguồn server: ');
+          label.className = 'catalog-server-label';
+          serverBar.appendChild(label);
+          for (const group of groups) {
+            const btn = catalogNode('button', group || 'Nguồn mặc định');
+            btn.type = 'button';
+            btn.className = 'catalog-server-btn' + (group === selectedGroup ? ' catalog-server-btn--active' : '');
+            btn.addEventListener('click', () => {
+              selectedGroup = group;
+              groupSelect.value = group;
+              page = 0;
+              render();
+            });
+            serverBar.appendChild(btn);
+          }
+        }
+      }
+
       function render() {
-        const episodes = title.episodes.filter(episode => episode.group === groupSelect.value);
+        renderServerButtons();
+        const episodes = title.episodes.filter(episode => episode.group === selectedGroup);
         const pages = Math.max(1, Math.ceil(episodes.length / 25));
         episodeList.replaceChildren();
         for (const episode of episodes.slice(page * 25, (page + 1) * 25)) {
@@ -153,7 +211,7 @@
       const navigation = catalogNode('div');
       navigation.className = 'catalog-pagination';
       navigation.append(previous, status, next);
-      content.replaceChildren(heading, groupSelect, episodeList, navigation, playback);
+      content.replaceChildren(heading, serverBar, groupSelect, episodeList, navigation, playback);
       render();
     }
 
@@ -207,3 +265,10 @@
         if (catalogPlaybackRequests.get(panel) === request) catalogPlaybackRequests.delete(panel);
       }
     }
+
+function catalogOpenRawJSON(data) {
+  const rawURL = URL.createObjectURL(new Blob(
+    [JSON.stringify(data, null, 2)], { type: 'application/json' }));
+  window.open(rawURL, '_blank', 'noopener');
+  setTimeout(() => URL.revokeObjectURL(rawURL), 60_000);
+}

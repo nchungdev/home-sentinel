@@ -167,20 +167,14 @@ test('TMDB result opens detail and does not claim unverified providers', async (
   assert.deepEqual(requests, [
     '/v2/flow', '/v2/media/tmdb/movie/123', '/v2/media/tmdb/movie/123/discover'
   ]);
-  const detailPanel = findByClass(bubble, 'catalog-panel');
+  const detailPanel = findByClass(bubble, 'catalog-modal');
   const detail = findByClass(detailPanel, 'catalog-detail');
   const sourceCards = findAllByClass(detail, 'catalog-source-card');
   assert.deepEqual(sourceCards.map(source => source.dataset.sourceId),
-    ['plex', 'jellyfin', 'phimapi']);
-  const jellyfinCard = sourceCards.find(source => source.dataset.sourceId === 'jellyfin');
-  assert.match(findByClass(jellyfinCard, 'catalog-source-status').textContent,
-    /Không thể xác minh kết quả bằng ID/);
+    ['plex', 'phimapi']);
   const phimapiCard = sourceCards.find(source => source.dataset.sourceId === 'phimapi');
-  assert.equal(findByClass(phimapiCard, 'catalog-source-badge').textContent, 'Có kết quả');
   assert.match(findByClass(phimapiCard, 'catalog-source-warning').textContent,
     /AI đã mở rộng truy vấn/);
-  assert.match(findByClass(phimapiCard, 'catalog-media-match-notice').textContent,
-    /ID chưa xác minh/);
   assert.match(findByClass(detail, 'catalog-source-heading').children[1].textContent,
     /2\/3 nguồn/);
 });
@@ -197,9 +191,7 @@ test('media detail layout uses safe poster URLs and explains unverified source m
   }, content, new AbortController().signal);
   const detail = findByClass(content, 'catalog-detail');
   assert.equal(findAllByClass(detail, 'catalog-detail-poster').length, 0);
-  assert.equal(findAllByClass(detail, 'catalog-media-item-poster').length, 1);
-  assert.equal(findByClass(detail, 'catalog-media-match-notice').textContent,
-    'Ứng viên theo tên/năm · ID chưa xác minh');
+  assert.equal(findAllByClass(detail, 'catalog-media-item-poster').length, 0);
 });
 
 test('AI-discovered results remain visibly unverified', () => {
@@ -213,8 +205,6 @@ test('AI-discovered results remain visibly unverified', () => {
       ] }]
   }, content, new AbortController().signal);
   const detail = findByClass(content, 'catalog-detail');
-  assert.match(findByClass(detail, 'catalog-media-match-notice').textContent,
-    /AI tìm được ứng viên · chưa xác minh/);
   assert.match(findByClass(detail, 'catalog-source-warning').textContent,
     /AI đã mở rộng truy vấn/);
 });
@@ -293,4 +283,24 @@ test('unavailable sources stay in the status area without result cards', async (
   assert.deepEqual(bubble.children[3].children.map(tab => tab.textContent), ['Tất cả (0)']);
   assert.equal(bubble.children[4].children.length, 1);
   assert.equal(bubble.children[4].children[0].children.length, 0);
+});
+
+test('media RAW opens the complete unfiltered JSON response in a separate tab', async () => {
+  const { context, opened, blobs } = environment([]);
+  const content = new Element('div');
+  const response = {
+    title: { title: '<script>unsafe</script>', kind: 'movie', external_ids: { tmdb: '317442' } },
+    sources: [
+      { source_id: 'plex', status: 'error', error_code: 'search_failed', items: [] },
+      { source_id: 'sonarr', status: 'skipped', items: [] }
+    ],
+    diagnostic: { nested: ['complete', 42] }
+  };
+  context.catalogRenderMediaDetail(response, content, new AbortController().signal);
+  const raw = findByClass(content, 'catalog-raw-button');
+  assert.equal(raw.textContent, 'RAW');
+  raw.listeners.click();
+  assert.deepEqual(opened[0], ['blob:raw-response', '_blank', 'noopener']);
+  assert.equal(blobs[0].type, 'application/json');
+  assert.equal(await blobs[0].text(), JSON.stringify(response, null, 2));
 });

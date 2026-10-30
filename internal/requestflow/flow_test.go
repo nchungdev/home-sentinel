@@ -14,7 +14,9 @@ func TestPlansRouteByPurpose(t *testing.T) {
 		{"Ai đạo diễn Interstellar?", "lookup",
 			map[string]bool{"movie.metadata": true, "web.search": true}},
 		{"Tìm Interstellar để xem", "find_to_watch",
-			map[string]bool{"movie.metadata": true, "video.search": true}},
+			map[string]bool{
+				"movie.metadata": true, "video.search": true,
+			}},
 		{"Tìm cách sửa lỗi Windows", "lookup",
 			map[string]bool{"documentation.search": true, "web.search": true}},
 		{"Tóm tắt https://example.com/article", "summarize_url",
@@ -22,7 +24,9 @@ func TestPlansRouteByPurpose(t *testing.T) {
 		{"Thêm phim Interstellar vào thư viện", "request_library",
 			map[string]bool{"library.check": true, "request.prepare": true}},
 		{"Interstellar", "find_to_watch",
-			map[string]bool{"movie.metadata": true, "video.search": true}},
+			map[string]bool{
+				"movie.metadata": true, "video.search": true,
+			}},
 		{"bạn nghĩ sao về chuyện này hôm qua nhỉ?", "clarify", map[string]bool{}},
 		{"xin chào", "chat", map[string]bool{"answer.compose": true}},
 	}
@@ -59,7 +63,12 @@ func TestPlaceholderNeverClaimsLiveResults(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(events[0].Plan.Tasks) != 2 {
-		t.Fatal("expected TMDB and YouTube search tasks")
+		t.Fatal("expected only TMDB and YouTube search tasks")
+	}
+	for _, task := range events[0].Plan.Tasks {
+		if task.Source != "tmdb" && task.Source != "youtube" {
+			t.Fatalf("unexpected default search source: %+v", task)
+		}
 	}
 	started, finished := map[string]bool{}, map[string]bool{}
 	for index, event := range events {

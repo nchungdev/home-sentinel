@@ -19,9 +19,20 @@ func (s *Service) SearchMatching(
 	aliases []string,
 	externalIDs map[string]string,
 ) []contracts.MediaSourceResults {
-	results := make([]contracts.MediaSourceResults, len(identitySources))
+	targetSources := make([]string, 0, len(identitySources))
+	for _, sourceID := range identitySources {
+		if kind == "movie" && sourceID == "sonarr" {
+			continue
+		}
+		if kind == "show" && sourceID == "radarr" {
+			continue
+		}
+		targetSources = append(targetSources, sourceID)
+	}
+
+	results := make([]contracts.MediaSourceResults, len(targetSources))
 	var workers sync.WaitGroup
-	for index, sourceID := range identitySources {
+	for index, sourceID := range targetSources {
 		workers.Add(1)
 		go func() {
 			defer workers.Done()
@@ -32,9 +43,63 @@ func (s *Service) SearchMatching(
 				return
 			}
 
+			if sourceID == "plex" || sourceID == "jellyfin" {
+				queries := identityQueries(title, aliases)
+				var firstResult contracts.MediaSourceResults
+				matches := []contracts.MediaItem{}
+				seenItems := map[string]bool{}
+
+				expectedTitles := make(map[string]struct{}, len(aliases)+1)
+				expectedTitles[normalizeIdentityTitle(title)] = struct{}{}
+				for _, alias := range aliases {
+					if normalized := normalizeIdentityTitle(alias); normalized != "" {
+						expectedTitles[normalized] = struct{}{}
+					}
+				}
+
+				for _, query := range queries {
+					result := s.SearchSource(ctx, sourceID, query)
+					if firstResult.Status == "" {
+						firstResult = result
+					}
+					for _, item := range result.Items {
+						if seenItems[item.ID] || item.Kind != kind {
+							continue
+						}
+						if sharesExternalID(item.ExternalIDs, externalIDs) {
+							item.MatchMethod = "external_id"
+							seenItems[item.ID] = true
+							matches = append(matches, item)
+						} else if !hasConflictingExternalID(item.ExternalIDs, externalIDs) &&
+							year > 0 && item.Year == year && matchesAnyTitle(item, expectedTitles) {
+							item.MatchMethod = "title_year"
+							seenItems[item.ID] = true
+							matches = append(matches, item)
+						}
+					}
+					if len(matches) > 0 {
+						break
+					}
+				}
+				firstResult.SourceID = sourceID
+				firstResult.Items = matches
+				if len(matches) > 0 {
+					firstResult.Status = "ok"
+					firstResult.ErrorCode = ""
+				} else {
+					firstResult.Status = "empty"
+					firstResult.ErrorCode = "identity_not_verified"
+				}
+				results[index] = firstResult
+				return
+			}
+
 			result := s.SearchSource(
 				ctx, sourceID, identitySearchQuery(sourceID, title, externalIDs),
 			)
+			if result.SourceID == "" {
+				result.SourceID = sourceID
+			}
 			matches := make([]contracts.MediaItem, 0, len(result.Items))
 			for _, item := range result.Items {
 				if item.Kind == kind && sharesExternalID(item.ExternalIDs, externalIDs) {
@@ -53,6 +118,24 @@ func (s *Service) SearchMatching(
 	workers.Wait()
 
 	return results
+}
+
+func identityQueries(title string, aliases []string) []string {
+	candidates := append([]string{title}, aliases...)
+	seen := make(map[string]bool)
+	queries := make([]string, 0, len(candidates))
+	for _, candidate := range candidates {
+		candidate = strings.TrimSpace(candidate)
+		if candidate == "" || seen[candidate] {
+			continue
+		}
+		seen[candidate] = true
+		queries = append(queries, candidate)
+		if len(queries) == 5 {
+			break
+		}
+	}
+	return queries
 }
 
 func matchPhimAPIItems(
@@ -164,21 +247,18 @@ func identitySearchQuery(sourceID, title string, externalIDs map[string]string) 
 }
 
 func sharesExternalID(itemIDs, expectedIDs map[string]string) bool {
-	matched := false
+	if hasConflictingExternalID(itemIDs, expectedIDs) {
+		return false
+	}
 	for key, expected := range expectedIDs {
 		if key == "type" || expected == "" {
 			continue
 		}
 		for candidateKey, candidate := range itemIDs {
-			if !strings.EqualFold(candidateKey, key) {
-				continue
+			if strings.EqualFold(candidateKey, key) && candidate != "" && candidate == expected {
+				return true
 			}
-			if candidate != expected {
-				return false
-			}
-			matched = true
 		}
 	}
-
-	return matched
+	return false
 }

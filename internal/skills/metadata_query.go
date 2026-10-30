@@ -11,17 +11,19 @@ var mediaPartSuffix = regexp.MustCompile(
 	`(?i)\s+(?:phần|mùa|season|part)\s+(?:\d+|[ivxlcdm]+)$`,
 )
 
+type tmdbItem struct {
+	ID          int    `json:"id"`
+	MediaType   string `json:"media_type"`
+	Title       string `json:"title"`
+	Name        string `json:"name"`
+	Overview    string `json:"overview"`
+	ReleaseDate string `json:"release_date"`
+	AirDate     string `json:"first_air_date"`
+	PosterPath  string `json:"poster_path"`
+}
+
 type tmdbSearchResponse struct {
-	Results []struct {
-		ID          int    `json:"id"`
-		MediaType   string `json:"media_type"`
-		Title       string `json:"title"`
-		Name        string `json:"name"`
-		Overview    string `json:"overview"`
-		ReleaseDate string `json:"release_date"`
-		AirDate     string `json:"first_air_date"`
-		PosterPath  string `json:"poster_path"`
-	} `json:"results"`
+	Results []tmdbItem `json:"results"`
 }
 
 func (s MovieMetadata) searchMetadata(
@@ -29,8 +31,10 @@ func (s MovieMetadata) searchMetadata(
 	query string,
 ) (tmdbSearchResponse, string) {
 	for _, candidate := range tmdbSearchQueries(query) {
-		payload := tmdbSearchResponse{}
-		for _, mediaType := range []string{"tv", "movie"} {
+		movieResults := tmdbSearchResponse{}
+		tvResults := tmdbSearchResponse{}
+
+		for _, mediaType := range []string{"movie", "tv"} {
 			path := "/search/" + mediaType + "?" + url.Values{
 				"query": {candidate}, "language": {"vi-VN"}, "include_adult": {"false"},
 			}.Encode()
@@ -41,14 +45,37 @@ func (s MovieMetadata) searchMetadata(
 			for index := range typedResults.Results {
 				typedResults.Results[index].MediaType = mediaType
 			}
-			payload.Results = append(payload.Results, typedResults.Results...)
+			if mediaType == "movie" {
+				movieResults = typedResults
+			} else {
+				tvResults = typedResults
+			}
 		}
-		if len(payload.Results) > 0 {
-			return payload, ""
+
+		combined := interleaveTMDBResults(movieResults.Results, tvResults.Results)
+		if len(combined) > 0 {
+			return tmdbSearchResponse{Results: combined}, ""
 		}
 	}
 
 	return tmdbSearchResponse{}, ""
+}
+
+func interleaveTMDBResults(movies, tvs []tmdbItem) []tmdbItem {
+	combined := make([]tmdbItem, 0, len(movies)+len(tvs))
+	maxLen := len(movies)
+	if len(tvs) > maxLen {
+		maxLen = len(tvs)
+	}
+	for i := 0; i < maxLen; i++ {
+		if i < len(movies) {
+			combined = append(combined, movies[i])
+		}
+		if i < len(tvs) {
+			combined = append(combined, tvs[i])
+		}
+	}
+	return combined
 }
 
 func tmdbSearchQueries(query string) []string {

@@ -58,6 +58,10 @@
     .chat-history-popover[hidden] { display: none; }
 
     .chat-history-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
       flex: 0 0 auto;
       padding: 14px 16px 12px;
       border-bottom: 1px solid var(--border);
@@ -169,4 +173,37 @@
       .chat-history-popover { max-height: min(65vh, 520px); }
 
       .chat-session-delete { opacity: .7; }
+    }
+
+    .chat-history-sidebar { display: none; }
+
+    @media (min-width: 1200px) {
+      .chat-history-sidebar {
+        display: flex;
+        flex: 0 0 280px;
+        min-height: 0;
+        overflow: hidden;
+        border-right: 1px solid var(--border);
+        background: var(--surface);
+      }
+
+      #chatHistoryToggle { display: none; }
+
+      .chat-history-sidebar .chat-history-heading { padding: 8px 12px 8px 16px; }
+
+      .chat-history-sidebar #chatNewSessionButton { width: 32px; height: 32px; }
+
+      .chat-history-sidebar .chat-history-popover {
+        position: static;
+        flex: 1;
+        width: 100%;
+        min-width: 0;
+        max-height: none;
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+        box-shadow: none;
+      }
+
+      .chat-history-sidebar .chat-session-list { flex: 1; }
     }

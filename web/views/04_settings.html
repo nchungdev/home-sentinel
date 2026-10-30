@@ -10,6 +10,9 @@
         <button class="subtab-btn" id="btn-subtab-ha-cfg" onclick="switchSubTab('ha-cfg', this)">
           <span class="mi">home_iot_device</span> Home Assistant
         </button>
+        <button class="subtab-btn" id="btn-subtab-media-cfg" onclick="switchSubTab('media-cfg', this)">
+          <span class="mi">movie</span> Services Config
+        </button>
         <button class="subtab-btn" id="btn-subtab-auth-cfg" onclick="switchSubTab('auth-cfg', this)">
           <span class="mi">key</span> Bearer Token
         </button>
@@ -229,6 +232,100 @@
             <button class="btn-action" onclick="testHAConnection()"><span class="mi">bolt</span> Kiểm Tra Kết Nối</button>
           </div>
           <div id="haTestResult" style="font-size:12px; margin-top:8px; line-height:1.4;"></div>
+        </div>
+      </div>
+
+      <!-- SUBTAB 4: MEDIA SERVICES CONFIG & DISCOVERY -->
+      <div id="subtab-media-cfg" class="subtab-panel grid-layout">
+        <div class="card">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div class="card-title">Trạng Thái & Khám Phá Dịch Vụ Media</div>
+            <button class="btn-action" id="btnDiscoverServices" onclick="discoverMediaServices()">
+              <span class="mi">radar</span> Khám Phá Dịch Vụ
+            </button>
+          </div>
+          <p style="font-size:12px; color:var(--text-muted); margin-bottom:12px;">
+            Tự động kiểm tra trạng thái kết nối tới các dịch vụ Plex, Jellyfin, Radarr, Sonarr, TMDb, YouTube, SearXNG.
+          </p>
+          <div id="mediaDiscoveryList" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:10px;">
+            <div style="padding:14px; text-align:center; color:var(--text-muted); font-size:13px; border:1px dashed var(--border); border-radius:8px; grid-column: 1 / -1;">
+              Bấm <strong>"Khám Phá Dịch Vụ"</strong> để kiểm tra trạng thái kết nối.
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Cấu Hình API Key & Endpoint Dịch Vụ</div>
+          <p style="font-size:12px; color:var(--text-muted); margin-bottom:12px;">
+            Nhập URL và API Key trực tiếp cho từng dịch vụ để không phải chỉnh sửa code thủ công.
+          </p>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div class="form-group">
+              <label for="cfgTmdbApiKey">TMDb API Key:</label>
+              <input type="password" id="cfgTmdbApiKey" placeholder="Nhập TMDb API Key">
+            </div>
+            <div class="form-group">
+              <label for="cfgYoutubeApiKey">YouTube API Key:</label>
+              <input type="password" id="cfgYoutubeApiKey" placeholder="Nhập YouTube API Key v3">
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div class="form-group">
+              <label for="cfgPlexUrl">Plex URL:</label>
+              <input type="text" id="cfgPlexUrl" placeholder="http://127.0.0.1:32400">
+            </div>
+            <div class="form-group">
+              <label for="cfgPlexToken">Plex Token:</label>
+              <input type="password" id="cfgPlexToken" placeholder="Plex Token (X-Plex-Token)">
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div class="form-group">
+              <label for="cfgJellyfinUrl">Jellyfin URL:</label>
+              <input type="text" id="cfgJellyfinUrl" placeholder="http://127.0.0.1:8096">
+            </div>
+            <div class="form-group">
+              <label for="cfgJellyfinApiKey">Jellyfin API Key:</label>
+              <input type="password" id="cfgJellyfinApiKey" placeholder="Jellyfin API Key">
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div class="form-group">
+              <label for="cfgRadarrUrl">Radarr URL:</label>
+              <input type="text" id="cfgRadarrUrl" placeholder="http://127.0.0.1:7878">
+            </div>
+            <div class="form-group">
+              <label for="cfgRadarrApiKey">Radarr API Key:</label>
+              <input type="password" id="cfgRadarrApiKey" placeholder="Radarr API Key">
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div class="form-group">
+              <label for="cfgSonarrUrl">Sonarr URL:</label>
+              <input type="text" id="cfgSonarrUrl" placeholder="http://127.0.0.1:8989">
+            </div>
+            <div class="form-group">
+              <label for="cfgSonarrApiKey">Sonarr API Key:</label>
+              <input type="password" id="cfgSonarrApiKey" placeholder="Sonarr API Key">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="cfgSearxngUrl">SearXNG URL (Tùy chọn search web):</label>
+            <input type="text" id="cfgSearxngUrl" placeholder="http://127.0.0.1:8888">
+          </div>
+
+          <div style="display:flex; gap:12px; margin-top:12px;">
+            <button class="btn-save" id="btnSaveMediaConfig" onclick="saveMediaServicesConfig()">
+              <span class="mi">save</span> Lưu Cấu Hình & Cập Nhật Dịch Vụ
+            </button>
+          </div>
+          <div id="mediaConfigStatus" style="font-size:12px; margin-top:10px; line-height:1.4;"></div>
         </div>
       </div>
 

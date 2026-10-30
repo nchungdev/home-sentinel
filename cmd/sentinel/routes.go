@@ -72,6 +72,7 @@ func registerSystemRoutes(mux *http.ServeMux, server *Server) {
 	mux.HandleFunc("/api/media/search", server.handleMediaSearch)
 	mux.HandleFunc("/api/media/browse", server.handleMediaBrowse)
 	mux.HandleFunc("/api/media/request", server.handleMediaRequest)
+	mux.HandleFunc("/api/media/config", server.handleMediaConfig)
 	mux.HandleFunc("/api/nas/status", server.handleNASStatus)
 	mux.HandleFunc("/api/token/generate", server.handleGenerateToken)
 	mux.HandleFunc("/api/pair/approve", server.handlePairApprove)

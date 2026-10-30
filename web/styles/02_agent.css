@@ -2,11 +2,9 @@
     .agent-view {
       flex-direction: row;
       width: 100%;
-      max-width: 1200px;
       height: 0;
       min-height: 0;
       overflow: hidden;
-      margin: 0 auto;
     }
     .view-content.agent-view.active { flex: 1 1 0; }
     .chat-workspace {
@@ -30,6 +28,9 @@
       display: flex;
       gap: 14px;
       width: 100%;
+      max-width: 1152px;
+      margin-inline: auto;
+      flex-shrink: 0;
     }
     .message-row.user {
       flex-direction: row-reverse;
@@ -76,6 +77,9 @@
     }
 
     .chat-input-wrapper {
+      width: 100%;
+      max-width: 1200px;
+      margin-inline: auto;
       padding: 16px 24px 24px 24px;
       flex-shrink: 0;
     }

@@ -223,6 +223,7 @@ function formatChatSessionTime(session) {
 
 function toggleChatHistory(event) {
   event.stopPropagation();
+  if (chatHistoryWideLayout.matches) return;
   const popover = document.getElementById('chatHistoryPopover');
   const toggle = document.getElementById('chatHistoryToggle');
   if (!popover || !toggle) return;
@@ -236,7 +237,7 @@ function closeChatHistory() {
   const toggle = document.getElementById('chatHistoryToggle');
   if (!popover || !toggle) return;
 
-  popover.hidden = true;
+  popover.hidden = !chatHistoryWideLayout.matches;
   toggle.setAttribute('aria-expanded', 'false');
 }
 

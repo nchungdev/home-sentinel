@@ -72,14 +72,23 @@ func (s *arrSource) item(entry map[string]any) (contracts.MediaItem, bool) {
 		externalIDs["imdb"] = imdbID
 	}
 	nativeID, _ := entry["id"].(float64)
+	titleSlug, _ := entry["titleSlug"].(string)
 	availability := "requestable"
-	actions := []contracts.MediaAction{{Type: "request_library", Label: "Yêu cầu thêm thư viện",
+	actions := []contracts.MediaAction{{Type: "request_library", Label: "Yêu cầu thêm " + s.name,
 		SourceID: s.id, ItemID: itemID, Enabled: true}}
 	if nativeID > 0 {
 		availability = "already_requested"
-		actions = []contracts.MediaAction{}
-	}
-	if kind == "show" {
+		path := "/movie/"
+		if s.id == "sonarr" {
+			path = "/series/"
+		}
+		if titleSlug != "" {
+			path += titleSlug
+		} else {
+			path += strconv.Itoa(int(nativeID))
+		}
+		actions = []contracts.MediaAction{linkAction("Mở "+s.name, s.link(path))}
+	} else if kind == "show" {
 		actions = []contracts.MediaAction{browseAction(s.id, itemID, "Chọn mùa để yêu cầu")}
 	}
 	return contracts.MediaItem{
@@ -175,7 +184,17 @@ func (s *arrSource) Request(ctx context.Context, itemID string, options RequestO
 		if err := s.do(ctx, http.MethodPost, s.route(), entry, &added); err != nil {
 			return contracts.MediaItem{}, err
 		}
-		item.Availability, item.Actions = "requested", []contracts.MediaAction{}
+		item.Availability = "requested"
+		path := "/movie/"
+		if s.id == "sonarr" {
+			path = "/series/"
+		}
+		if slug, ok := added["titleSlug"].(string); ok && slug != "" {
+			path += slug
+		} else if addedID, ok := added["id"].(float64); ok && addedID > 0 {
+			path += strconv.Itoa(int(addedID))
+		}
+		item.Actions = []contracts.MediaAction{linkAction("Mở "+s.name, s.link(path))}
 		return item, nil
 	}
 	return contracts.MediaItem{}, fmt.Errorf("không tìm thấy đúng mục trong catalog")

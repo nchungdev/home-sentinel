@@ -84,6 +84,7 @@
       if (subtabId === 'agent-cfg') loadEngines();
       if (subtabId === 'automation-cfg') loadAutomationConfigAndDevices();
       if (subtabId === 'logs') loadClientLogs();
+      if (subtabId === 'media-cfg') loadMediaServicesConfig();
     }
 
     function switchNav(name, el) {

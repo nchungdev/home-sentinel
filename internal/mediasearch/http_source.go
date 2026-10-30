@@ -58,6 +58,9 @@ func (s *httpSource) do(ctx context.Context, method, path string, body, result a
 	}
 	if s.keyHeader != "" && s.apiKey != "" {
 		request.Header.Set(s.keyHeader, s.apiKey)
+		if s.id == "jellyfin" {
+			request.Header.Set("Authorization", `MediaBrowser Token="`+s.apiKey+`"`)
+		}
 	}
 	response, err := s.client.Do(request)
 	if err != nil {

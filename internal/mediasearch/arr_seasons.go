@@ -42,11 +42,17 @@ func (s *arrSource) Browse(ctx context.Context, itemID string) ([]contracts.Medi
 				continue
 			}
 			seasonNumber := int(value)
+			seasonLabel := fmt.Sprintf("Mùa %d", seasonNumber)
+			actionLabel := fmt.Sprintf("➕ Yêu cầu Mùa %d", seasonNumber)
+			if seasonNumber == 0 {
+				seasonLabel = "Tập đặc biệt (Specials)"
+				actionLabel = "➕ Yêu cầu Tập đặc biệt"
+			}
 			items = append(items, contracts.MediaItem{
 				ID: itemID + ":" + strconv.Itoa(seasonNumber), ParentID: itemID, Kind: "season",
-				Title: fmt.Sprintf("%s · Mùa %d", item.Title, seasonNumber), Season: &seasonNumber,
+				Title: fmt.Sprintf("%s · %s", item.Title, seasonLabel), Season: &seasonNumber,
 				Availability: "requestable", Actions: []contracts.MediaAction{{Type: "request_library",
-					Label: "Yêu cầu mùa này", SourceID: s.id, ItemID: itemID, Season: &seasonNumber, Enabled: true}},
+					Label: actionLabel, SourceID: s.id, ItemID: itemID, Season: &seasonNumber, Enabled: true}},
 			})
 		}
 		return items, nil

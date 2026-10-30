@@ -41,7 +41,7 @@
         </div>
         <div class="chat-header-actions">
           <button type="button" class="chat-header-icon-button"
-            onclick="createChatSession()" title="Cuộc trò chuyện mới"
+            id="chatNewSessionButton" onclick="createChatSession()" title="Cuộc trò chuyện mới"
             aria-label="Cuộc trò chuyện mới">
             <span class="mi" aria-hidden="true">add</span>
           </button>
@@ -54,7 +54,9 @@
           </button>
           <div class="chat-history-popover" id="chatHistoryPopover" hidden
             role="dialog" aria-label="Cuộc trò chuyện gần đây">
-            <div class="chat-history-heading">Cuộc trò chuyện gần đây</div>
+            <div class="chat-history-heading" id="chatHistoryHeading">
+              <span>Cuộc trò chuyện gần đây</span>
+            </div>
             <div class="chat-session-list" id="chatSessionList"></div>
             <div class="chat-session-status" id="chatSessionStatus" aria-live="polite"></div>
           </div>
@@ -68,6 +70,8 @@
 
     <!-- 1. AGENT VIEW (MINIMALIST MODERN CHAT) -->
     <div id="view-agent" class="view-content agent-view active">
+      <aside class="chat-history-sidebar" id="chatHistorySidebar"
+        aria-label="Lịch sử trò chuyện"></aside>
       <section class="chat-workspace" aria-label="Hội thoại">
         <div class="chat-messages" id="chatList"></div>
 

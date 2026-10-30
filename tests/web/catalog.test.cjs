@@ -43,8 +43,8 @@ test('500 episodes render in pages instead of creating 500 buttons', () => {
   }));
   const content = new Element('div');
   context.catalogRenderTitle({ name: 'Series', episodes }, content, new AbortController().signal);
-  const list = content.children[2];
-  const navigation = content.children[3];
+  const list = content.children[3];
+  const navigation = content.children[4];
   assert.equal(list.children.length, 25);
   assert.equal(list.children[0].textContent, 'Tập 0');
   assert.match(navigation.children[1].textContent, /1\/20/);
@@ -59,7 +59,7 @@ test('special labels are preserved and unsupported episodes stay disabled', () =
   context.catalogRenderTitle({ name: 'Series', episodes: [
     { id: 'special', label: 'Tết đặc biệt', group: 'Main', playable: false }
   ] }, content, new AbortController().signal);
-  const episode = content.children[2].children[0];
+  const episode = content.children[3].children[0];
   assert.equal(episode.textContent, 'Tết đặc biệt');
   assert.equal(episode.disabled, true);
 });

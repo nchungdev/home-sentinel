@@ -3,7 +3,13 @@ function catalogRenderMediaDetail(data, content, signal) {
   detail.className = 'catalog-detail';
   detail.appendChild(catalogRenderMediaHero(data.title));
 
-  const sourceResults = data.sources || [];
+  const kind = data.title?.kind;
+  const sourceResults = (data.sources || []).filter(result => {
+    if (kind === 'movie' && result.source_id === 'sonarr') return false;
+    if (kind === 'show' && result.source_id === 'radarr') return false;
+    return true;
+  });
+
   const foundCount = sourceResults.filter(result => (result.items || []).length > 0).length;
   const sourceHeader = catalogNode('div');
   sourceHeader.className = 'catalog-source-heading';
@@ -14,10 +20,20 @@ function catalogRenderMediaDetail(data, content, signal) {
       : 'Chưa tìm thấy trong các nguồn')
   );
 
+  const rawButton = catalogNode('button', 'RAW');
+  rawButton.type = 'button';
+  rawButton.className = 'catalog-raw-button';
+  rawButton.title = 'Xem toàn bộ JSON phản hồi';
+  rawButton.addEventListener('click', () => catalogOpenRawJSON(data));
+  sourceHeader.appendChild(rawButton);
+
   const sources = catalogNode('div');
   sources.className = 'catalog-media-sources';
   for (const result of sourceResults) {
-    sources.appendChild(catalogRenderMediaSource(result, signal));
+    const card = catalogRenderMediaSource(result, signal, data.title);
+    if (card) {
+      sources.appendChild(card);
+    }
   }
   detail.append(sourceHeader, sources);
   content.replaceChildren(detail);
@@ -51,26 +67,68 @@ function catalogRenderMediaHero(title) {
   return hero;
 }
 
-function catalogRenderMediaSource(result, signal) {
+function catalogRenderMediaSource(result, signal, title) {
   const items = result.items || [];
+
+  if (!items.length) {
+    if (result.source_id === 'radarr') {
+      const tmdbID = title?.external_ids?.tmdb || (title?.id || '').replace(/^(movie|tv)\//, '');
+      if (tmdbID) {
+        const section = catalogNode('section');
+        section.className = 'catalog-source-card';
+        section.dataset.sourceId = result.source_id;
+
+        const header = catalogNode('div');
+        header.className = 'catalog-source-card-heading';
+        header.appendChild(catalogNode('h4', catalogSourceName(result.source_id)));
+        section.appendChild(header);
+
+        const btn = catalogNode('button', '➕ Thêm vào Radarr');
+        btn.type = 'button';
+        btn.className = 'catalog-request-btn';
+        btn.addEventListener('click', () => catalogRequestMedia({
+          source_id: 'radarr', item_id: String(tmdbID)
+        }, btn, signal));
+        section.appendChild(btn);
+        return section;
+      }
+    } else if (result.source_id === 'sonarr') {
+      const tvdbID = title?.external_ids?.tvdb || title?.external_ids?.tmdb || (title?.id || '').replace(/^(movie|tv)\//, '');
+      if (tvdbID) {
+        const section = catalogNode('section');
+        section.className = 'catalog-source-card';
+        section.dataset.sourceId = result.source_id;
+
+        const header = catalogNode('div');
+        header.className = 'catalog-source-card-heading';
+        header.appendChild(catalogNode('h4', catalogSourceName(result.source_id)));
+        section.appendChild(header);
+
+        const btn = catalogNode('button', '➕ Thêm vào Sonarr');
+        btn.type = 'button';
+        btn.className = 'catalog-request-btn';
+        btn.addEventListener('click', () => catalogRequestMedia({
+          source_id: 'sonarr', item_id: String(tvdbID), season: 1
+        }, btn, signal));
+        section.appendChild(btn);
+        return section;
+      }
+    }
+    return null;
+  }
+
   const section = catalogNode('section');
-  section.className = 'catalog-source-card' +
-    (items.length ? ' catalog-source-card--found' : '');
+  section.className = 'catalog-source-card catalog-source-card--found';
   section.dataset.sourceId = result.source_id;
 
   const header = catalogNode('div');
   header.className = 'catalog-source-card-heading';
-  const sourceName = catalogNode('h4', catalogSourceName(result.source_id));
-  const badge = catalogNode('span', items.length ? 'Có kết quả' : 'Không có kết quả');
-  badge.className = 'catalog-source-badge' +
-    (items.length ? ' catalog-source-badge--found' : '');
-  header.append(sourceName, badge);
+  header.appendChild(catalogNode('h4', catalogSourceName(result.source_id)));
   section.appendChild(header);
 
   if (result.discovery_method === 'ai_query_expansion') {
     const notice = catalogNode('p',
-      'AI đã mở rộng truy vấn; kết quả cần được xác minh ' +
-      'bằng ID hoặc tên/năm.');
+      'AI đã mở rộng truy vấn; kết quả cần được xác minh.');
     notice.className = 'catalog-source-warning';
     section.appendChild(notice);
   }
@@ -78,13 +136,6 @@ function catalogRenderMediaSource(result, signal) {
     const warning = catalogNode('p', 'Một số truy vấn tên thay thế không hoàn tất.');
     warning.className = 'catalog-source-warning';
     section.appendChild(warning);
-  }
-
-  if (!items.length) {
-    const status = catalogNode('p', catalogSourceStatus(result));
-    status.className = 'catalog-source-status';
-    section.appendChild(status);
-    return section;
   }
 
   catalogRenderMediaItems(items, section, signal);
@@ -101,53 +152,18 @@ function catalogSourceName(source) {
   }[source] || source;
 }
 
-function catalogSourceStatus(result) {
-  if (result.error_code === 'identity_not_verified') {
-    return result.source_id === 'phimapi'
-      ? 'Không có ID khớp hoặc ứng viên tên và năm duy nhất.'
-      : 'Không thể xác minh kết quả bằng ID media.';
-  }
-  if (result.error_code === 'ai_no_new_queries') {
-    return 'AI không tìm được tên thay thế mới để thử.';
-  }
-  if (result.error_code === 'partial_search_failed') {
-    return 'Một số truy vấn tên không hoàn tất; chưa xác minh được kết quả.';
-  }
-  return {
-    not_configured: 'Nguồn chưa được cấu hình.',
-    unreachable: 'Không thể kết nối với nguồn.',
-    auth_required: 'Nguồn yêu cầu xác thực.',
-    timeout: 'Nguồn phản hồi quá lâu.',
-    source_unavailable: 'Nguồn hiện không khả dụng.',
-  }[result.error_code] || 'Không tìm thấy media phù hợp.';
-}
-
 function catalogRenderMediaItems(items, container, signal) {
   for (const item of items) {
-    const entry = catalogNode('article');
-    entry.className = 'catalog-media-item';
-    const poster = catalogMediaImage(item.poster, item.title, 'catalog-media-item-poster');
-    if (poster) entry.appendChild(poster);
+    const entry = catalogNode('div');
+    entry.className = 'catalog-media-item-simple';
 
-    const information = catalogNode('div');
-    information.className = 'catalog-media-item-information';
-    information.appendChild(catalogNode('strong', item.title));
-    if (item.match_method === 'title_year') {
-      const notice = catalogNode('small', 'Ứng viên theo tên/năm · ID chưa xác minh');
-      notice.className = 'catalog-media-match-notice';
-      information.appendChild(notice);
-    } else if (item.match_method === 'ai_candidate') {
-      const notice = catalogNode('small', 'AI tìm được ứng viên · chưa xác minh');
-      notice.className = 'catalog-media-match-notice';
-      information.appendChild(notice);
-    } else if (item.match_method === 'external_id') {
-      const notice = catalogNode('small', 'Đã khớp ID media');
-      notice.className = 'catalog-media-match-verified';
-      information.appendChild(notice);
+    if (item.kind === 'season' && item.title) {
+      const seasonTitle = catalogNode('strong', item.title);
+      seasonTitle.className = 'catalog-season-title';
+      entry.appendChild(seasonTitle);
     }
-    if (item.summary) information.appendChild(catalogNode('p', item.summary));
-    catalogRenderMediaActions(item.actions || [], information, signal);
-    entry.appendChild(information);
+
+    catalogRenderMediaActions(item.actions || [], entry, signal);
     container.appendChild(entry);
   }
 }
@@ -174,6 +190,14 @@ function catalogRenderMediaActions(actions, container, signal) {
   const actionGroup = catalogNode('div');
   actionGroup.className = 'catalog-media-actions';
   for (const action of actions) {
+    if (action.type === 'catalog_detail') {
+      const button = catalogNode('button', action.label || 'Xem phim / Chọn tập');
+      button.type = 'button';
+      button.className = 'catalog-media-action-primary';
+      button.addEventListener('click', () => catalogOpenTitle(action.item_id, button, container));
+      actionGroup.appendChild(button);
+      continue;
+    }
     if (action.type === 'request_library') {
       const button = catalogNode('button', action.label);
       button.type = 'button';
@@ -211,6 +235,8 @@ function catalogRenderMediaActions(actions, container, signal) {
 
 async function catalogRequestMedia(action, button, signal) {
   button.disabled = true;
+  const originalText = button.textContent;
+  button.textContent = 'Đang gửi yêu cầu…';
   try {
     await catalogJSON('/api/media/request', {
       method: 'POST',
@@ -219,9 +245,10 @@ async function catalogRequestMedia(action, button, signal) {
         seasons: action.season ? [action.season] : [] }),
       signal
     });
-    button.textContent = 'Đã gửi yêu cầu';
+    button.textContent = '✓ Đã gửi yêu cầu thêm';
   } catch (error) {
     if (error.name !== 'AbortError') button.textContent = error.message;
+    else button.textContent = originalText;
     button.disabled = false;
   }
 }

@@ -18,20 +18,12 @@ func (s *plexSource) Search(ctx context.Context, query string) ([]contracts.Medi
 	var response struct {
 		MediaContainer struct {
 			Hub []struct {
-				Metadata []struct {
-					Title   string            `json:"title"`
-					Year    int               `json:"year"`
-					ID      string            `json:"ratingKey"`
-					Type    string            `json:"type"`
-					Summary string            `json:"summary"`
-					Thumb   string            `json:"thumb"`
-					Origin  string            `json:"originalTitle"`
-					GUIDs   []externalIDEntry `json:"Guid"`
-				} `json:"Metadata"`
+				Metadata []plexSearchEntry `json:"Metadata"`
 			} `json:"Hub"`
 		} `json:"MediaContainer"`
 	}
-	path := "/hubs/search?query=" + url.QueryEscape(query) + "&limit=" + strconv.Itoa(resultLimit)
+	path := "/hubs/search?query=" + url.QueryEscape(query) + "&limit=" + strconv.Itoa(resultLimit) +
+		"&includeGuids=1&includeExternalMedia=0"
 	if err := s.do(ctx, http.MethodGet, path, nil, &response); err != nil {
 		return nil, err
 	}
@@ -48,10 +40,11 @@ func (s *plexSource) Search(ctx context.Context, query string) ([]contracts.Medi
 			if app := s.appLink(ctx, entry.ID); app != "" {
 				actions = append([]contracts.MediaAction{appAction(app)}, actions...)
 			}
+			externalIDs := s.searchEntryExternalIDs(ctx, entry)
 			items = append(items, contracts.MediaItem{
 				ID: entry.ID, Title: entry.Title, Year: entry.Year, Kind: entry.Type,
 				Summary: entry.Summary, URL: target, Poster: s.poster(entry.Thumb),
-				Original: entry.Origin, ExternalIDs: plexExternalIDs(entry.GUIDs),
+				Original: entry.Origin, ExternalIDs: externalIDs,
 				Availability: "in_library", Actions: actions,
 			})
 			if len(items) == resultLimit {

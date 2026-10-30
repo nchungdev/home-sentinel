@@ -204,3 +204,34 @@ func TestMovieMetadataUsesTMDBAPIKeyQueryAuthentication(t *testing.T) {
 		t.Fatalf("TMDB API key auth failed: %+v, %q", detail, code)
 	}
 }
+
+func TestMovieMetadataInterleavesMoviesAndTVShows(t *testing.T) {
+	provider := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/search/movie" {
+			_, _ = w.Write([]byte(`{"results":[
+{"id":24428,"title":"The Avengers","release_date":"2012-04-25"}
+]}`))
+			return
+		}
+		if r.URL.Path == "/search/tv" {
+			_, _ = w.Write([]byte(`{"results":[
+{"id":2146,"name":"The Avengers","first_air_date":"1961-01-07"}
+]}`))
+			return
+		}
+		_, _ = w.Write([]byte(`{"results":[]}`))
+	}))
+	defer provider.Close()
+
+	result := (MovieMetadata{
+		APIKey: "test-key", BaseURL: provider.URL, Client: provider.Client(),
+	}).Execute(context.Background(), requestflow.Task{
+		Query: "The Avengers", Strategy: "tmdb_search",
+	})
+	if result.Status != "ok" || len(result.Items) != 2 {
+		t.Fatalf("expected 2 items (1 movie, 1 tv), got: %+v", result)
+	}
+	if result.Items[0].Kind != "movie" || result.Items[1].Kind != "show" {
+		t.Fatalf("expected interleaved movie then show, got: %s, %s", result.Items[0].Kind, result.Items[1].Kind)
+	}
+}
