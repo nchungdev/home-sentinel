@@ -165,7 +165,7 @@ test('TMDB result opens detail and does not claim unverified providers', async (
   assert.equal(tmdbTitle.tag, 'button');
   await tmdbTitle.listeners.click();
   assert.deepEqual(requests, [
-    '/v2/flow', '/v2/media/tmdb/movie/123', '/v2/media/tmdb/movie/123/discover'
+    '/v2/flow', '/v2/media/tmdb/movie/123?stream=1', '/v2/media/tmdb/movie/123/discover'
   ]);
   const detailPanel = findByClass(bubble, 'catalog-modal');
   const detail = findByClass(detailPanel, 'catalog-detail');
@@ -303,4 +303,41 @@ test('media RAW opens the complete unfiltered JSON response in a separate tab', 
   assert.deepEqual(opened[0], ['blob:raw-response', '_blank', 'noopener']);
   assert.equal(blobs[0].type, 'application/json');
   assert.equal(await blobs[0].text(), JSON.stringify(response, null, 2));
+});
+
+test('unconnected or skipped sources like sonarr/radarr are excluded from media detail view', () => {
+  const { context } = environment([]);
+  const content = new Element('div');
+  const response = {
+    title: { title: 'Naruto', kind: 'show', external_ids: { tvdb: '12345' } },
+    sources: [
+      { source_id: 'sonarr', status: 'skipped', error_code: 'not_configured', items: [] },
+      { source_id: 'phimapi', status: 'ok', items: [{ title: 'Naruto Ep 1', match_method: 'title' }] }
+    ]
+  };
+  context.catalogRenderMediaDetail(response, content, new AbortController().signal);
+  const detail = findByClass(content, 'catalog-detail');
+  const sourceCards = findAllByClass(detail, 'catalog-source-card');
+  assert.equal(sourceCards.length, 1);
+  assert.equal(sourceCards[0].dataset.sourceId, 'phimapi');
+});
+
+test('multiple items under a provider render distinct item titles for seasons', () => {
+  const { context } = environment([]);
+  const content = new Element('div');
+  const response = {
+    title: { title: 'Loki', kind: 'show' },
+    sources: [
+      { source_id: 'phimapi', status: 'ok', items: [
+        { title: 'Loki', kind: 'show', season: 1, year: 2021, actions: [{ type: 'catalog_detail', label: 'Chọn tập' }] },
+        { title: 'Loki', kind: 'show', season: 2, year: 2023, actions: [{ type: 'catalog_detail', label: 'Chọn tập' }] }
+      ] }
+    ]
+  };
+  context.catalogRenderMediaDetail(response, content, new AbortController().signal);
+  const detail = findByClass(content, 'catalog-detail');
+  const itemTitles = findAllByClass(detail, 'catalog-item-title');
+  assert.equal(itemTitles.length, 2);
+  assert.equal(itemTitles[0].textContent, 'Loki · Phần 1');
+  assert.equal(itemTitles[1].textContent, 'Loki · Phần 2');
 });

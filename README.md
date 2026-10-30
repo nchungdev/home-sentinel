@@ -316,20 +316,20 @@ Open `http://<server-ip>:8788/` in a web browser. Verify:
 
 ## Communication Protocols & Endpoints
 
-| Method | Endpoint | Description |
-|---|---|---|
-| `POST` | `/v2/ask` | Primary conversational AI NDJSON streaming endpoint |
-| `GET` | `/v2/suggestions` | Contextual recommendations for Android TV idle state |
-| `GET` | `/ws/duinch` | Real-time WebSocket connection to TV Launcher |
-| `GET/POST`| `/api/automation/config` | Load, save, or test automation scenarios |
-| `GET` | `/api/ha/entities` | Live Home Assistant entities list |
-| `POST` | `/api/camera/ptz` | Control Tapo camera Pan/Tilt/Zoom presets |
-| `POST` | `/api/camera/speak` | Send TTS audio to Tapo camera speaker |
-| `GET` | `/api/nas/status` | Disk, Docker and host snapshot of the NAS (JSON, no LLM) |
-| `POST` | `/api/token/generate` | Rotate the access token (409 when `AGENT_TOKEN` manages it) |
-| `POST` | `/api/auth/login` | Web login: `{"token": "..."}` sets an HttpOnly session cookie |
-| `GET` | `/api/auth/status` | `{"required": bool, "authorized": bool}` |
-| `GET` | `/health` | Health check; 401 when a wrong `Authorization` header is sent |
+| Method     | Endpoint                 | Description                                                   |
+|------------|--------------------------|---------------------------------------------------------------|
+| `POST`     | `/v2/ask`                | Primary conversational AI NDJSON streaming endpoint           |
+| `GET`      | `/v2/suggestions`        | Contextual recommendations for Android TV idle state          |
+| `GET`      | `/ws/duinch`             | Real-time WebSocket connection to TV Launcher                 |
+| `GET/POST` | `/api/automation/config` | Load, save, or test automation scenarios                      |
+| `GET`      | `/api/ha/entities`       | Live Home Assistant entities list                             |
+| `POST`     | `/api/camera/ptz`        | Control Tapo camera Pan/Tilt/Zoom presets                     |
+| `POST`     | `/api/camera/speak`      | Send TTS audio to Tapo camera speaker                         |
+| `GET`      | `/api/nas/status`        | Disk, Docker and host snapshot of the NAS (JSON, no LLM)      |
+| `POST`     | `/api/token/generate`    | Rotate the access token (409 when `AGENT_TOKEN` manages it)   |
+| `POST`     | `/api/auth/login`        | Web login: `{"token": "..."}` sets an HttpOnly session cookie |
+| `GET`      | `/api/auth/status`       | `{"required": bool, "authorized": bool}`                      |
+| `GET`      | `/health`                | Health check; 401 when a wrong `Authorization` header is sent |
 
 ### Access control
 

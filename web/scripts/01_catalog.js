@@ -7,16 +7,17 @@
     }
 
     function catalogError(code) {
-      return {
+      const messages = {
         catalog_item_not_found: 'Phim hoặc tập không còn trên nguồn.',
         episode_playback_unsupported: 'Tập này chưa có nguồn phát trực tiếp được hỗ trợ.',
         catalog_timeout: 'Nguồn phản hồi quá lâu. Hãy thử lại.',
         catalog_source_unavailable: 'Chưa truy cập được nguồn phim.',
-        ai_search_unavailable: 'AI tìm kiếm chưa được cấu hình.',
+        ai_search_unavailable: '',
         ai_search_failed: 'AI không thể gợi ý thêm tên tìm kiếm.',
         ai_search_timeout: 'AI tìm kiếm phản hồi quá lâu. Hãy thử lại.',
         ai_invalid_response: 'AI trả về gợi ý không hợp lệ.'
-      }[code] || 'Chưa lấy được dữ liệu phim. Hãy thử lại.';
+      };
+      return code in messages ? messages[code] : 'Chưa lấy được dữ liệu phim. Hãy thử lại.';
     }
 
     async function catalogJSON(url, options) {
@@ -108,12 +109,51 @@
       const modal = catalogOpenModal(trigger, detailHost);
       modal.content.textContent = 'Đang lấy chi tiết và kiểm tra nguồn…';
       try {
-        const data = await catalogJSON('/v2/media/tmdb/' + match[1] + '/' + match[2],
-          { signal: modal.controller.signal });
-        searchFlowTitle = data.title.title;
-        catalogRenderMediaDetail(data, modal.content, modal.controller.signal);
-        if (catalogMediaNeedsAIDiscovery(data)) {
-          await catalogDiscoverMedia(match[1], match[2], data, modal.content, modal.controller.signal);
+        const response = await fetch('/v2/media/tmdb/' + match[1] + '/' + match[2] + '?stream=1', {
+          signal: modal.controller.signal
+        });
+        if (!response.ok) {
+          const errData = await response.json().catch(() => ({}));
+          throw new Error(catalogError(errData.error));
+        }
+
+        let mediaData = null;
+        if (response.body && typeof response.body.getReader === 'function') {
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+          let buffer = '';
+          let titleData = null;
+          const sources = [];
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop();
+
+            for (const line of lines) {
+              if (!line.trim()) continue;
+              const event = JSON.parse(line.trim());
+              if (event.type === 'media' || event.type === 'title') {
+                titleData = event.media || event.title;
+                searchFlowTitle = titleData.title;
+                catalogRenderMediaDetail({ media: titleData, sources: [] }, modal.content, modal.controller.signal);
+              } else if (event.type === 'source') {
+                sources.push(event.source);
+                catalogRenderMediaDetail({ media: titleData, sources }, modal.content, modal.controller.signal);
+              }
+            }
+          }
+          mediaData = { title: titleData, sources };
+        } else {
+          mediaData = await response.json();
+          searchFlowTitle = mediaData.title.title;
+          catalogRenderMediaDetail(mediaData, modal.content, modal.controller.signal);
+        }
+
+        if (catalogMediaNeedsAIDiscovery(mediaData)) {
+          await catalogDiscoverMedia(match[1], match[2], mediaData, modal.content, modal.controller.signal);
         }
       } catch (error) {
         if (error.name !== 'AbortError') modal.content.textContent = error.message;
@@ -136,7 +176,13 @@
         else sources[sourceIndex] = response.source;
         catalogRenderMediaDetail({ ...data, sources }, content, signal);
       } catch (error) {
-        if (error.name !== 'AbortError') status.textContent = error.message;
+        if (error.name !== 'AbortError') {
+          if (error.message) {
+            status.textContent = error.message;
+          } else {
+            status.remove();
+          }
+        }
       }
     }
 

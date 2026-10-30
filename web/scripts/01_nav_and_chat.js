@@ -101,6 +101,7 @@
         'camera': 'Camera Live & PTZ',
         'automation': 'Kịch Bản Tự Động Hóa (Automation)',
         'tvmodes': 'Chế độ TV',
+        'api': 'REST API Playground & Test',
         'setting': 'Settings'
       };
       document.getElementById('viewHeaderTitle').textContent = titles[name] || 'Home Sentinel';
@@ -126,6 +127,10 @@
 
       if (name === 'tvmodes') {
         loadTvModes();
+      }
+
+      if (name === 'api') {
+        renderApiRoutesSidebar();
       }
 
       if (name === 'setting') {

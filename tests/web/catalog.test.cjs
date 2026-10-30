@@ -10,6 +10,7 @@ class Element {
   }
   append(...nodes) { for (const node of nodes) this.appendChild(node); }
   appendChild(node) {
+    node.parent = this;
     this.children.push(node);
     if (this.tag === 'select' && this.children.length === 1) this.value = node.value;
   }
@@ -18,7 +19,10 @@ class Element {
   setAttribute() {}
   focus() { this.focused = true; }
   select() {}
-  remove() { this.removed = true; }
+  remove() {
+    this.removed = true;
+    if (this.parent) this.parent.children = this.parent.children.filter(item => item !== this);
+  }
   set innerHTML(_) { throw new Error('unsafe HTML sink'); }
 }
 
@@ -72,4 +76,15 @@ test('playback resolver does not turn an unexpected URL into a player link', asy
   await context.catalogResolveEpisode({ id: 'episode', label: 'Tập 1' }, panel,
     new AbortController().signal);
   assert.equal(panel.textContent, 'Link phát không hợp lệ.');
+});
+
+test('ai_search_unavailable error removes status indicator without displaying error line', async () => {
+  const context = load(async () => ({
+    ok: false,
+    json: async () => ({ error: 'ai_search_unavailable' })
+  }));
+  const content = new Element('div');
+  const controller = new AbortController();
+  await context.catalogDiscoverMedia('movie', '123', { sources: [] }, content, controller.signal);
+  assert.equal(content.children.length, 0);
 });

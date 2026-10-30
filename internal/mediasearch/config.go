@@ -47,12 +47,18 @@ func FromEnvironment(bridge *mediabridge.Bridge) *Service {
 		arr("sonarr", "Sonarr", "8989"), youtube, web}
 	phimAPI := &phimAPISource{makeSource("phimapi", "PhimAPI", "catalog",
 		envDefault("PHIMAPI_URL", "https://phimapi.com"), "", "", "/v1/api/home")}
-	sources = append(sources, phimAPI)
-	for _, source := range pendingCatalogSources() {
-		if source.Info().ID != "phimapi" {
-			sources = append(sources, source)
-		}
-	}
+	ophim := &ophimSource{makeSource("ophim", "OPhim", "catalog",
+		envDefault("OPHIM_URL", "https://ophim1.com"), "", "", "/v1/api/home")}
+	nguonc := &nguoncSource{makeSource("nguonc", "NguonC", "catalog",
+		envDefault("NGUONC_URL", "https://phim.nguonc.com"), "", "", "/api/films/phim-moi-cap-nhat")}
+	motchill := &motchillSource{makeSource("motchill", "Motchill", "website",
+		envDefault("MOTCHILL_URL", "https://motchill.tv"), "", "", "/api/v1/home")}
+	rophim := &rophimSource{makeSource("rophim", "RoPhim", "website",
+		envDefault("ROPHIM_URL", "https://rophim.me"), "", "", "/api/v1/home")}
+	phimtuoitho := &phimTuoiThoSource{makeSource("phimtuoitho", "Phim Tuổi Thơ", "website",
+		envDefault("PHIMTUOITHO_URL", "https://phimtuoitho.org"), "", "", "/api/v1/home")}
+
+	sources = append(sources, phimAPI, ophim, nguonc, motchill, rophim, phimtuoitho)
 	return New(sources...)
 }
 

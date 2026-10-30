@@ -65,6 +65,26 @@ func TestSearchMatchingRequiresExactExternalIDsAndMediaKind(t *testing.T) {
 			return []contracts.MediaItem{{ID: "phimapi:right", Kind: "movie",
 				ExternalIDs: map[string]string{"tmdb": "123"}}}, nil
 		}},
+		controlledSource{id: "ophim", search: func(context.Context) ([]contracts.MediaItem, error) {
+			return []contracts.MediaItem{{ID: "ophim:right", Kind: "movie",
+				ExternalIDs: map[string]string{"tmdb": "123"}}}, nil
+		}},
+		controlledSource{id: "nguonc", search: func(context.Context) ([]contracts.MediaItem, error) {
+			return []contracts.MediaItem{{ID: "nguonc:right", Kind: "movie",
+				ExternalIDs: map[string]string{"tmdb": "123"}}}, nil
+		}},
+		controlledSource{id: "motchill", search: func(context.Context) ([]contracts.MediaItem, error) {
+			return []contracts.MediaItem{{ID: "motchill:right", Kind: "movie",
+				ExternalIDs: map[string]string{"tmdb": "123"}}}, nil
+		}},
+		controlledSource{id: "rophim", search: func(context.Context) ([]contracts.MediaItem, error) {
+			return []contracts.MediaItem{{ID: "rophim:right", Kind: "movie",
+				ExternalIDs: map[string]string{"tmdb": "123"}}}, nil
+		}},
+		controlledSource{id: "phimtuoitho", search: func(context.Context) ([]contracts.MediaItem, error) {
+			return []contracts.MediaItem{{ID: "phimtuoitho:right", Kind: "movie",
+				ExternalIDs: map[string]string{"tmdb": "123"}}}, nil
+		}},
 	)
 
 	results := service.SearchMatching(context.Background(), "Localized title", "movie", 2024,

@@ -1,12 +1,14 @@
 function catalogRenderMediaDetail(data, content, signal) {
   const detail = catalogNode('article');
   detail.className = 'catalog-detail';
-  detail.appendChild(catalogRenderMediaHero(data.title));
+  const mediaInfo = data.media || data.title || {};
+  detail.appendChild(catalogRenderMediaHero(mediaInfo));
 
-  const kind = data.title?.kind;
+  const kind = mediaInfo?.kind;
   const sourceResults = (data.sources || []).filter(result => {
     if (kind === 'movie' && result.source_id === 'sonarr') return false;
     if (kind === 'show' && result.source_id === 'radarr') return false;
+    if (result.status !== 'ok' && result.status !== 'empty') return false;
     return true;
   });
 
@@ -71,6 +73,7 @@ function catalogRenderMediaSource(result, signal, title) {
   const items = result.items || [];
 
   if (!items.length) {
+    if (result.status !== 'ok' && result.status !== 'empty') return null;
     if (result.source_id === 'radarr') {
       const tmdbID = title?.external_ids?.tmdb || (title?.id || '').replace(/^(movie|tv)\//, '');
       if (tmdbID) {
@@ -148,7 +151,12 @@ function catalogSourceName(source) {
     jellyfin: 'Jellyfin',
     radarr: 'Radarr',
     sonarr: 'Sonarr',
-    phimapi: 'PhimAPI'
+    phimapi: 'PhimAPI',
+    ophim: 'OPhim',
+    nguonc: 'NguonC',
+    motchill: 'Motchill',
+    rophim: 'RoPhim',
+    phimtuoitho: 'Phim Tuổi Thơ'
   }[source] || source;
 }
 
@@ -157,13 +165,39 @@ function catalogRenderMediaItems(items, container, signal) {
     const entry = catalogNode('div');
     entry.className = 'catalog-media-item-simple';
 
-    if (item.kind === 'season' && item.title) {
-      const seasonTitle = catalogNode('strong', item.title);
-      seasonTitle.className = 'catalog-season-title';
-      entry.appendChild(seasonTitle);
+    const showItemTitle = item.title && (items.length > 1 || item.kind === 'season' || item.season);
+    if (showItemTitle) {
+      let labelText = item.title;
+      if (item.season && !/mùa|phần|season/i.test(labelText)) {
+        labelText += ' · Phần ' + item.season;
+      } else if (item.year && items.length > 1 && !labelText.includes(String(item.year))) {
+        labelText += ' (' + item.year + ')';
+      }
+      const itemTitle = catalogNode('strong', labelText);
+      itemTitle.className = 'catalog-item-title';
+      entry.appendChild(itemTitle);
     }
 
-    catalogRenderMediaActions(item.actions || [], entry, signal);
+    if (item.episodes && item.episodes.length > 0) {
+      const episodeList = catalogNode('div');
+      episodeList.className = 'catalog-episodes';
+      for (const ep of item.episodes) {
+        const btn = catalogNode('button', ep.label || 'Tập');
+        btn.type = 'button';
+        btn.className = 'catalog-episode-btn';
+        btn.addEventListener('click', () => catalogResolveEpisode(ep, entry, signal));
+        episodeList.appendChild(btn);
+      }
+      entry.appendChild(episodeList);
+    } else if (item.playback) {
+      const playbackDiv = catalogNode('div');
+      playbackDiv.className = 'catalog-playback';
+      catalogRenderPlaybackLink(item.playback, playbackDiv);
+      entry.appendChild(playbackDiv);
+    } else if (item.actions && item.actions.length > 0) {
+      catalogRenderMediaActions(item.actions, entry, signal);
+    }
+
     container.appendChild(entry);
   }
 }

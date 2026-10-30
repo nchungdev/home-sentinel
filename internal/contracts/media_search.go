@@ -11,6 +11,16 @@ type MediaAction struct {
 	Season   *int   `json:"season,omitempty"`
 }
 
+type CatalogEpisode struct {
+	ID       string `json:"id"`
+	TitleID  string `json:"title_id,omitempty"`
+	Label    string `json:"label"`
+	Group    string `json:"group,omitempty"`
+	Order    int    `json:"order,omitempty"`
+	SeasonID string `json:"season_id,omitempty"`
+	Playable bool   `json:"playable"`
+}
+
 type MediaItem struct {
 	ID                string            `json:"id"`
 	Title             string            `json:"title"`
@@ -27,7 +37,9 @@ type MediaItem struct {
 	Episode           *int              `json:"episode,omitempty"`
 	ExternalIDs       map[string]string `json:"external_ids,omitempty"`
 	Availability      string            `json:"availability"`
-	Actions           []MediaAction     `json:"actions"`
+	Episodes          []CatalogEpisode  `json:"episodes,omitempty"`
+	Playback          any               `json:"playback,omitempty"`
+	Actions           []MediaAction     `json:"actions,omitempty"`
 }
 
 type MediaSourceCapability struct {

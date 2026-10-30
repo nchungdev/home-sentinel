@@ -116,6 +116,10 @@ func (s *phimAPISource) search(
 		if value, err := strconv.Atoi(providerID(entry.TMDB.Season)); err == nil && value > 0 {
 			season = &value
 		}
+		actionLabel := "Chọn tập"
+		if kind == "movie" {
+			actionLabel = "Xem phim"
+		}
 		items = append(items, contracts.MediaItem{
 			ID: "phimapi:" + entry.Slug, Title: entry.Name, Kind: kind, Year: entry.Year,
 			Season: season,
@@ -124,7 +128,7 @@ func (s *phimAPISource) search(
 			Original: entry.OriginName, AlternativeTitles: entry.AlternativeNames,
 			ExternalIDs: externalIDs,
 			Actions: []contracts.MediaAction{
-				{Type: "catalog_detail", Label: "Chọn tập", SourceID: "phimapi",
+				{Type: "catalog_detail", Label: actionLabel, SourceID: "phimapi",
 					ItemID: "phimapi:" + entry.Slug, Enabled: true},
 				linkAction("Mở trang phim", target),
 			},

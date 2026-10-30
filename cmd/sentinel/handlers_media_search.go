@@ -169,7 +169,9 @@ func (s *Server) handleMediaConfig(w http.ResponseWriter, r *http.Request) {
 
 func saveMediaConfigEnv(cfg mediaConfig) {
 	envPath := "env.local"
-	if _, err := os.Stat("/home/chungnh/.config/tv-agent.env"); err == nil {
+	if _, err := os.Stat("/home/chungnh/.config/home-sentinel.env"); err == nil {
+		envPath = "/home/chungnh/.config/home-sentinel.env"
+	} else if _, err := os.Stat("/home/chungnh/.config/tv-agent.env"); err == nil {
 		envPath = "/home/chungnh/.config/tv-agent.env"
 	}
 

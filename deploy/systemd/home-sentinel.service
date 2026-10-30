@@ -1,11 +1,11 @@
 [Unit]
-Description=TV AI Agent endpoint (Go Sentinel)
+Description=Home Sentinel Server (Go)
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Environment=PATH=%h/.local/bin:/home/linuxbrew/.linuxbrew/bin:/usr/local/bin:/usr/bin:/bin
-EnvironmentFile=%h/.config/tv-agent.env
+EnvironmentFile=%h/.config/home-sentinel.env
 ExecStart=%h/home-sentinel/bin/sentinel_server
 Restart=on-failure
 NoNewPrivileges=true

@@ -2,6 +2,9 @@ package mediasearch
 
 import (
 	"context"
+	"regexp"
+	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"unicode"
@@ -10,7 +13,7 @@ import (
 	"golang.org/x/text/unicode/norm"
 )
 
-var identitySources = []string{"plex", "jellyfin", "radarr", "sonarr", "phimapi"}
+var identitySources = []string{"plex", "jellyfin", "radarr", "sonarr", "phimapi", "ophim", "nguonc", "motchill", "rophim", "phimtuoitho"}
 
 func (s *Service) SearchMatching(
 	ctx context.Context,
@@ -18,6 +21,17 @@ func (s *Service) SearchMatching(
 	year int,
 	aliases []string,
 	externalIDs map[string]string,
+) []contracts.MediaSourceResults {
+	return s.SearchMatchingStream(ctx, title, kind, year, aliases, externalIDs, nil)
+}
+
+func (s *Service) SearchMatchingStream(
+	ctx context.Context,
+	title, kind string,
+	year int,
+	aliases []string,
+	externalIDs map[string]string,
+	onSource func(contracts.MediaSourceResults),
 ) []contracts.MediaSourceResults {
 	targetSources := make([]string, 0, len(identitySources))
 	for _, sourceID := range identitySources {
@@ -32,92 +46,115 @@ func (s *Service) SearchMatching(
 
 	results := make([]contracts.MediaSourceResults, len(targetSources))
 	var workers sync.WaitGroup
+	var mutex sync.Mutex
+
 	for index, sourceID := range targetSources {
 		workers.Add(1)
-		go func() {
+		go func(idx int, id string) {
 			defer workers.Done()
-			if sourceID == "phimapi" {
-				results[index] = s.SearchPhimAPI(
-					ctx, title, kind, year, aliases, externalIDs,
-				)
-				return
+			var res contracts.MediaSourceResults
+			if id == "phimapi" {
+				res = s.SearchPhimAPI(ctx, title, kind, year, aliases, externalIDs)
+			} else if id == "plex" || id == "jellyfin" {
+				res = s.searchLibrarySourceMatching(ctx, id, title, kind, year, aliases, externalIDs)
+			} else {
+				res = s.searchArrSourceMatching(ctx, id, title, kind, externalIDs)
 			}
 
-			if sourceID == "plex" || sourceID == "jellyfin" {
-				queries := identityQueries(title, aliases)
-				var firstResult contracts.MediaSourceResults
-				matches := []contracts.MediaItem{}
-				seenItems := map[string]bool{}
+			mutex.Lock()
+			results[idx] = res
+			mutex.Unlock()
 
-				expectedTitles := make(map[string]struct{}, len(aliases)+1)
-				expectedTitles[normalizeIdentityTitle(title)] = struct{}{}
-				for _, alias := range aliases {
-					if normalized := normalizeIdentityTitle(alias); normalized != "" {
-						expectedTitles[normalized] = struct{}{}
-					}
-				}
-
-				for _, query := range queries {
-					result := s.SearchSource(ctx, sourceID, query)
-					if firstResult.Status == "" {
-						firstResult = result
-					}
-					for _, item := range result.Items {
-						if seenItems[item.ID] || item.Kind != kind {
-							continue
-						}
-						if sharesExternalID(item.ExternalIDs, externalIDs) {
-							item.MatchMethod = "external_id"
-							seenItems[item.ID] = true
-							matches = append(matches, item)
-						} else if !hasConflictingExternalID(item.ExternalIDs, externalIDs) &&
-							year > 0 && item.Year == year && matchesAnyTitle(item, expectedTitles) {
-							item.MatchMethod = "title_year"
-							seenItems[item.ID] = true
-							matches = append(matches, item)
-						}
-					}
-					if len(matches) > 0 {
-						break
-					}
-				}
-				firstResult.SourceID = sourceID
-				firstResult.Items = matches
-				if len(matches) > 0 {
-					firstResult.Status = "ok"
-					firstResult.ErrorCode = ""
-				} else {
-					firstResult.Status = "empty"
-					firstResult.ErrorCode = "identity_not_verified"
-				}
-				results[index] = firstResult
-				return
+			if onSource != nil {
+				onSource(res)
 			}
-
-			result := s.SearchSource(
-				ctx, sourceID, identitySearchQuery(sourceID, title, externalIDs),
-			)
-			if result.SourceID == "" {
-				result.SourceID = sourceID
-			}
-			matches := make([]contracts.MediaItem, 0, len(result.Items))
-			for _, item := range result.Items {
-				if item.Kind == kind && sharesExternalID(item.ExternalIDs, externalIDs) {
-					item.MatchMethod = "external_id"
-					matches = append(matches, item)
-				}
-			}
-			result.Items = matches
-			if result.Status == "ok" && len(matches) == 0 {
-				result.Status = "empty"
-				result.ErrorCode = "identity_not_verified"
-			}
-			results[index] = result
-		}()
+		}(index, sourceID)
 	}
 	workers.Wait()
 
 	return results
+}
+
+func (s *Service) searchLibrarySourceMatching(
+	ctx context.Context,
+	sourceID, title, kind string,
+	year int,
+	aliases []string,
+	externalIDs map[string]string,
+) contracts.MediaSourceResults {
+	queries := identityQueries(title, aliases)
+	var firstResult contracts.MediaSourceResults
+	matches := []contracts.MediaItem{}
+	seenItems := map[string]bool{}
+
+	expectedTitles := make(map[string]struct{}, len(aliases)+1)
+	expectedTitles[normalizeIdentityTitle(title)] = struct{}{}
+	for _, alias := range aliases {
+		if normalized := normalizeIdentityTitle(alias); normalized != "" {
+			expectedTitles[normalized] = struct{}{}
+		}
+	}
+
+	for _, query := range queries {
+		result := s.SearchSource(ctx, sourceID, query)
+		if firstResult.Status == "" {
+			firstResult = result
+		}
+		for _, item := range result.Items {
+			if seenItems[item.ID] || item.Kind != kind {
+				continue
+			}
+			if sharesExternalID(item.ExternalIDs, externalIDs) {
+				item.MatchMethod = "external_id"
+				seenItems[item.ID] = true
+				matches = append(matches, item)
+			} else if !hasConflictingExternalID(item.ExternalIDs, externalIDs) &&
+				year > 0 && item.Year == year && matchesAnyTitle(item, expectedTitles) {
+				item.MatchMethod = "title_year"
+				seenItems[item.ID] = true
+				matches = append(matches, item)
+			}
+		}
+		if len(matches) > 0 {
+			break
+		}
+	}
+	firstResult.SourceID = sourceID
+	firstResult.Items = matches
+	if len(matches) > 0 {
+		firstResult.Status = "ok"
+		firstResult.ErrorCode = ""
+	} else if firstResult.Status == "ok" {
+		firstResult.Status = "empty"
+		firstResult.ErrorCode = "identity_not_verified"
+	}
+	return firstResult
+}
+
+func (s *Service) searchArrSourceMatching(
+	ctx context.Context,
+	sourceID, title, kind string,
+	externalIDs map[string]string,
+) contracts.MediaSourceResults {
+	result := s.SearchSource(
+		ctx, sourceID, identitySearchQuery(sourceID, title, externalIDs),
+	)
+	if result.SourceID == "" {
+		result.SourceID = sourceID
+	}
+	matches := make([]contracts.MediaItem, 0, len(result.Items))
+	for _, item := range result.Items {
+		if item.Kind == kind && sharesExternalID(item.ExternalIDs, externalIDs) {
+			item.MatchMethod = "external_id"
+			matches = append(matches, item)
+		}
+	}
+	result.Items = matches
+	if result.Status == "ok" && len(matches) == 0 {
+		result.Status = "empty"
+		result.ErrorCode = "identity_not_verified"
+	}
+	return result
 }
 
 func identityQueries(title string, aliases []string) []string {
@@ -138,6 +175,30 @@ func identityQueries(title string, aliases []string) []string {
 	return queries
 }
 
+var seasonSuffixRegex = regexp.MustCompile(`(?i)\s*[\(\[\{-]?\s*(phan|mua|season|part|p|s)\s*(\d+)[\)\]\}]?\s*$`)
+
+func matchTitleOrSeason(item contracts.MediaItem, expected map[string]struct{}) (bool, int) {
+	candidates := append([]string{item.Title, item.Original}, item.AlternativeTitles...)
+	for _, candidate := range candidates {
+		normalized := normalizeIdentityTitle(candidate)
+		if normalized == "" {
+			continue
+		}
+		if _, found := expected[normalized]; found {
+			return true, 0
+		}
+		matches := seasonSuffixRegex.FindStringSubmatch(normalized)
+		if len(matches) == 3 {
+			base := strings.TrimSpace(normalized[:len(normalized)-len(matches[0])])
+			if _, found := expected[base]; found {
+				seasonNum, _ := strconv.Atoi(matches[2])
+				return true, seasonNum
+			}
+		}
+	}
+	return false, 0
+}
+
 func matchPhimAPIItems(
 	items []contracts.MediaItem,
 	title string,
@@ -146,8 +207,6 @@ func matchPhimAPIItems(
 	kind string,
 	externalIDs map[string]string,
 ) []contracts.MediaItem {
-	exactMatches := make([]contracts.MediaItem, 0)
-	titleCandidates := make([]contracts.MediaItem, 0)
 	expectedTitles := make(map[string]struct{}, len(aliases)+1)
 	expectedTitles[normalizeIdentityTitle(title)] = struct{}{}
 	for _, alias := range aliases {
@@ -156,32 +215,85 @@ func matchPhimAPIItems(
 		}
 	}
 
+	matchedItems := make([]contracts.MediaItem, 0)
+	seenIDs := make(map[string]bool)
+
+	// Step 1: External ID matches
 	for _, item := range items {
 		if item.Kind != kind {
 			continue
 		}
 		if sharesExternalID(item.ExternalIDs, externalIDs) {
 			item.MatchMethod = "external_id"
-			exactMatches = append(exactMatches, item)
-			continue
-		}
-		if hasConflictingExternalID(item.ExternalIDs, externalIDs) ||
-			year == 0 || item.Year != year {
-			continue
-		}
-		if matchesAnyTitle(item, expectedTitles) {
-			titleCandidates = append(titleCandidates, item)
+			seenIDs[item.ID] = true
+			matchedItems = append(matchedItems, item)
 		}
 	}
-	if len(exactMatches) > 0 {
-		return exactMatches
-	}
-	if len(titleCandidates) != 1 {
-		return []contracts.MediaItem{}
-	}
-	titleCandidates[0].MatchMethod = "title_year"
 
-	return titleCandidates
+	// Step 2: Title / Season matches
+	titleCandidates := make([]contracts.MediaItem, 0)
+	hasSeasonSuffixes := false
+
+	for _, item := range items {
+		if item.Kind != kind || seenIDs[item.ID] {
+			continue
+		}
+		if hasConflictingExternalID(item.ExternalIDs, externalIDs) {
+			continue
+		}
+		if kind == "movie" && (year == 0 || item.Year != year) {
+			continue
+		}
+
+		matched, extractedSeason := matchTitleOrSeason(item, expectedTitles)
+		if !matched {
+			continue
+		}
+
+		if extractedSeason > 0 {
+			hasSeasonSuffixes = true
+			if item.Season == nil {
+				item.Season = &extractedSeason
+			}
+		} else {
+			if year == 0 || item.Year != year {
+				continue
+			}
+		}
+
+		item.MatchMethod = "title_year"
+		titleCandidates = append(titleCandidates, item)
+	}
+
+	if hasSeasonSuffixes || len(matchedItems) == 0 {
+		if hasSeasonSuffixes || len(titleCandidates) == 1 {
+			for _, candidate := range titleCandidates {
+				if !seenIDs[candidate.ID] {
+					seenIDs[candidate.ID] = true
+					matchedItems = append(matchedItems, candidate)
+				}
+			}
+		}
+	}
+
+	sort.SliceStable(matchedItems, func(i, j int) bool {
+		s1, s2 := 0, 0
+		if matchedItems[i].Season != nil {
+			s1 = *matchedItems[i].Season
+		}
+		if matchedItems[j].Season != nil {
+			s2 = *matchedItems[j].Season
+		}
+		if s1 != s2 {
+			return s1 < s2
+		}
+		if matchedItems[i].Year != matchedItems[j].Year {
+			return matchedItems[i].Year < matchedItems[j].Year
+		}
+		return matchedItems[i].Title < matchedItems[j].Title
+	})
+
+	return matchedItems
 }
 
 func matchesAnyTitle(item contracts.MediaItem, expected map[string]struct{}) bool {

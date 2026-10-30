@@ -9,15 +9,15 @@ Run these commands from the repository root as the service user:
 
 ```bash
 mkdir -p ~/.config/systemd/user
-cp deploy/systemd/tv-agent.service ~/.config/systemd/user/
+cp deploy/systemd/home-sentinel.service ~/.config/systemd/user/
 umask 077
 printf 'AGENT_TOKEN=%s\nAGENT_PORT=8788\n' \
-  "$(openssl rand -hex 24)" > ~/.config/tv-agent.env
-systemctl --user daemon-reload && systemctl --user enable --now tv-agent
+  "$(openssl rand -hex 24)" > ~/.config/home-sentinel.env
+systemctl --user daemon-reload && systemctl --user enable --now home-sentinel
 ```
 
 Without systemd, run `AGENT_TOKEN=... ./bin/sentinel_server` (it reads the same variables).
-Set `AGENT_ALLOW` in `~/.config/tv-agent.env` to the TV's and your phone's IPs to refuse every other client.
+Set `AGENT_ALLOW` in `~/.config/home-sentinel.env` to the TV's and your phone's IPs to refuse every other client.
 `AGENT_WORKDIR` is the directory the CLI works in: point it at a folder you are happy for the agent to touch.
 `AGENT_CMD` can be another CLI as long as it takes `-p` and the stream-json flags used in `run_cli`.
 
@@ -27,7 +27,7 @@ The media search uses the public YouTube Data API v3. Create an API key in Googl
 enable YouTube Data API v3, and restrict the key to that API. Keep the key on the server;
 do not put it in the web client or commit it.
 
-For the systemd service, add this line to `~/.config/tv-agent.env`:
+For the systemd service, add this line to `~/.config/home-sentinel.env`:
 
 ```text
 YOUTUBE_API_KEY=your-key
@@ -36,8 +36,8 @@ YOUTUBE_API_KEY=your-key
 Keep the file private and restart the service:
 
 ```bash
-chmod 600 ~/.config/tv-agent.env
-systemctl --user restart tv-agent
+chmod 600 ~/.config/home-sentinel.env
+systemctl --user restart home-sentinel
 ```
 
 For a directly launched development server, set `YOUTUBE_API_KEY` in its process
@@ -54,7 +54,7 @@ Put the server's address in `apps/launcher/app/src/main/res/values/config.xml` (
 the app the token and the microphone:
 
 ```bash
-TOKEN=$(ssh USER@SERVER 'grep ^AGENT_TOKEN= ~/.config/tv-agent.env | cut -d= -f2')
+TOKEN=$(ssh USER@SERVER 'grep ^AGENT_TOKEN= ~/.config/home-sentinel.env | cut -d= -f2')
 echo "$TOKEN" > /tmp/agent_token
 adb -s TV_IP:5555 shell mkdir -p /sdcard/Android/data/com.gathin.tvhome/files
 adb -s TV_IP:5555 push /tmp/agent_token /sdcard/Android/data/com.gathin.tvhome/files/agent_token

@@ -550,6 +550,17 @@
   gap: 6px;
   margin-top: 8px;
 }
+.catalog-media-item-simple + .catalog-media-item-simple {
+  border-top: 1px solid #333649;
+  padding-top: 10px;
+  margin-top: 10px;
+}
+.catalog-item-title,
+.catalog-season-title {
+  color: #edeefe;
+  font-size: 14px;
+  font-weight: 600;
+}
 .catalog-media-badges {
   display: flex;
   flex-wrap: wrap;

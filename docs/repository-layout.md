@@ -67,7 +67,7 @@ implementation moves there when a real feature requires it.
 | `camera/vision/` | `workers/vision/` |
 | `yamnet_service/` | `workers/yamnet/` |
 | `agent/agent_config.example.json` | `configs/agent.example.json` |
-| `agent/tv-agent.service` | `deploy/systemd/tv-agent.service` |
+| `agent/tv-agent.service` | `deploy/systemd/home-sentinel.service` |
 | `agent/tv` | `scripts/tv` |
 | `agent/README.md` | `docs/server-setup.md` |
 | `camera/README.md` | `docs/integrations/camera.md` |

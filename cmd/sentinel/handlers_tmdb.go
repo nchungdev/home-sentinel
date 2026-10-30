@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
+	"github.com/nchungdev/home-sentinel/internal/contracts"
 	"github.com/nchungdev/home-sentinel/internal/skills"
 )
 
@@ -31,11 +33,105 @@ func (s *Server) handleTMDBMediaDetail(w http.ResponseWriter, r *http.Request) {
 		writeTMDBDetailError(w, code)
 		return
 	}
+	w.Header().Set("Cache-Control", "no-store")
+
+	isStream := r.URL.Query().Get("stream") == "1" ||
+		strings.Contains(r.Header.Get("Accept"), "application/x-ndjson")
+
+	if isStream {
+		flusher, ok := w.(http.Flusher)
+		if !ok {
+			http.Error(w, "streaming unsupported", http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/x-ndjson; charset=utf-8")
+		w.Header().Set("X-Accel-Buffering", "no")
+		encoder := json.NewEncoder(w)
+
+		_ = encoder.Encode(map[string]any{"type": "media", "media": title})
+		flusher.Flush()
+
+		s.MediaSearch.SearchMatchingStream(
+			ctx, title.Title, title.Kind, title.Year, title.Aliases, title.ExternalIDs,
+			func(source contracts.MediaSourceResults) {
+				if ctx.Err() == nil {
+					s.populateSourceCatalogData(ctx, &source)
+					_ = encoder.Encode(map[string]any{"type": "source", "source": source})
+					flusher.Flush()
+				}
+			},
+		)
+
+		_ = encoder.Encode(map[string]any{"type": "completed"})
+		flusher.Flush()
+		return
+	}
+
 	sources := s.MediaSearch.SearchMatching(
 		ctx, title.Title, title.Kind, title.Year, title.Aliases, title.ExternalIDs,
 	)
-	w.Header().Set("Cache-Control", "no-store")
-	writeJSON(w, map[string]any{"title": title, "sources": sources})
+	for i := range sources {
+		s.populateSourceCatalogData(ctx, &sources[i])
+	}
+	writeJSON(w, tmdbDetailResponse{Media: title, Sources: sources})
+}
+
+type tmdbDetailResponse struct {
+	Media   any                            `json:"media"`
+	Sources []contracts.MediaSourceResults `json:"sources"`
+}
+
+func (s *Server) populateSourceCatalogData(ctx context.Context, source *contracts.MediaSourceResults) {
+	if source == nil || len(source.Items) == 0 {
+		return
+	}
+	for index := range source.Items {
+		item := &source.Items[index]
+		if !strings.HasPrefix(item.ID, "phimapi:") &&
+			!strings.HasPrefix(item.ID, "ophim:") &&
+			!strings.HasPrefix(item.ID, "nguonc:") &&
+			!strings.HasPrefix(item.ID, "motchill:") &&
+			!strings.HasPrefix(item.ID, "rophim:") &&
+			!strings.HasPrefix(item.ID, "phimtuoitho:") {
+			continue
+		}
+
+		catTitle, err := s.catalog().GetTitle(ctx, item.ID)
+		if err != nil || len(catTitle.Episodes) == 0 {
+			continue
+		}
+
+		if item.Kind == "show" || len(catTitle.Episodes) > 1 {
+			episodes := make([]contracts.CatalogEpisode, 0, len(catTitle.Episodes))
+			for _, ep := range catTitle.Episodes {
+				episodes = append(episodes, contracts.CatalogEpisode{
+					ID:       ep.ID,
+					TitleID:  ep.TitleID,
+					Label:    ep.Label,
+					Group:    ep.Group,
+					Order:    ep.Order,
+					SeasonID: ep.SeasonID,
+					Playable: ep.Playable,
+				})
+			}
+			item.Episodes = episodes
+			item.Actions = nil
+		} else if len(catTitle.Episodes) == 1 && s.Playback != nil {
+			ep := catTitle.Episodes[0]
+			stream, err := s.catalog().ResolveEpisode(ctx, ep.ID)
+			if err == nil && stream.URL != "" {
+				endpoint, headers, err := s.Playback.Resolver.Resolve(ctx, stream.URL)
+				if err == nil {
+					descriptor, err := s.Playback.Create(endpoint, stream.Title+" · "+ep.Label, "", headers, false)
+					if err == nil {
+						item.Playback = descriptor
+						item.Actions = nil
+					}
+				}
+			}
+		}
+	}
 }
 
 func (s *Server) handleTMDBMediaDiscovery(w http.ResponseWriter, r *http.Request) {
