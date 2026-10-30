@@ -102,17 +102,11 @@ func (s *Server) populateSourceCatalogData(ctx context.Context, source *contract
 			continue
 		}
 
-		if item.Kind == "show" || len(catTitle.Episodes) > 1 {
+		if len(catTitle.Episodes) > 0 {
 			serverMap := make(map[string][]contracts.CatalogEpisode)
 			serverOrder := []string{}
 
 			for _, ep := range catTitle.Episodes {
-				streamURL := ""
-				stream, err := s.catalog().ResolveEpisode(ctx, ep.ID)
-				if err == nil {
-					streamURL = stream.URL
-				}
-
 				catalogEp := contracts.CatalogEpisode{
 					ID:       ep.ID,
 					TitleID:  ep.TitleID,
@@ -121,7 +115,6 @@ func (s *Server) populateSourceCatalogData(ctx context.Context, source *contract
 					Order:    ep.Order,
 					SeasonID: ep.SeasonID,
 					Playable: ep.Playable,
-					URL:      streamURL,
 				}
 
 				groupName := ep.Group
@@ -145,19 +138,6 @@ func (s *Server) populateSourceCatalogData(ctx context.Context, source *contract
 			item.Servers = servers
 			item.Episodes = nil
 			item.Actions = nil
-		} else if len(catTitle.Episodes) == 1 && s.Playback != nil {
-			ep := catTitle.Episodes[0]
-			stream, err := s.catalog().ResolveEpisode(ctx, ep.ID)
-			if err == nil && stream.URL != "" {
-				endpoint, headers, err := s.Playback.Resolver.Resolve(ctx, stream.URL)
-				if err == nil {
-					descriptor, err := s.Playback.Create(endpoint, stream.Title+" · "+ep.Label, "", headers, false)
-					if err == nil {
-						item.Playback = descriptor
-						item.Actions = nil
-					}
-				}
-			}
 		}
 	}
 }
