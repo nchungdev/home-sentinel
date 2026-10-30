@@ -47,8 +47,11 @@ func libraryActions(sourceID, itemID, kind, target string) []contracts.MediaActi
 	if kind == "season" {
 		return []contracts.MediaAction{browseAction(sourceID, itemID, "Chọn tập")}
 	}
-	return []contracts.MediaAction{{Type: "play_library", Label: "Phát trực tiếp",
-		SourceID: sourceID, ItemID: itemID, Enabled: true}, linkAction("Mở thư viện", target)}
+	label := "Mở Plex"
+	if sourceID == "jellyfin" {
+		label = "Mở Jellyfin"
+	}
+	return []contracts.MediaAction{linkAction(label, target)}
 }
 
 func (s *plexSource) Browse(ctx context.Context, itemID string) ([]contracts.MediaItem, error) {

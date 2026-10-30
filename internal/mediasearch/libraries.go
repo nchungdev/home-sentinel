@@ -37,9 +37,6 @@ func (s *plexSource) Search(ctx context.Context, query string) ([]contracts.Medi
 			seen[entry.ID] = true
 			target := s.itemLink(ctx, entry.ID)
 			actions := libraryActions(s.id, entry.ID, entry.Type, target)
-			if app := s.appLink(ctx, entry.ID); app != "" {
-				actions = append([]contracts.MediaAction{appAction(app)}, actions...)
-			}
 			externalIDs := s.searchEntryExternalIDs(ctx, entry)
 			items = append(items, contracts.MediaItem{
 				ID: entry.ID, Title: entry.Title, Year: entry.Year, Kind: entry.Type,
