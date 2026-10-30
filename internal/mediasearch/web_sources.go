@@ -117,7 +117,7 @@ func youtubeThumbnail(thumbnails map[string]youtubeThumbnailVariant) string {
 
 func (s *httpSource) Info() contracts.MediaSourceCapability {
 	return contracts.MediaSourceCapability{ID: s.id, Name: s.name, Kind: s.kind,
-		Status: "checking", Actions: []string{}}
+		Status: "checking", PlaybackMode: s.playbackMode(), Actions: []string{}}
 }
 
 func validProbe(sourceID string, info map[string]any) bool {

@@ -40,8 +40,9 @@ func pendingCatalogSources() []Source {
 func (s placeholderSource) Info() contracts.MediaSourceCapability {
 	return contracts.MediaSourceCapability{
 		ID: s.id, Name: s.name, Kind: s.kind, Status: "not_implemented",
-		Message: "Adapter chưa triển khai; chưa kiểm tra kết nối nguồn.",
-		Actions: []string{},
+		PlaybackMode: 0,
+		Message:      "Adapter chưa triển khai; chưa kiểm tra kết nối nguồn.",
+		Actions:      []string{},
 	}
 }
 

@@ -71,7 +71,8 @@ func (s *Service) searchPhimAPIQueries(
 	queries := phimAPIQueries("", queryCandidates)
 	combined := contracts.MediaSourceResults{
 		SourceID: "phimapi", Status: "empty", Cache: "hit",
-		Items: []contracts.MediaItem{},
+		PlaybackMode: 2,
+		Items:        []contracts.MediaItem{},
 	}
 	seen := make(map[string]struct{})
 	for start := 0; start < len(queries); start += phimAPIQueryConcurrency {

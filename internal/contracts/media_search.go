@@ -50,19 +50,21 @@ type MediaItem struct {
 }
 
 type MediaSourceCapability struct {
-	ID        string   `json:"id"`
-	Name      string   `json:"name"`
-	Kind      string   `json:"kind"`
-	Detected  bool     `json:"detected"`
-	Available bool     `json:"available"`
-	Status    string   `json:"status"`
-	Message   string   `json:"message,omitempty"`
-	Actions   []string `json:"actions"`
+	ID           string   `json:"id"`
+	Name         string   `json:"name"`
+	Kind         string   `json:"kind"`
+	Detected     bool     `json:"detected"`
+	Available    bool     `json:"available"`
+	Status       string   `json:"status"`
+	PlaybackMode int      `json:"playback_mode"`
+	Message      string   `json:"message,omitempty"`
+	Actions      []string `json:"actions"`
 }
 
 type MediaSourceResults struct {
 	SourceID        string      `json:"source_id"`
 	Status          string      `json:"status"`
+	PlaybackMode    int         `json:"playback_mode"`
 	Searched        bool        `json:"searched"`
 	Cache           string      `json:"cache,omitempty"`
 	Items           []MediaItem `json:"items"`

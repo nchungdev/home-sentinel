@@ -85,9 +85,18 @@ func (s *httpSource) do(ctx context.Context, method, path string, body, result a
 	return nil
 }
 
+func (s *httpSource) playbackMode() int {
+	switch s.id {
+	case "radarr", "sonarr", "web":
+		return 0
+	default:
+		return 2
+	}
+}
+
 func (s *httpSource) Capability(ctx context.Context) contracts.MediaSourceCapability {
 	capability := contracts.MediaSourceCapability{ID: s.id, Name: s.name, Kind: s.kind,
-		Status: "unreachable", Actions: []string{}}
+		Status: "unreachable", PlaybackMode: s.playbackMode(), Actions: []string{}}
 	if s.baseURL == "" {
 		capability.Status = "not_configured"
 		return capability

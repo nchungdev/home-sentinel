@@ -103,7 +103,8 @@ func (s *Service) searchSource(
 	updates <- sourceUpdate{index: index, capability: &capability}
 	result := contracts.MediaSourceResults{
 		SourceID: capability.ID, Status: "skipped", Cache: "bypassed",
-		Items: []contracts.MediaItem{},
+		PlaybackMode: capability.PlaybackMode,
+		Items:        []contracts.MediaItem{},
 	}
 	if !capability.Available {
 		result.ErrorCode = capability.Status
