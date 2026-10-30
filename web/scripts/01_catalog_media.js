@@ -178,7 +178,52 @@ function catalogRenderMediaItems(items, container, signal) {
       entry.appendChild(itemTitle);
     }
 
-    if (item.episodes && item.episodes.length > 0) {
+    if (item.servers && item.servers.length > 0) {
+      let selectedServer = item.servers[0].server_name;
+
+      if (item.servers.length > 1) {
+        const serverBar = catalogNode('div');
+        serverBar.className = 'catalog-server-sources';
+        const label = catalogNode('span', 'Server: ');
+        label.className = 'catalog-server-label';
+        serverBar.appendChild(label);
+
+        for (const srv of item.servers) {
+          const btn = catalogNode('button', srv.server_name);
+          btn.type = 'button';
+          btn.className = 'catalog-server-btn' + (srv.server_name === selectedServer ? ' catalog-server-btn--active' : '');
+          btn.addEventListener('click', () => {
+            selectedServer = srv.server_name;
+            serverBar.querySelectorAll('.catalog-server-btn').forEach(b => {
+              b.classList.toggle('catalog-server-btn--active', b.textContent === selectedServer);
+            });
+            renderEpisodes();
+          });
+          serverBar.appendChild(btn);
+        }
+        entry.appendChild(serverBar);
+      }
+
+      const episodeList = catalogNode('div');
+      episodeList.className = 'catalog-episodes';
+
+      function renderEpisodes() {
+        episodeList.replaceChildren();
+        const currentServer = item.servers.find(s => s.server_name === selectedServer) || item.servers[0];
+        if (currentServer && currentServer.episodes) {
+          for (const ep of currentServer.episodes) {
+            const btn = catalogNode('button', ep.label || 'Tập');
+            btn.type = 'button';
+            btn.className = 'catalog-episode-btn';
+            btn.addEventListener('click', () => catalogResolveEpisode(ep, entry, signal));
+            episodeList.appendChild(btn);
+          }
+        }
+      }
+
+      renderEpisodes();
+      entry.appendChild(episodeList);
+    } else if (item.episodes && item.episodes.length > 0) {
       const episodeList = catalogNode('div');
       episodeList.className = 'catalog-episodes';
       for (const ep of item.episodes) {

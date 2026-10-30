@@ -19,6 +19,12 @@ type CatalogEpisode struct {
 	Order    int    `json:"order,omitempty"`
 	SeasonID string `json:"season_id,omitempty"`
 	Playable bool   `json:"playable"`
+	URL      string `json:"url,omitempty"`
+}
+
+type CatalogServer struct {
+	Name     string           `json:"server_name"`
+	Episodes []CatalogEpisode `json:"episodes"`
 }
 
 type MediaItem struct {
@@ -37,6 +43,7 @@ type MediaItem struct {
 	Episode           *int              `json:"episode,omitempty"`
 	ExternalIDs       map[string]string `json:"external_ids,omitempty"`
 	Availability      string            `json:"availability"`
+	Servers           []CatalogServer   `json:"servers,omitempty"`
 	Episodes          []CatalogEpisode  `json:"episodes,omitempty"`
 	Playback          any               `json:"playback,omitempty"`
 	Actions           []MediaAction     `json:"actions,omitempty"`

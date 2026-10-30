@@ -103,9 +103,17 @@ func (s *Server) populateSourceCatalogData(ctx context.Context, source *contract
 		}
 
 		if item.Kind == "show" || len(catTitle.Episodes) > 1 {
-			episodes := make([]contracts.CatalogEpisode, 0, len(catTitle.Episodes))
+			serverMap := make(map[string][]contracts.CatalogEpisode)
+			serverOrder := []string{}
+
 			for _, ep := range catTitle.Episodes {
-				episodes = append(episodes, contracts.CatalogEpisode{
+				streamURL := ""
+				stream, err := s.catalog().ResolveEpisode(ctx, ep.ID)
+				if err == nil {
+					streamURL = stream.URL
+				}
+
+				catalogEp := contracts.CatalogEpisode{
 					ID:       ep.ID,
 					TitleID:  ep.TitleID,
 					Label:    ep.Label,
@@ -113,9 +121,29 @@ func (s *Server) populateSourceCatalogData(ctx context.Context, source *contract
 					Order:    ep.Order,
 					SeasonID: ep.SeasonID,
 					Playable: ep.Playable,
+					URL:      streamURL,
+				}
+
+				groupName := ep.Group
+				if groupName == "" {
+					groupName = "Server mặc định"
+				}
+				if _, exists := serverMap[groupName]; !exists {
+					serverOrder = append(serverOrder, groupName)
+				}
+				serverMap[groupName] = append(serverMap[groupName], catalogEp)
+			}
+
+			servers := make([]contracts.CatalogServer, 0, len(serverOrder))
+			for _, name := range serverOrder {
+				servers = append(servers, contracts.CatalogServer{
+					Name:     name,
+					Episodes: serverMap[name],
 				})
 			}
-			item.Episodes = episodes
+
+			item.Servers = servers
+			item.Episodes = nil
 			item.Actions = nil
 		} else if len(catTitle.Episodes) == 1 && s.Playback != nil {
 			ep := catTitle.Episodes[0]
