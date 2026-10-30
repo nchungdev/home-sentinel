@@ -235,29 +235,75 @@
         }
         const streamURL = new URL(data.playback.url, window.location.origin).href;
         const name = catalogNode('strong', data.playback.title);
-        const hint = catalogNode('p', 'Mở link này bằng VLC hoặc trình phát hỗ trợ HLS.');
-        const input = catalogNode('input');
-        input.type = 'text';
-        input.readOnly = true;
-        input.value = streamURL;
-        input.setAttribute('aria-label', 'Link phát');
-        const copy = catalogNode('button', 'Sao chép link phát');
+        name.className = 'catalog-playback-title';
+
+        const wrapper = catalogNode('div');
+        wrapper.className = 'catalog-video-wrapper';
+
+        const video = catalogNode('video');
+        video.className = 'catalog-video-player';
+        video.controls = true;
+        video.autoplay = true;
+        video.playsInline = true;
+
+        if (video.canPlayType('application/x-mpegURL') || video.canPlayType('application/vnd.apple.mpegurl')) {
+          video.src = streamURL;
+        } else if (typeof window !== 'undefined' && window.Hls && window.Hls.isSupported()) {
+          const hls = new window.Hls();
+          hls.loadSource(streamURL);
+          hls.attachMedia(video);
+        } else if (typeof document !== 'undefined' && document.createElement) {
+          if (!window.Hls && document.head) {
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/hls.js@latest';
+            script.onload = () => {
+              if (window.Hls && window.Hls.isSupported()) {
+                const hls = new window.Hls();
+                hls.loadSource(streamURL);
+                hls.attachMedia(video);
+              } else {
+                video.src = streamURL;
+              }
+            };
+            document.head.appendChild(script);
+          } else {
+            video.src = streamURL;
+          }
+        }
+
+        wrapper.appendChild(video);
+
+        const actions = catalogNode('div');
+        actions.className = 'catalog-playback-actions';
+
+        const copy = catalogNode('button', '📋 Sao chép link M3U8');
         copy.type = 'button';
         copy.addEventListener('click', async () => {
           try {
             await navigator.clipboard.writeText(streamURL);
-            copy.textContent = 'Đã sao chép';
-          } catch (_) { input.focus(); input.select(); }
+            copy.textContent = '✓ Đã sao chép';
+          } catch (_) {
+            if (typeof prompt === 'function') prompt('Link M3U8:', streamURL);
+          }
         });
-        panel.replaceChildren(name, hint, input, copy);
-        if (/Android/i.test(navigator.userAgent)) {
-          const link = catalogNode('a', 'Mở bằng VLC (nếu đã cài)');
+        actions.appendChild(copy);
+
+        const openBtn = catalogNode('a', '↗ Mở tab mới');
+        openBtn.href = streamURL;
+        openBtn.target = '_blank';
+        openBtn.rel = 'noopener noreferrer';
+        actions.appendChild(openBtn);
+
+        if (typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent)) {
+          const vlcLink = catalogNode('a', '🎬 Mở bằng VLC');
           const parsed = new URL(streamURL);
-          link.href = 'intent://' + parsed.host + parsed.pathname + '#Intent;scheme=' +
-            parsed.protocol.slice(0, -1) + ';type=' + data.playback.mime_type +
+          vlcLink.href = 'intent://' + parsed.host + parsed.pathname + '#Intent;scheme=' +
+            parsed.protocol.slice(0, -1) + ';type=' + (data.playback.mime_type || 'application/x-mpegURL') +
             ';package=org.videolan.vlc;end';
-          panel.appendChild(link);
+          actions.appendChild(vlcLink);
         }
+
+        panel.replaceChildren(name, wrapper, actions);
       } catch (error) {
         if (error.name !== 'AbortError') panel.textContent = error.message;
       } finally {
